@@ -7,22 +7,14 @@
 
 #include <string>
 #include <vector>
+#include "darbohAstNode.hpp"
 
 namespace striboh{
         namespace darboh {
 
-            class AstNode;
-
-            AstNode &parse(const std::string &pIdlCode);
-
-            struct PreprocessedInput {
-                std::string mInput;
-            };
-
             using Includes = std::vector<std::string>;
 
-            PreprocessedInput
-            parseIdl(const Includes& pIncludes, const std::string& pInputFile) noexcept;
+            AstNode parseIdl(const Includes& pIncludes, const std::string& pInputFile) noexcept;
         }
 } // end namespace striboh
 

@@ -8,9 +8,11 @@
 
 #include "darbohParser.hpp"
 
+
 using std::string;
 using std::vector;
 using std::cout;
+using striboh::darboh::AstNode;
 
 namespace po=boost::program_options;
 
@@ -24,7 +26,7 @@ int main(int pArgc, char* pArgv[]) {
             ("help", "produce help message")
             ("include-path,I", po::value<vector<string>>(), "include directory")
             ("input-file", po::value<vector<string>>(), "input file")
-            ("parseIdl-only,p", po::value<bool>(),"stop right after preprocessing input.")
+            ("dump-tree,d","dump the resulting AST tree.")
             ;
     po::variables_map myVarMap;
     po::store(po::command_line_parser (pArgc, pArgv).options(myOptDesc).positional(myPosOpt).run(), myVarMap);
@@ -43,14 +45,20 @@ int main(int pArgc, char* pArgv[]) {
             cout << myInclude << "\n";
         }
     }
+    vector<AstNode> myParsedIdls;
     if (myVarMap.count("input-file"))
     {
         auto myInputs=myVarMap["input-file"].as< vector<string> >();
         for(const auto& myInput:myInputs) {
             cout << "Processing " << myInput << "\n";
-            striboh::darboh::parseIdl(myIncludes, "import \"" + myInput + "\"" );
+            myParsedIdls.push_back(striboh::darboh::parseIdl(myIncludes, "import \"" + myInput + "\"" ));
         }
     }
-
+    if(myVarMap.count("dump-tree"))
+    {
+        for( auto& myNode:myParsedIdls) {
+            cout << myNode;
+        }
+    }
     return 0;
 }
