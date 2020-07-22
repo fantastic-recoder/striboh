@@ -7,14 +7,14 @@
 
 #include <string>
 #include <vector>
-#include "darbohAstNode.hpp"
+#include "darbohAstNodeRoot.hpp"
 
 namespace striboh{
         namespace darboh {
 
             using Includes = std::vector<std::string>;
 
-            AstNode parseIdl(const Includes& pIncludes, const std::string& pInputFile) noexcept;
+            AstNodeRoot parseIdl(const Includes &pIncludes, const std::string &pInputFile) noexcept;
         }
 } // end namespace striboh
 

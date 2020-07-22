@@ -3,7 +3,8 @@
 //
 
 #include "darbohParser.hpp"
-#include "darbohAstNode.hpp"
+#include "darbohAstNodeRoot.hpp"
+#include "darbohAstNodeImport.hpp"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -36,37 +37,9 @@ namespace striboh {
         namespace ascii = boost::spirit::ascii;
 
         template <typename Iterator>
-        struct DarbohGrammar : qi::grammar<Iterator, AstNode(), ascii::space_type>
-        {
+        struct DarbohGrammar : qi::grammar<Iterator, AstNodeRoot(), ascii::space_type> {
 
-            struct ProcessImport {
-                ProcessImport(DarbohGrammar& pGrammar):mGrammar(pGrammar) {}
-
-                DarbohGrammar& mGrammar;
-
-                void operator()( const vector<string>& pIn) const {
-                    std::for_each(pIn.begin(), pIn.end(),
-                                  [this](const std::string &pStr) {
-                        this->mGrammar.mImports.push_back(pStr);
-                    });
-                }
-            };
-
-            struct AddImport {
-                AddImport(AstNode& pParentNode):mParentNode(pParentNode) {}
-
-                DarbohGrammar& mParentNode;
-
-                void operator()( const vector<string>& pIn) const {
-                    std::for_each(pIn.begin(), pIn.end(),
-                                  [this](const std::string &pStr) {
-                                      mParentNode.push_back(pStr);
-                                  });
-                }
-            };
-
-            DarbohGrammar() : DarbohGrammar::base_type(idl)
-            {
+            DarbohGrammar() : DarbohGrammar::base_type(idl) {
                 using qi::lit;
                 using qi::lexeme;
                 using ascii::char_;
@@ -78,15 +51,14 @@ namespace striboh {
 
                 quoted_file_name %= lexeme['"' >> (+(char_ - '"')) >> '"'];
 
-                import %= lit("import")  >> quoted_file_name;
+                import %= lit("import") >> quoted_file_name;
 
                 idl %= (*import) /*>> body*/;
             }
 
-            qi::rule<Iterator, AstNode(), ascii::space_type> idl;
-            qi::rule<Iterator, vector<string>(), ascii::space_type> import;
+            qi::rule<Iterator, AstNodeRoot(), ascii::space_type> idl;
+            qi::rule<Iterator, AstNodeImport(), ascii::space_type> import;
             qi::rule<Iterator, string(), ascii::space_type> quoted_file_name;
-            std::vector<std::string> mImports;
         }; // end DarbohGrammar
 
         /**
@@ -95,16 +67,15 @@ namespace striboh {
          * @param pInputFile file to parse.
          * @return
          */
-        AstNode parseIdl(const vector<string>& pIncludes, const string &pInputFile) noexcept {
+        AstNodeRoot parseIdl(const vector<string> &pIncludes, const string &pInputFile) noexcept {
             using boost::spirit::ascii::space;
             std::string::const_iterator myIter = pInputFile.begin();
             std::string::const_iterator myEnd = pInputFile.end();
-            AstNode myIdlDoc("TOP");
+            AstNodeRoot myIdlDoc;
             DarbohGrammar<std::string::const_iterator> myIdlGrammar;
             bool r = phrase_parse(myIter, myEnd, myIdlGrammar, space, myIdlDoc);
 
-            if (r && myIter == myEnd)
-            {
+            if (r && myIter == myEnd) {
                 std::cout << "-------------------------\n";
                 std::cout << "Parsing succeeded\n";
                 std::cout << "-------------------------\n";

@@ -12,7 +12,7 @@
 using std::string;
 using std::vector;
 using std::cout;
-using striboh::darboh::AstNode;
+using striboh::darboh::AstNodeRoot;
 
 namespace po=boost::program_options;
 
@@ -45,7 +45,7 @@ int main(int pArgc, char* pArgv[]) {
             cout << myInclude << "\n";
         }
     }
-    vector<AstNode> myParsedIdls;
+    vector<AstNodeRoot> myParsedIdls;
     if (myVarMap.count("input-file"))
     {
         auto myInputs=myVarMap["input-file"].as< vector<string> >();
