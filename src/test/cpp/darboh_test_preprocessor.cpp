@@ -3,7 +3,7 @@
 //
 #include <gtest/gtest.h>
 #include <iostream>
-#include <darboh/darbohParser.hpp>
+#include <striboh/stribohIdlParser.hpp>
 
 TEST(Array, test){
    std::cout << "g" << std::endl;

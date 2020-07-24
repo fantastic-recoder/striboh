@@ -7,7 +7,7 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
-#include "darbohParser.hpp"
+#include "stribohIdlParser.hpp"
 
 
 using std::string;
@@ -15,7 +15,7 @@ using std::vector;
 using std::cout;
 using std::cerr;
 using std::endl;
-using striboh::darboh::AstNodeRoot;
+using striboh::idl::ast::RootNode;
 
 namespace po=boost::program_options;
 namespace fs=boost::filesystem;
@@ -49,15 +49,15 @@ int main(int pArgc, char* pArgv[]) {
             cout << myInclude << "\n";
         }
     }
-    vector<AstNodeRoot> myParsedIdls;
+    vector<RootNode> myParsedIdls;
     if (myVarMap.count("input-file"))
     {
         auto myInputs=myVarMap["input-file"].as< vector<string> >();
         for(const auto& myInput:myInputs) {
             cout << "Processing " << myInput << "\n";
             try {
-                const AstNodeRoot myParseIdl = striboh::darboh::parseIdl(myIncludes, fs::path(myInput),
-                                                                         "import \"" + myInput + "\"");
+                const RootNode myParseIdl = striboh::idl::parseIdl(myIncludes, fs::path(myInput),
+                                                                   "import \"" + myInput + "\"");
                 if (!myParseIdl.hasErrors()) {
                     std::cout << "-------------------------\n";
                     std::cout << "Parsing of \"" << myInput << "\" succeeded\n";

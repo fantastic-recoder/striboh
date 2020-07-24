@@ -15,30 +15,30 @@
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/config/warning_disable.hpp>
-#include "darbohParser.hpp"
-#include "darbohAstNodeRoot.hpp"
-#include "darbohAstNodeImport.hpp"
+#include "stribohIdlParser.hpp"
+#include "stribohIdlAstRootNode.hpp"
+#include "stribohIdlAstImportNode.hpp"
 
 namespace {
     inline void
-    printAstNode(const int pIndent, const striboh::darboh::AstNodeImport &pNode2Print, std::ostream &pOstream) {
+    printAstNode(const int pIndent, const striboh::idl::ast::ImportNode& pNode2Print, std::ostream& pOstream) {
         std::string myIdent;
         for (int ii = 0; ii < pIndent; ii++) {
             myIdent += '\t';
         }
-        pOstream << myIdent << "AstNodeImport:{" << std::endl;
+        pOstream << myIdent << "ImportNode:{" << std::endl;
         pOstream << myIdent << "\tfilename:" << pNode2Print.mFilename << std::endl;
         pOstream << myIdent << "}" << std::endl;
     }
 
     inline void
-    printAstNode(const int pIndent, const striboh::darboh::AstNodeRoot &pNode2Print, std::ostream &pOstream) {
+    printAstNode(const int pIndent, const striboh::idl::ast::RootNode& pNode2Print, std::ostream& pOstream) {
         std::string myIdent;
         for (int ii = 0; ii < pIndent; ii++) {
             myIdent += '\t';
         }
-        pOstream << myIdent << "AstNodeRoot:{" << std::endl;
-        for (const auto &myChildNode: pNode2Print) {
+        pOstream << myIdent << "RootNode:{" << std::endl;
+        for (const auto& myChildNode: pNode2Print) {
             printAstNode(pIndent + 1, myChildNode, pOstream);
         }
         pOstream << myIdent << "}" << std::endl;
@@ -47,17 +47,18 @@ namespace {
 
 }
 namespace striboh {
-    namespace darboh {
+    namespace idl {
+        namespace ast {
+            using std::vector;
+            using std::string;
 
-        using std::vector;
-        using std::string;
+            std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) {
+                printAstNode(0, pNode, pOstream);
+            }
 
-        std::ostream &operator<<(std::ostream &pOstream, const AstNodeRoot &pNode) {
-            printAstNode(0, pNode, pOstream);
+            void RootNode::mergeSubtree(const RootNode& pSubtree) {
+                getErrors().insert(getErrors().begin(), pSubtree.getErrors().begin(), pSubtree.getErrors().end());
+            }
         }
-
-        void AstNodeRoot::mergeSubtree(const AstNodeRoot &pSubtree) {
-            getErrors().insert(getErrors().begin(),pSubtree.getErrors().begin(),pSubtree.getErrors().end());
-        }
-    } // end darboh
+    } // end idl
 } // end striboh

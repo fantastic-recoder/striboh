@@ -2,9 +2,10 @@
 // Created by grobap on 7/18/20.
 //
 
-#include "darbohParser.hpp"
-#include "darbohAstNodeRoot.hpp"
-#include "darbohAstNodeImport.hpp"
+#include "stribohIdlParser.hpp"
+#include "stribohIdlAstRootNode.hpp"
+#include "stribohIdlAstImportNode.hpp"
+#include "stribohIdlAstIdentifierNode.hpp"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -27,7 +28,7 @@
 
 
 namespace striboh {
-    namespace darboh {
+    namespace idl {
 
         using std::string;
         using std::vector;
@@ -43,18 +44,69 @@ namespace striboh {
         namespace ascii = boost::spirit::ascii;
         namespace fs = boost::filesystem;
 
-        template <typename Iterator>
-        struct DarbohGrammar : qi::grammar<Iterator, AstNodeRoot(), ascii::space_type> {
+        struct error_handler_f {
+            typedef qi::error_handler_result result_type;
 
-            DarbohGrammar() : DarbohGrammar::base_type(idl) {
+            template<typename T1, typename T2, typename T3, typename T4>
+            qi::error_handler_result operator()(T1 b, T2 e, T3 where, T4 const& what) const {
+                std::cerr << "Error: expecting " << what << " in line " << get_line(where) << ": \n"
+                          << std::string(b, e) << "\n"
+                          << std::setw(std::distance(b, where)) << '^' << "---- here\n";
+                return qi::fail;
+            }
+        };
+
+        template<typename It>
+        struct annotation_f {
+            typedef void result_type;
+
+            annotation_f(It first) : first(first) {}
+
+            It const first;
+
+            template<typename Val, typename First, typename Last>
+            void operator()(Val& v, First f, Last l) const {
+                std::cerr << "\nannotating " << typeid(v).name() << " '" << std::string(f, l) << "'\n";
+                do_annotate(v, f, l, first);
+            }
+
+        private:
+            void static do_annotate(ast::BaseNode& li, It f, It l, It first) {
+                using std::distance;
+                li.line = get_line(f);
+                li.column = get_column(first, f);
+                li.length = distance(f, l);
+            }
+
+            static void do_annotate(...) { std::cerr << "(not having LocationInfo)\n"; }
+        };
+
+        /**
+         * @see http://coliru.stacked-crooked.com/a/b69dcdf4c5a81715
+         *
+         * @tparam Iterator
+         */
+        template<typename Iterator>
+        struct IdlGrammar : qi::grammar<Iterator, ast::RootNode(), ascii::space_type> {
+
+            IdlGrammar() : IdlGrammar::base_type(idl) {
                 using qi::lit;
                 using qi::lexeme;
+                using qi::as_string;
+                using qi::alnum;
+                using qi::alpha;
                 using ascii::char_;
                 using ascii::string;
                 using namespace qi::labels;
 
                 using phoenix::at_c;
                 using phoenix::push_back;
+
+                KeywordInterface = lit("interface");
+                KeywordModule = lit("module");
+                SemiColon = lit(';');
+
+                Identifier = as_string[alpha >> *(alnum | char_("_"))];
 
                 quoted_file_name %= lexeme['"' >> (+(char_ - '"')) >> '"'];
 
@@ -63,10 +115,25 @@ namespace striboh {
                 idl %= (*import) /*>> body*/;
             }
 
-            qi::rule<Iterator, AstNodeRoot(), ascii::space_type> idl;
-            qi::rule<Iterator, AstNodeImport(), ascii::space_type> import;
+            qi::rule<Iterator, ast::RootNode(), ascii::space_type> idl;
+            qi::rule<Iterator, ast::ImportNode(), ascii::space_type> import;
             qi::rule<Iterator, string(), ascii::space_type> quoted_file_name;
-        }; // end DarbohGrammar
+            qi::rule<Iterator, ast::IdentifierNode()> Identifier;
+            qi::rule<Iterator> KeywordInterface, KeywordModule, SemiColon;
+/*
+            on_error<fail>(ast::ModuleNode, handler(_1, _2, _3, _4));
+            on_error<fail>(ast::ImportNode, handler(_1, _2, _3, _4));
+
+            auto set_location_info = annotate(_val, _1, _3);
+            on_success(ast::IdentifierNode,    set_location_info);
+            on_success(ast::ImportNode, set_location_info);
+            on_success(ast::ModuleNode,    set_location_info);
+
+            BOOST_SPIRIT_DEBUG_NODES((KeywordInterface)(KeywordModule)(SemiColon)(Identifier))
+*/
+        }; // end IdlGrammar
+
+        static const IdlGrammar<std::string::const_iterator> theIdlGrammar;
 
         /**
          * Parse the supplied input file.
@@ -74,16 +141,16 @@ namespace striboh {
          * @param pInputFile file to parse.
          * @return
          */
-        AstNodeRoot parseIdl(const vector<string> &pIncludes, const fs::path& pInputFile, const string &pInputFileContens) noexcept {
+        ast::RootNode parseIdl(const vector<string>& pIncludes, const fs::path& pInputFile,
+                               const string& pInputFileContens) noexcept {
             using boost::spirit::ascii::space;
-            DarbohGrammar<std::string::const_iterator> myIdlGrammar;
             std::string::const_iterator myIter = pInputFileContens.begin();
             std::string::const_iterator myEnd = pInputFileContens.end();
-            AstNodeRoot myIdlDoc;
+            ast::RootNode myIdlDoc;
             const bool myParsedSuccess
-                    = phrase_parse(myIter, myEnd, myIdlGrammar, space, myIdlDoc);
+                    = phrase_parse(myIter, myEnd, theIdlGrammar, space, myIdlDoc);
             if (myParsedSuccess && myIter == myEnd) {
-                for( auto myImportNode : myIdlDoc) {
+                for (auto myImportNode : myIdlDoc) {
                     fs::path myFilename(myImportNode.filename());
                     myFilename = fs::absolute(myFilename);
                     if (! fs::exists(myFilename) ) {
