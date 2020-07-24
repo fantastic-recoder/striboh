@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <boost/filesystem.hpp>
 #include "darbohAstNodeRoot.hpp"
 
 namespace striboh{
@@ -14,7 +15,7 @@ namespace striboh{
 
             using Includes = std::vector<std::string>;
 
-            AstNodeRoot parseIdl(const Includes &pIncludes, const std::string &pInputFile) noexcept;
+            AstNodeRoot parseIdl(const Includes &pIncludes, const boost::filesystem::path&, const std::string &pInputFile) noexcept;
         }
 } // end namespace striboh
 

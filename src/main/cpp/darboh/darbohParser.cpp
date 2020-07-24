@@ -15,12 +15,16 @@
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <fstream>
+
 
 namespace striboh {
     namespace darboh {
@@ -28,13 +32,16 @@ namespace striboh {
         using std::string;
         using std::vector;
         using std::cout;
+        using std::cerr;
         using std::endl;
         using std::ostream;
+        using boost::format;
 
         namespace fusion = boost::fusion;
         namespace phoenix = boost::phoenix;
         namespace qi = boost::spirit::qi;
         namespace ascii = boost::spirit::ascii;
+        namespace fs = boost::filesystem;
 
         template <typename Iterator>
         struct DarbohGrammar : qi::grammar<Iterator, AstNodeRoot(), ascii::space_type> {
@@ -67,27 +74,43 @@ namespace striboh {
          * @param pInputFile file to parse.
          * @return
          */
-        AstNodeRoot parseIdl(const vector<string> &pIncludes, const string &pInputFile) noexcept {
+        AstNodeRoot parseIdl(const vector<string> &pIncludes, const fs::path& pInputFile, const string &pInputFileContens) noexcept {
             using boost::spirit::ascii::space;
-            std::string::const_iterator myIter = pInputFile.begin();
-            std::string::const_iterator myEnd = pInputFile.end();
-            AstNodeRoot myIdlDoc;
             DarbohGrammar<std::string::const_iterator> myIdlGrammar;
-            bool r = phrase_parse(myIter, myEnd, myIdlGrammar, space, myIdlDoc);
-
-            if (r && myIter == myEnd) {
-                std::cout << "-------------------------\n";
-                std::cout << "Parsing succeeded\n";
-                std::cout << "-------------------------\n";
+            std::string::const_iterator myIter = pInputFileContens.begin();
+            std::string::const_iterator myEnd = pInputFileContens.end();
+            AstNodeRoot myIdlDoc;
+            const bool myParsedSuccess
+                    = phrase_parse(myIter, myEnd, myIdlGrammar, space, myIdlDoc);
+            if (myParsedSuccess && myIter == myEnd) {
+                for( auto myImportNode : myIdlDoc) {
+                    fs::path myFilename(myImportNode.filename());
+                    myFilename = fs::absolute(myFilename);
+                    if (! fs::exists(myFilename) ) {
+                        myIdlDoc.pushBackError(str(format("File %s does not exists.")%myFilename));
+                        return myIdlDoc;
+                    }
+                    std::ifstream myImportFileStream(myFilename.string(), std::ios::in);
+                    if(!myImportFileStream) {
+                        myIdlDoc.pushBackError(str(format("Failed to open %s.")%myFilename));
+                    } else {
+                        string myLine, myFileContens;
+                        while (std::getline(myImportFileStream, myLine)) {
+                            myFileContens += "\n";
+                            myFileContens += myLine;
+                        }
+                        auto myImportIdl = parseIdl(pIncludes, myFilename, myFileContens);
+                        myIdlDoc.mergeSubtree(myImportIdl);
+                    }
+                }
             }
             else
             {
                 std::string::const_iterator some = myIter + std::min(30, int(myEnd - myIter));
                 std::string context(myIter, (some>myEnd)?myEnd:some);
-                std::cout << "-------------------------\n";
-                std::cout << "Parsing failed\n";
-                std::cout << "stopped at: \"" << context << "...\"\n";
-                std::cout << "-------------------------\n";
+                std::stringstream myErr;
+                myErr << "Parsing of " << pInputFile << " failed, stopped at: \"" << context << "...\".";
+                myIdlDoc.pushBackError(myErr.str());
             }
             return myIdlDoc;
         }

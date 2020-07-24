@@ -13,6 +13,10 @@ namespace striboh {
             AstNodeImport(const std::string &pFilename) : mFilename(pFilename) {}
 
             AstNodeImport() {}
+
+            const std::string & filename() const {
+                return mFilename;
+            }
         };
     }
 }

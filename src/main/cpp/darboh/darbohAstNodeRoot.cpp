@@ -56,5 +56,8 @@ namespace striboh {
             printAstNode(0, pNode, pOstream);
         }
 
+        void AstNodeRoot::mergeSubtree(const AstNodeRoot &pSubtree) {
+            getErrors().insert(getErrors().begin(),pSubtree.getErrors().begin(),pSubtree.getErrors().end());
+        }
     } // end darboh
 } // end striboh

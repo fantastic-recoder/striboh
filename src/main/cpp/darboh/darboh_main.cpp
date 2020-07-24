@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 #include "darbohParser.hpp"
 
@@ -12,9 +13,12 @@
 using std::string;
 using std::vector;
 using std::cout;
+using std::cerr;
+using std::endl;
 using striboh::darboh::AstNodeRoot;
 
 namespace po=boost::program_options;
+namespace fs=boost::filesystem;
 
 int main(int pArgc, char* pArgv[]) {
 // Declare the supported options.
@@ -51,7 +55,24 @@ int main(int pArgc, char* pArgv[]) {
         auto myInputs=myVarMap["input-file"].as< vector<string> >();
         for(const auto& myInput:myInputs) {
             cout << "Processing " << myInput << "\n";
-            myParsedIdls.push_back(striboh::darboh::parseIdl(myIncludes, "import \"" + myInput + "\"" ));
+            try {
+                const AstNodeRoot myParseIdl = striboh::darboh::parseIdl(myIncludes, fs::path(myInput),
+                                                                         "import \"" + myInput + "\"");
+                if (!myParseIdl.hasErrors()) {
+                    std::cout << "-------------------------\n";
+                    std::cout << "Parsing of \"" << myInput << "\" succeeded\n";
+                    std::cout << "-------------------------\n";
+                    myParsedIdls.push_back(myParseIdl);
+                } else {
+                    for (string myError: myParseIdl.getErrors()) {
+                        cerr << "-------------------------\n";
+                        cerr << myError << endl;
+                        cerr << "-------------------------\n";
+                    }
+                }
+            } catch( std::exception& pExc ) {
+                cerr << "Something unexpected happened ... " << pExc.what() << endl;
+            }
         }
     }
     if(myVarMap.count("dump-tree"))

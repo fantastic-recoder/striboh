@@ -15,7 +15,24 @@ namespace striboh {
 
         class AstNodeImport;
 
-        struct AstNodeRoot : public std::vector<AstNodeImport> {
+        class AstNodeRoot : public std::vector<AstNodeImport> {
+            std::vector<std::string> mErrors;
+        public:
+            const std::vector <std::string> &getErrors() const {
+                return mErrors;
+            }
+
+            std::vector <std::string> &getErrors() {
+                return mErrors;
+            }
+
+            void pushBackError( const std::string& pError ) {
+                mErrors.push_back(pError);
+            }
+
+            bool hasErrors() const { return !mErrors.empty(); }
+
+            void mergeSubtree( const AstNodeRoot& pSubtree );
         };
 
         std::ostream &operator<<(std::ostream &, const AstNodeRoot &);
