@@ -1,11 +1,15 @@
 module m0 {
 
  module m1 {
-
+   interface Test {
+      int add( int p1, int p2);
+   };
  };
 
  module m2{
-
+    interface Hello {
+        string echo( string pIn );
+    };
  };
 
 };

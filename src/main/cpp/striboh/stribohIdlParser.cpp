@@ -8,6 +8,9 @@
 #include "stribohIdlAstIdentifierNode.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleListNode.hpp"
+#include "stribohIdlAstMethodNode.hpp"
+#include "stribohIdlAstTypeNode.hpp"
+#include "stribohIdlAstEBuildinTypes.hpp"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -123,6 +126,7 @@ namespace striboh {
                 closeBlock = lit('}');
                 keywordImport = lit("import");
                 keywordString = lit("string");
+                keywordInt = lit("int");
 
                 identifier = as_string[alpha >> *(alnum | char_("_"))];
 
@@ -132,12 +136,22 @@ namespace striboh {
 
                 importList = *import;
 
-                interface = keywordInterface >> openBlock >> closeBlock >> semiColon;
+                type = keywordString[_val = ast::EBuildinTypes::STRING] | keywordInt[_val = ast::EBuildinTypes::INT];
+
+                typedIdentifier = type >> identifier;
+
+                method = typedIdentifier >> lit('(') >> typedIdentifier >> *(lit(',') >> typedIdentifier) >> lit(')')
+                                         >> semiColon;
+
+                interface = keywordInterface >> identifier
+                                             >> openBlock
+                                             >> +method
+                                             >> closeBlock >> semiColon;
 
                 module = keywordModule >> identifier
                                        >> openBlock
-                                       >> moduleList //| interface
-                                       >> closeBlock >> semiColon;
+                                       >> moduleList | *interface
+                                 >> closeBlock >> semiColon;
 
                 moduleList = *module;
 
@@ -146,11 +160,15 @@ namespace striboh {
                 on_error<fail>(idl, handler(_1, _2, _3, _4));
                 on_error<fail>(import, handler(_1, _2, _3, _4));
                 on_error<fail>(module, handler(_1, _2, _3, _4));
+                on_error<fail>(method, handler(_1, _2, _3, _4));
+                on_error<fail>(type, handler(_1, _2, _3, _4));
 
                 auto set_location_info = annotate(_val, _1, _3);
                 on_success(identifier, set_location_info);
                 on_success(import, set_location_info);
                 on_success(module, set_location_info);
+                on_success(method, set_location_info);
+                on_success(type, set_location_info);
 
                 BOOST_SPIRIT_DEBUG_NODES((keywordInterface)(keywordModule)(semiColon)(identifier)(module)(import))
             }
@@ -163,10 +181,14 @@ namespace striboh {
             qi::rule<Iterator, std::string(), ascii::space_type> quoted_file_name;
             qi::rule<Iterator, ast::IdentifierNode(), ascii::space_type> identifier;
             qi::rule<Iterator, ast::ModuleNode(), ascii::space_type> module;
+            qi::rule<Iterator, ast::MethodNode(), ascii::space_type> method;
+            qi::rule<Iterator, ast::TypeNode(), ascii::space_type> type;
+            qi::rule<Iterator, ast::TypedIdentifierNode(), ascii::space_type> typedIdentifier;
             qi::rule<Iterator, ast::ImportListNode(), ascii::space_type> importList;
             qi::rule<Iterator, ast::ModuleListNode(), ascii::space_type> moduleList;
             qi::rule<Iterator, ascii::space_type> interface;
-            qi::rule<Iterator> keywordInterface, keywordModule, semiColon, openBlock, closeBlock, keywordImport, keywordString;
+            qi::rule<Iterator> keywordInterface, keywordModule, semiColon, openBlock, closeBlock, keywordImport,
+                    keywordString, keywordInt;
 
 
         }; // end IdlGrammar
