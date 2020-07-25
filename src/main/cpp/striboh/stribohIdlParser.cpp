@@ -6,6 +6,8 @@
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
 #include "stribohIdlAstIdentifierNode.hpp"
+#include "stribohIdlAstModuleNode.hpp"
+#include "stribohIdlAstModuleListNode.hpp"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -14,6 +16,7 @@
 #include <boost/spirit/include/phoenix_fusion.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/spirit/include/support_line_pos_iterator.hpp>
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
@@ -30,6 +33,12 @@
 namespace striboh {
     namespace idl {
 
+        namespace fusion = boost::fusion;
+        namespace qi = boost::spirit::qi;
+        namespace ascii = boost::spirit::ascii;
+        namespace fs = boost::filesystem;
+        namespace phx = boost::phoenix;
+
         using std::string;
         using std::vector;
         using std::cout;
@@ -37,12 +46,23 @@ namespace striboh {
         using std::endl;
         using std::ostream;
         using boost::format;
+        using qi::lit;
+        using qi::lexeme;
+        using qi::as_string;
+        using qi::alnum;
+        using qi::alpha;
+        using qi::on_error;
+        using qi::on_success;
+        using qi::fail;
+        using qi::error_handler;
+        using ascii::char_;
+        using boost::spirit::get_line;
+        using boost::spirit::get_column;
+        using namespace qi::labels;
 
-        namespace fusion = boost::fusion;
-        namespace phoenix = boost::phoenix;
-        namespace qi = boost::spirit::qi;
-        namespace ascii = boost::spirit::ascii;
-        namespace fs = boost::filesystem;
+        using phx::at_c;
+        using phx::push_back;
+
 
         struct error_handler_f {
             typedef qi::error_handler_result result_type;
@@ -60,22 +80,26 @@ namespace striboh {
         struct annotation_f {
             typedef void result_type;
 
-            annotation_f(It first) : first(first) {}
+            constexpr annotation_f() {
+                throw std::runtime_error("annotation_f() is not defined!");
+            }
 
-            It const first;
+            constexpr annotation_f(const It& pFirst) : mFirst(pFirst) {}
+
+            It const mFirst;
 
             template<typename Val, typename First, typename Last>
             void operator()(Val& v, First f, Last l) const {
-                std::cerr << "\nannotating " << typeid(v).name() << " '" << std::string(f, l) << "'\n";
-                do_annotate(v, f, l, first);
+                std::cout << "\nannotating " << typeid(v).name() << " '" << std::string(f, l) << "'\n";
+                do_annotate(v, f, l, mFirst);
             }
 
         private:
-            void static do_annotate(ast::BaseNode& li, It f, It l, It first) {
+            void static do_annotate(ast::BaseNode& pNode, It pIt, It pLast, It pFirst) {
                 using std::distance;
-                li.line = get_line(f);
-                li.column = get_column(first, f);
-                li.length = distance(f, l);
+                pNode.line = get_line(pIt);
+                pNode.column = get_column(pFirst, pIt);
+                pNode.length = distance(pIt, pLast);
             }
 
             static void do_annotate(...) { std::cerr << "(not having LocationInfo)\n"; }
@@ -89,51 +113,63 @@ namespace striboh {
         template<typename Iterator>
         struct IdlGrammar : qi::grammar<Iterator, ast::RootNode(), ascii::space_type> {
 
-            IdlGrammar() : IdlGrammar::base_type(idl) {
-                using qi::lit;
-                using qi::lexeme;
-                using qi::as_string;
-                using qi::alnum;
-                using qi::alpha;
-                using ascii::char_;
-                using ascii::string;
-                using namespace qi::labels;
+            IdlGrammar(Iterator pFirst) : IdlGrammar::base_type(idl),
+                                          annotate(pFirst) {
 
-                using phoenix::at_c;
-                using phoenix::push_back;
+                keywordInterface = lit("interface");
+                keywordModule = lit("module");
+                semiColon = lit(';');
+                openBlock = lit('{');
+                closeBlock = lit('}');
+                keywordImport = lit("import");
+                keywordString = lit("string");
 
-                KeywordInterface = lit("interface");
-                KeywordModule = lit("module");
-                SemiColon = lit(';');
-
-                Identifier = as_string[alpha >> *(alnum | char_("_"))];
+                identifier = as_string[alpha >> *(alnum | char_("_"))];
 
                 quoted_file_name %= lexeme['"' >> (+(char_ - '"')) >> '"'];
 
-                import %= lit("import") >> quoted_file_name;
+                import = keywordImport >> quoted_file_name >> semiColon;
 
-                idl %= (*import) /*>> body*/;
+                importList = *import;
+
+                interface = keywordInterface >> openBlock >> closeBlock >> semiColon;
+
+                module = keywordModule >> identifier
+                                       >> openBlock
+                                       >> moduleList //| interface
+                                       >> closeBlock >> semiColon;
+
+                moduleList = *module;
+
+                idl = importList >> moduleList;
+
+                on_error<fail>(idl, handler(_1, _2, _3, _4));
+                on_error<fail>(import, handler(_1, _2, _3, _4));
+                on_error<fail>(module, handler(_1, _2, _3, _4));
+
+                auto set_location_info = annotate(_val, _1, _3);
+                on_success(identifier, set_location_info);
+                on_success(import, set_location_info);
+                on_success(module, set_location_info);
+
+                BOOST_SPIRIT_DEBUG_NODES((keywordInterface)(keywordModule)(semiColon)(identifier)(module)(import))
             }
+
+            phx::function<error_handler_f> handler;
+            phx::function<annotation_f<Iterator>> annotate;
 
             qi::rule<Iterator, ast::RootNode(), ascii::space_type> idl;
             qi::rule<Iterator, ast::ImportNode(), ascii::space_type> import;
-            qi::rule<Iterator, string(), ascii::space_type> quoted_file_name;
-            qi::rule<Iterator, ast::IdentifierNode()> Identifier;
-            qi::rule<Iterator> KeywordInterface, KeywordModule, SemiColon;
-/*
-            on_error<fail>(ast::ModuleNode, handler(_1, _2, _3, _4));
-            on_error<fail>(ast::ImportNode, handler(_1, _2, _3, _4));
+            qi::rule<Iterator, std::string(), ascii::space_type> quoted_file_name;
+            qi::rule<Iterator, ast::IdentifierNode(), ascii::space_type> identifier;
+            qi::rule<Iterator, ast::ModuleNode(), ascii::space_type> module;
+            qi::rule<Iterator, ast::ImportListNode(), ascii::space_type> importList;
+            qi::rule<Iterator, ast::ModuleListNode(), ascii::space_type> moduleList;
+            qi::rule<Iterator, ascii::space_type> interface;
+            qi::rule<Iterator> keywordInterface, keywordModule, semiColon, openBlock, closeBlock, keywordImport, keywordString;
 
-            auto set_location_info = annotate(_val, _1, _3);
-            on_success(ast::IdentifierNode,    set_location_info);
-            on_success(ast::ImportNode, set_location_info);
-            on_success(ast::ModuleNode,    set_location_info);
 
-            BOOST_SPIRIT_DEBUG_NODES((KeywordInterface)(KeywordModule)(SemiColon)(Identifier))
-*/
         }; // end IdlGrammar
-
-        static const IdlGrammar<std::string::const_iterator> theIdlGrammar;
 
         /**
          * Parse the supplied input file.
@@ -147,19 +183,20 @@ namespace striboh {
             std::string::const_iterator myIter = pInputFileContens.begin();
             std::string::const_iterator myEnd = pInputFileContens.end();
             ast::RootNode myIdlDoc;
+            const IdlGrammar<std::string::const_iterator> theIdlGrammar(myIter);
             const bool myParsedSuccess
                     = phrase_parse(myIter, myEnd, theIdlGrammar, space, myIdlDoc);
             if (myParsedSuccess && myIter == myEnd) {
-                for (auto myImportNode : myIdlDoc) {
-                    fs::path myFilename(myImportNode.filename());
+                for (auto myImportNode : myIdlDoc.getImports()) {
+                    fs::path myFilename(myImportNode.getFilename());
                     myFilename = fs::absolute(myFilename);
-                    if (! fs::exists(myFilename) ) {
-                        myIdlDoc.pushBackError(str(format("File %s does not exists.")%myFilename));
+                    if (!fs::exists(myFilename)) {
+                        myIdlDoc.pushBackError(str(format("File %s does not exists.") % myFilename));
                         return myIdlDoc;
                     }
                     std::ifstream myImportFileStream(myFilename.string(), std::ios::in);
-                    if(!myImportFileStream) {
-                        myIdlDoc.pushBackError(str(format("Failed to open %s.")%myFilename));
+                    if (!myImportFileStream) {
+                        myIdlDoc.pushBackError(str(format("Failed to open %s.") % myFilename));
                     } else {
                         string myLine, myFileContens;
                         while (std::getline(myImportFileStream, myLine)) {

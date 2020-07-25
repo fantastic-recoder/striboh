@@ -7,17 +7,29 @@
 
 #include <vector>
 #include <string>
+#include <boost/fusion/tuple.hpp>
 
 #include "stribohIdlAstBaseNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
+#include "stribohIdlAstImportListNode.hpp"
+#include "stribohIdlAstModuleListNode.hpp"
 
 namespace striboh {
     namespace idl {
         namespace ast {
 
-            class RootNode : public std::vector<ImportNode>, BaseNode {
+            typedef boost::fusion::tuple<ImportListNode, ModuleListNode> RootNodeBase;
+
+            struct RootNode : BaseNode, RootNodeBase {
+                typedef ModuleNode value_type;
                 std::vector<std::string> mErrors;
-            public:
+
+                const ImportListNode& getImports() const { return boost::fusion::at_c<0>(*this); }
+
+                RootNode() {}
+
+                RootNode(const RootNodeBase& pBase) : RootNodeBase(pBase) {}
+
                 const std::vector<std::string>& getErrors() const {
                     return mErrors;
                 }
@@ -39,4 +51,6 @@ namespace striboh {
         }
     }
 }
+
+
 #endif //STRIBOH_STRIBOHIDLASTROOTNODE_HPP

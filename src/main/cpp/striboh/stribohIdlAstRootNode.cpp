@@ -38,7 +38,7 @@ namespace {
             myIdent += '\t';
         }
         pOstream << myIdent << "RootNode:{" << std::endl;
-        for (const auto& myChildNode: pNode2Print) {
+        for (const auto& myChildNode: pNode2Print.getImports()) {
             printAstNode(pIndent + 1, myChildNode, pOstream);
         }
         pOstream << myIdent << "}" << std::endl;
@@ -62,3 +62,4 @@ namespace striboh {
         }
     } // end idl
 } // end striboh
+

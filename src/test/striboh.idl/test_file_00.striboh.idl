@@ -1,7 +1,8 @@
-import "test_file_01"
+import "src/test/striboh.idl/test_file_01.striboh.idl";
 
-module m0 {
- module m3 {
+module Mmmm {
 
- }
-}
+};
+
+
+

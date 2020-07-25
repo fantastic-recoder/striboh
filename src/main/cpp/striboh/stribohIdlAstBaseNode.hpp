@@ -12,7 +12,7 @@ namespace manip { struct LocationInfoPrinter; }
 namespace striboh {
     namespace idl {
         namespace ast {
-            class BaseNode {
+            struct BaseNode {
                 unsigned line, column, length;
 
                 manip::LocationInfoPrinter printLoc() const;

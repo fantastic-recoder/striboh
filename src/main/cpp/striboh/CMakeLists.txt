@@ -1,5 +1,5 @@
 
 message(STATUS "Striboh conan libs: ${CONAN_LIBS}.")
 
-add_executable(striboh_idl_compiler stribohIdlCompiler_main.cpp stribohIdlParser.cpp stribohIdlParser.hpp stribohIdlAstRootNode.cpp stribohIdlAstRootNode.hpp stribohIdlAstBaseNode.hpp stribohIdlAstModuleNode.cpp stribohIdlAstModuleNode.hpp stribohIdlAstIdentifierNode.hpp identifierNode.hpp)
+add_executable(striboh_idl_compiler stribohIdlCompiler_main.cpp stribohIdlParser.cpp stribohIdlParser.hpp stribohIdlAstRootNode.cpp stribohIdlAstRootNode.hpp stribohIdlAstBaseNode.hpp stribohIdlAstModuleNode.cpp stribohIdlAstModuleNode.hpp stribohIdlAstIdentifierNode.hpp stribohIdlAstImportListNode.hpp)
 target_link_libraries(striboh_idl_compiler boost_program_options boost_filesystem boost_system)

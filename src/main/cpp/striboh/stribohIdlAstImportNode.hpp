@@ -5,17 +5,18 @@
 #ifndef STRIBOH_ASTNODEIMPORT_HPP
 #define STRIBOH_ASTNODEIMPORT_HPP
 
+#include <string>
+#include <boost/fusion/adapted/struct.hpp>
+
+#include "stribohIdlAstBaseNode.hpp"
+
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct ImportNode {
+            struct ImportNode : BaseNode {
                 std::string mFilename;
 
-                ImportNode(const std::string& pFilename) : mFilename(pFilename) {}
-
-                ImportNode() {}
-
-                const std::string& filename() const {
+                const std::string& getFilename() const {
                     return mFilename;
                 }
             };
@@ -23,5 +24,6 @@ namespace striboh {
     }
 }
 
+BOOST_FUSION_ADAPT_STRUCT(striboh::idl::ast::ImportNode, (std::string, mFilename))
 
 #endif //STRIBOH_ASTNODEIMPORT_HPP

@@ -57,7 +57,7 @@ int main(int pArgc, char* pArgv[]) {
             cout << "Processing " << myInput << "\n";
             try {
                 const RootNode myParseIdl = striboh::idl::parseIdl(myIncludes, fs::path(myInput),
-                                                                   "import \"" + myInput + "\"");
+                                                                   "import \"" + myInput + "\";");
                 if (!myParseIdl.hasErrors()) {
                     std::cout << "-------------------------\n";
                     std::cout << "Parsing of \"" << myInput << "\" succeeded\n";

@@ -1,13 +1,11 @@
 module m0 {
 
  module m1 {
-    service Hallo {
-       string echo( string pIn );
-    }
- }
+
+ };
 
  module m2{
 
- }
+ };
 
-}
+};
