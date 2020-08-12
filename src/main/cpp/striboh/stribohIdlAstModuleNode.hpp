@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/24/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/24/20.
 //
 
 #ifndef STRIBOH_STRIBOHIDLASTMODULENODE_HPP
@@ -21,8 +21,26 @@ namespace striboh {
                 ModuleNode() {}
 
                 ModuleNode(const IdentifierNode& pIdent)
-                        :
-                        mIdentifier(pIdent) {}
+                        : mIdentifier(pIdent) {}
+
+                const std::string&
+                getNodeType() const override;
+
+                const std::string&
+                getValue() const override {
+                    mIdentifier.getValue();
+                }
+
+                int
+                getSubNodeCount() const override {
+                    return 1;
+                }
+
+                const BaseNode&
+                getSubNode(size_t) const override {
+                    return mIdentifier;
+                }
+
             };
         }
     }

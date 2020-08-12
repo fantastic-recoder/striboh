@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/25/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/25/20.
 //
 
 #ifndef STRIBOH_STRIBOHIDLASTTYPEDIDENTIFIERNODE_HPP
@@ -15,7 +15,20 @@ namespace striboh {
     namespace idl {
         namespace ast {
             typedef boost::fusion::tuple<EBuildinTypes, IdentifierNode> TypedIdentifierBase;
+
             struct TypedIdentifierNode : BaseNode, TypedIdentifierBase {
+
+                const std::string&
+                getNodeType() const override;
+
+                const std::string&
+                getValue() const override;
+
+                int
+                getSubNodeCount() const override;
+
+                const BaseNode&
+                getSubNode(size_t pIdx) const override;
 
             };
         }

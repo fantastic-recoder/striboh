@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/25/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/25/20.
 //
 
 #ifndef STRIBOH_STRIBOHIDLASTMETHODNODE_HPP
@@ -14,6 +14,18 @@ namespace striboh {
     namespace idl {
         namespace ast {
             struct MethodNode : BaseNode, std::vector<TypedIdentifierNode> {
+                const std::string&
+                getNodeType() const override;
+
+                const std::string&
+                getValue() const override;
+
+                virtual int
+                getSubNodeCount() const override;
+
+                virtual const BaseNode&
+                getSubNode(size_t pIdx) const override;
+
             };
         }
     }

@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/24/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/24/20.
 //
 
 #ifndef STRIBOH_STRIBOHIDLASTIDENTIFIERNODE_HPP
@@ -14,12 +14,22 @@ namespace striboh {
     namespace idl {
         namespace ast {
             struct IdentifierNode : BaseNode {
+
+                IdentifierNode() {}
+
+                IdentifierNode(const std::string& pIdentifierName)
+                        : mIdentifierName(pIdentifierName) {}
+
+                const std::string& getNodeType() const override;
+
+                const std::string& getValue() const override {
+                    return mIdentifierName;
+                }
+
                 std::string mIdentifierName;
             };
         }
     }
 }
-
-BOOST_FUSION_ADAPT_STRUCT(striboh::idl::ast::IdentifierNode, (std::string, mIdentifierName))
 
 #endif //STRIBOH_STRIBOHIDLASTIDENTIFIERNODE_HPP

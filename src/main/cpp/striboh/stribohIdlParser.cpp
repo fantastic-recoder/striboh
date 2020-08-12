@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/18/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/18/20.
 //
 
 #include "stribohIdlParser.hpp"
@@ -31,7 +31,6 @@
 #include <vector>
 #include <algorithm>
 #include <fstream>
-
 
 namespace striboh {
     namespace idl {
@@ -128,7 +127,7 @@ namespace striboh {
                 keywordString = lit("string");
                 keywordInt = lit("int");
 
-                identifier = as_string[alpha >> *(alnum | char_("_"))];
+                identifier %= as_string[alpha >> *(alnum | char_("_"))];
 
                 quoted_file_name %= lexeme['"' >> (+(char_ - '"')) >> '"'];
 
@@ -148,14 +147,17 @@ namespace striboh {
                                              >> +method
                                              >> closeBlock >> semiColon;
 
-                module = keywordModule >> identifier
-                                       >> openBlock
-                                       >> moduleList | *interface
-                                 >> closeBlock >> semiColon;
+                //moduleBody %= moduleList | *interface;
 
-                moduleList = *module;
+                module %= keywordModule >> identifier
+                                        >> openBlock
+                                        >> (moduleList | *interface)
+                                        //>> moduleBody
+                                        >> closeBlock >> semiColon;
 
-                idl = importList >> moduleList;
+                moduleList %= *module;
+
+                idl %= importList >> moduleList;
 
                 on_error<fail>(idl, handler(_1, _2, _3, _4));
                 on_error<fail>(import, handler(_1, _2, _3, _4));
@@ -171,6 +173,7 @@ namespace striboh {
                 on_success(type, set_location_info);
 
                 BOOST_SPIRIT_DEBUG_NODES((keywordInterface)(keywordModule)(semiColon)(identifier)(module)(import))
+
             }
 
             phx::function<error_handler_f> handler;
@@ -181,6 +184,7 @@ namespace striboh {
             qi::rule<Iterator, std::string(), ascii::space_type> quoted_file_name;
             qi::rule<Iterator, ast::IdentifierNode(), ascii::space_type> identifier;
             qi::rule<Iterator, ast::ModuleNode(), ascii::space_type> module;
+            //qi::rule<Iterator, ast::ModuleBody(), ascii::space_type> moduleBody;
             qi::rule<Iterator, ast::MethodNode(), ascii::space_type> method;
             qi::rule<Iterator, ast::TypeNode(), ascii::space_type> type;
             qi::rule<Iterator, ast::TypedIdentifierNode(), ascii::space_type> typedIdentifier;
@@ -193,47 +197,62 @@ namespace striboh {
 
         }; // end IdlGrammar
 
-        /**
-         * Parse the supplied input file.
-         * @param pIncludes vector of include directories.
-         * @param pInputFile file to parse.
-         * @return
-         */
-        ast::RootNode parseIdl(const vector<string>& pIncludes, const fs::path& pInputFile,
-                               const string& pInputFileContens) noexcept {
-            using boost::spirit::ascii::space;
-            std::string::const_iterator myIter = pInputFileContens.begin();
-            std::string::const_iterator myEnd = pInputFileContens.end();
-            ast::RootNode myIdlDoc;
-            const IdlGrammar<std::string::const_iterator> theIdlGrammar(myIter);
-            const bool myParsedSuccess
-                    = phrase_parse(myIter, myEnd, theIdlGrammar, space, myIdlDoc);
-            if (myParsedSuccess && myIter == myEnd) {
-                for (auto myImportNode : myIdlDoc.getImports()) {
-                    fs::path myFilename(myImportNode.getFilename());
-                    myFilename = fs::absolute(myFilename);
-                    if (!fs::exists(myFilename)) {
-                        myIdlDoc.pushBackError(str(format("File %s does not exists.") % myFilename));
-                        return myIdlDoc;
-                    }
-                    std::ifstream myImportFileStream(myFilename.string(), std::ios::in);
-                    if (!myImportFileStream) {
-                        myIdlDoc.pushBackError(str(format("Failed to open %s.") % myFilename));
-                    } else {
-                        string myLine, myFileContens;
-                        while (std::getline(myImportFileStream, myLine)) {
-                            myFileContens += "\n";
-                            myFileContens += myLine;
-                        }
-                        auto myImportIdl = parseIdl(pIncludes, myFilename, myFileContens);
-                        myIdlDoc.mergeSubtree(myImportIdl);
-                    }
-                }
+        std::string readFile(const Includes& pIncludes, const fs::path& pInputFile, ast::RootNode& pIdlDoc) {
+            auto myFilename = fs::absolute(pInputFile);
+            if (!fs::exists(myFilename)) {
+                pIdlDoc.pushBackError(str(format("File %s does not exists.") % myFilename));
             }
-            else
-            {
+            std::ifstream myImportFileStream(myFilename.string(), std::ios::in);
+            if (!myImportFileStream) {
+                pIdlDoc.pushBackError(str(format("Failed to open %s.") % myFilename));
+            } else {
+                string myLine, myFileContent;
+                while (std::getline(myImportFileStream, myLine)) {
+                    myFileContent += "\n";
+                    myFileContent += myLine;
+                }
+                return myFileContent;
+            }
+            return "";
+        }
+
+        bool doParse(const Includes& pIncludes, string::const_iterator& pIter, string::const_iterator& pEnd,
+                     ast::RootNode& pIdlDoc) {
+            using boost::spirit::ascii::space;
+            const IdlGrammar<string::const_iterator> theIdlGrammar(pIter);
+            const bool myParsedSuccess
+                    = phrase_parse(pIter, pEnd, theIdlGrammar, space, pIdlDoc);
+            if (myParsedSuccess && pIter == pEnd) {
+                for (auto myImportNode : pIdlDoc.getImports()) {
+                    fs::path myFilename(myImportNode.getFilename());
+                    auto myImportIdl = parseIdlFile(pIncludes, myFilename);
+                    pIdlDoc.mergeSubtree(myImportIdl);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        ast::RootNode
+        parseIdlStr(const Includes& pIncludes, const string& pInputStr) noexcept {
+            string::const_iterator myIter = pInputStr.begin();
+            string::const_iterator myEnd = pInputStr.end();
+            ast::RootNode myIdlDoc;
+            doParse(pIncludes, myIter, myEnd, myIdlDoc);
+            return myIdlDoc;
+        }
+
+        ast::RootNode
+        parseIdlFile(const Includes& pIncludes, const fs::path& pInputFile) noexcept {
+            ast::RootNode myIdlDoc;
+            string myInputFileContent = readFile(pIncludes, pInputFile, myIdlDoc);
+            string::const_iterator myIter = myInputFileContent.begin();
+            string::const_iterator myEnd = myInputFileContent.end();
+            if (myIdlDoc.getErrors().empty()) {
+                doParse(pIncludes, myIter, myEnd, myIdlDoc);
+            } else {
                 std::string::const_iterator some = myIter + std::min(30, int(myEnd - myIter));
-                std::string context(myIter, (some>myEnd)?myEnd:some);
+                std::string context(myIter, (some > myEnd) ? myEnd : some);
                 std::stringstream myErr;
                 myErr << "Parsing of " << pInputFile << " failed, stopped at: \"" << context << "...\".";
                 myIdlDoc.pushBackError(myErr.str());

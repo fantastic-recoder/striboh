@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/18/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/18/20.
 //
 #include <string>
 #include <vector>
@@ -56,8 +56,7 @@ int main(int pArgc, char* pArgv[]) {
         for(const auto& myInput:myInputs) {
             cout << "Processing " << myInput << "\n";
             try {
-                const RootNode myParseIdl = striboh::idl::parseIdl(myIncludes, fs::path(myInput),
-                                                                   "import \"" + myInput + "\";");
+                const RootNode myParseIdl = striboh::idl::parseIdlFile(myIncludes, fs::path(myInput));
                 if (!myParseIdl.hasErrors()) {
                     std::cout << "-------------------------\n";
                     std::cout << "Parsing of \"" << myInput << "\" succeeded\n";

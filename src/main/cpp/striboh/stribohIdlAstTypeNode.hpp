@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/25/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/25/20.
 //
 
 #ifndef STRIBOH_STRIBOHIDLASTTYPENODE_HPP
@@ -18,6 +18,14 @@ namespace striboh {
                     return mBuildinType;
                 }
 
+                EBuildinTypes& getType() {
+                    return mBuildinType;
+                }
+
+                const EBuildinTypes getType() const {
+                    return mBuildinType;
+                }
+
                 operator EBuildinTypes&() {
                     return mBuildinType;
                 }
@@ -25,6 +33,13 @@ namespace striboh {
                 TypeNode& operator=(const EBuildinTypes pType) {
                     mBuildinType = pType;
                 }
+
+                virtual const std::string&
+                getNodeType() const override;
+
+                virtual const std::string&
+                getValue() const override;
+
             };
         }
     }

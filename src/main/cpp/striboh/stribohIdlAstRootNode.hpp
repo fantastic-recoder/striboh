@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/19/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/19/20.
 //
 
 #ifndef STRIBOH_STRIBOHIDLASTROOTNODE_HPP
@@ -26,6 +26,12 @@ namespace striboh {
 
                 const ImportListNode& getImports() const { return boost::fusion::at_c<0>(*this); }
 
+                ImportListNode& getImports() { return boost::fusion::at_c<0>(*this); }
+
+                const ModuleListNode& getModules() const { return boost::fusion::at_c<1>(*this); }
+
+                ModuleListNode& getModules() { return boost::fusion::at_c<1>(*this); }
+
                 RootNode() {}
 
                 RootNode(const RootNodeBase& pBase) : RootNodeBase(pBase) {}
@@ -45,6 +51,20 @@ namespace striboh {
                 bool hasErrors() const { return !mErrors.empty(); }
 
                 void mergeSubtree(const RootNode& pSubtree);
+
+                const std::string&
+                getNodeType() const override;
+
+                const std::string&
+                getValue() const override;
+
+                int
+                getSubNodeCount() const override;
+
+                const BaseNode&
+                getSubNode(size_t pIdx) const override;
+
+
             };
 
             std::ostream& operator<<(std::ostream&, const RootNode&);

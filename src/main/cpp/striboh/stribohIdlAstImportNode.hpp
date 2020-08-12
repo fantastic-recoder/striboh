@@ -1,5 +1,5 @@
 //
-// Created by grobap on 7/21/20.
+// Created by coder.peter.grobarcik@gmail.com on 7/21/20.
 //
 
 #ifndef STRIBOH_ASTNODEIMPORT_HPP
@@ -16,14 +16,24 @@ namespace striboh {
             struct ImportNode : BaseNode {
                 std::string mFilename;
 
+                ImportNode() {}
+
+                ImportNode(const std::string& pFilename)
+                        : mFilename(pFilename) {}
+
+                const std::string& getNodeType() const override;
+
                 const std::string& getFilename() const {
                     return mFilename;
+                }
+
+                const std::string& getValue() const override {
+                    return getFilename();
                 }
             };
         }
     }
 }
 
-BOOST_FUSION_ADAPT_STRUCT(striboh::idl::ast::ImportNode, (std::string, mFilename))
 
 #endif //STRIBOH_ASTNODEIMPORT_HPP
