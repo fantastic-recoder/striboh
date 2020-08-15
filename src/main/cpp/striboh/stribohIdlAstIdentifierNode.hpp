@@ -5,29 +5,34 @@
 #ifndef STRIBOH_STRIBOHIDLASTIDENTIFIERNODE_HPP
 #define STRIBOH_STRIBOHIDLASTIDENTIFIERNODE_HPP
 
-#include <string>
+#include<string>
 #include <boost/fusion/adapted/struct.hpp>
 
 #include "stribohIdlAstBaseNode.hpp"
 
+
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct IdentifierNode : BaseNode {
+            constexpr const char *const K_IDENTIFIER_NODE = "IdentifierNode";
 
-                IdentifierNode() {}
+            struct IdentifierNode : BaseValueNode<std::string> {
 
-                IdentifierNode(const std::string& pIdentifierName)
-                        : mIdentifierName(pIdentifierName) {}
+                IdentifierNode();
 
-                const std::string& getNodeType() const override;
+                explicit IdentifierNode(const std::string& pIdentifierName);
 
-                const std::string& getValue() const override {
-                    return mIdentifierName;
+                virtual size_t size() const {
+                    return 1L;
                 }
 
-                std::string mIdentifierName;
             };
+
+            inline std::ostream& operator<<(std::ostream& pOstream, const IdentifierNode& pNode) {
+                pOstream << pNode.getValue();
+                return pOstream;
+            }
+
         }
     }
 }

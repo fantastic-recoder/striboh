@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <striboh/stribohIdlParser.hpp>
+#include <striboh/stribohIdlAstModuleBodyNode.hpp>
 
 namespace {
     static const char *K_TST_IDL_MOD00 = R"K_TST_IDL(
@@ -37,7 +38,7 @@ TEST(stribohIdlTests, testModule) {
     }
     EXPECT_EQ(0, myIdlAst.getErrors().size());
     EXPECT_EQ(1, myIdlAst.getModules().size());
-    EXPECT_EQ(string("myFirstModule"), myIdlAst.getModules()[0].getValue());
+    EXPECT_EQ(string("myFirstModule"), myIdlAst.getModules()[0].getIdentifierStr());
     EXPECT_EQ(1, myIdlAst.getModules().size());
 }
 
@@ -49,5 +50,11 @@ TEST(stribohIdlTests, testNestedModules) {
     }
     EXPECT_EQ(0, myIdlAst.getErrors().size());
     EXPECT_EQ(1, myIdlAst.getModules().size());
-    //TODO: Modules can have submodules EXPECT_EQ(1, myIdlAst.getModules()[0].get.size());
+    const ast::ModuleNode& myM0ModuleNode = myIdlAst.getModules()[0];
+    EXPECT_EQ(string("m0"), myM0ModuleNode.getIdentifierStr());
+    EXPECT_EQ(1, myM0ModuleNode.getModuleBody().getNodules().size());
+    const ast::ModuleNode& myM1ModuleNode = myM0ModuleNode.getModuleBody().getNodules()[0];
+    EXPECT_EQ(string("m1"), myM1ModuleNode.getIdentifierStr());
+    const ast::ModuleNode& myM2ModuleNode = myM1ModuleNode.getModuleBody().getNodules()[0];
+    EXPECT_EQ(string("m2"), myM2ModuleNode.getIdentifierStr());
 }

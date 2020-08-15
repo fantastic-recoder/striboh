@@ -13,19 +13,11 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct MethodNode : BaseNode, std::vector<TypedIdentifierNode> {
-                const std::string&
-                getNodeType() const override;
 
-                const std::string&
-                getValue() const override;
+            constexpr const char *const K_METHOD_NODE = "MethodNode";
 
-                virtual int
-                getSubNodeCount() const override;
-
-                virtual const BaseNode&
-                getSubNode(size_t pIdx) const override;
-
+            struct MethodNode : BaseListNode<TypedIdentifierNode> {
+                MethodNode() : BaseListNode<TypedIdentifierNode>(K_METHOD_NODE) {}
             };
         }
     }

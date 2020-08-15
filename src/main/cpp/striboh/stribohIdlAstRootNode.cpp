@@ -21,6 +21,10 @@
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
 
+namespace {
+    static const std::string K_ROOT_VAL = "<root>";
+}
+
 namespace striboh {
     namespace idl {
         namespace ast {
@@ -44,35 +48,14 @@ namespace striboh {
                                     pSubtree.getModules().end());
             }
 
-            const std::string& RootNode::getNodeType() const {
-                static string K_NODE_TYPE("RootNode");
-                return K_NODE_TYPE;
+            RootNode::~RootNode() {
+
             }
 
-            const std::string& RootNode::getValue() const {
-                static string K_RET_V("Root");
-                return K_RET_V;
+            std::string RootNode::getValueStr() const {
+                return K_ROOT_VAL;
             }
 
-            int RootNode::getSubNodeCount() const {
-                return getModules().size() + getImports().size();
-            }
-
-            const BaseNode& RootNode::getSubNode(size_t pIdx) const {
-                const size_t myImportListSize = getImports().size();
-                if (pIdx < myImportListSize)
-                    return getImports()[pIdx];
-                const size_t mySize = getSubNodeCount();
-                if (pIdx >= mySize) {
-                    throw std::range_error(str(
-                            boost::format("Index % is out of range, max is %")
-                            % pIdx
-                            % mySize
-                                           )
-                    );
-                }
-                return getModules()[pIdx - myImportListSize];
-            }
         }
     } // end idl
 } // end striboh

@@ -6,6 +6,7 @@
 #define STRIBOH_STRIBOHIDLASTMODULENODE_HPP
 
 #include <string>
+#include <memory>
 #include <boost/fusion/adapted/struct.hpp>
 #include <boost/fusion/tuple.hpp>
 
@@ -15,33 +16,37 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct ModuleNode : BaseNode {
-                IdentifierNode mIdentifier;
 
-                ModuleNode() {}
+            class ModuleBodyNode;
 
-                ModuleNode(const IdentifierNode& pIdent)
-                        : mIdentifier(pIdent) {}
+            constexpr const char *const K_MODULE_NODE = "ModuleNode";
 
-                const std::string&
-                getNodeType() const override;
+            struct ModuleNode : public BaseValueNode<IdentifierNode> {
 
-                const std::string&
-                getValue() const override {
-                    mIdentifier.getValue();
-                }
+                ModuleNode();
 
-                int
-                getSubNodeCount() const override {
-                    return 1;
-                }
+                ModuleNode(const ModuleNode& pModuleNode);
 
-                const BaseNode&
-                getSubNode(size_t) const override {
-                    return mIdentifier;
-                }
+                ModuleNode(const IdentifierNode& pIdent);
 
+                const std::string& getIdentifierStr() const;
+
+                const ModuleBodyNode& getModuleBody() const;
+
+                ModuleBodyNode& getModuleBody();
+
+                void addModuleBody(const ModuleBodyNode&);
+
+                ModuleNode& operator=(const ModuleNode&);
+
+                virtual ~ModuleNode();
+
+            private:
+                std::unique_ptr<ModuleBodyNode> mBody;
             };
+
+            ModuleNode& operator+=(ModuleNode&, const ModuleBodyNode&);
+
         }
     }
 }

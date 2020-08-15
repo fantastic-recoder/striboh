@@ -15,16 +15,11 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct ImportListNode : BaseNode, std::vector<ImportNode> {
-                const std::string&
-                getNodeType() const override;
 
-                virtual int
-                getSubNodeCount() const override;
+            constexpr const char *const K_IMPORT_LIST_NODE = "ImportListNode";
 
-                virtual const BaseNode&
-                getSubNode(size_t pIdx) const override;
-
+            struct ImportListNode : BaseListNode<ImportNode> {
+                ImportListNode() : BaseListNode<ImportNode>(K_IMPORT_LIST_NODE) {}
             };
         }
     }

@@ -31,23 +31,6 @@ namespace striboh {
                 }
             }
 
-            const std::string& TypedIdentifierNode::getNodeType() const {
-                static string K_NODE_TYPE("TypedIdentifierNode");
-                return K_NODE_TYPE;
-            }
-
-            const std::string& TypedIdentifierNode::getValue() const {
-                return toString(at_c<0>(*this));
-            }
-
-            int TypedIdentifierNode::getSubNodeCount() const {
-                return 1;
-            }
-
-            const BaseNode& TypedIdentifierNode::getSubNode(size_t pIdx) const {
-                return at_c<1>(*this);
-            }
-
         }
     }
 }

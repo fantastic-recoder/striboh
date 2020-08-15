@@ -8,6 +8,7 @@
 #include "stribohIdlAstIdentifierNode.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleListNode.hpp"
+#include "stribohIdlAstModuleBodyNode.hpp"
 #include "stribohIdlAstMethodNode.hpp"
 #include "stribohIdlAstTypeNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
@@ -147,12 +148,11 @@ namespace striboh {
                                              >> +method
                                              >> closeBlock >> semiColon;
 
-                //moduleBody %= moduleList | *interface;
+                moduleBody %= moduleList | *interface;
 
                 module %= keywordModule >> identifier
                                         >> openBlock
-                                        >> (moduleList | *interface)
-                                        //>> moduleBody
+                                        >> moduleBody[_val += _1]
                                         >> closeBlock >> semiColon;
 
                 moduleList %= *module;
@@ -184,7 +184,7 @@ namespace striboh {
             qi::rule<Iterator, std::string(), ascii::space_type> quoted_file_name;
             qi::rule<Iterator, ast::IdentifierNode(), ascii::space_type> identifier;
             qi::rule<Iterator, ast::ModuleNode(), ascii::space_type> module;
-            //qi::rule<Iterator, ast::ModuleBody(), ascii::space_type> moduleBody;
+            qi::rule<Iterator, ast::ModuleBodyNode(), ascii::space_type> moduleBody;
             qi::rule<Iterator, ast::MethodNode(), ascii::space_type> method;
             qi::rule<Iterator, ast::TypeNode(), ascii::space_type> type;
             qi::rule<Iterator, ast::TypedIdentifierNode(), ascii::space_type> typedIdentifier;

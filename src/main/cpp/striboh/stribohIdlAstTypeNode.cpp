@@ -9,12 +9,7 @@ namespace striboh {
         namespace ast {
             using std::string;
 
-            const std::string& ast::TypeNode::getNodeType() const {
-                static string K_NODE_TYPE("TypeNode");
-                return K_NODE_TYPE;
-            }
-
-            const std::string& TypeNode::getValue() const {
+            std::string TypeNode::getValueStr() const {
                 return toString(getType());
             }
         }

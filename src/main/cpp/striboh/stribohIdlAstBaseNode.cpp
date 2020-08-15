@@ -15,7 +15,7 @@ namespace striboh {
                     myIdent += '\t';
                 }
                 pOstream << myIdent << getNodeType() << ":{" << std::endl;
-                pOstream << myIdent << "\tvalue:" << getValue() << std::endl;
+                pOstream << myIdent << "\tvalue:" << getValueStr() << std::endl;
                 const size_t mySubNodeCount = getSubNodeCount();
                 for (size_t myI = 0; myI < mySubNodeCount; myI++) {
                     getSubNode(myI).printAstNode(pIndent + 1, pOstream);
@@ -23,13 +23,13 @@ namespace striboh {
                 pOstream << myIdent << "}" << std::endl;
             }
 
-            const std::string&
-            BaseNode::getValue() const {
+            std::string
+            BaseNode::getValueStr() const {
                 static std::string K_EMPTY("**empty**");
                 return K_EMPTY;
             }
 
-            int
+            size_t
             BaseNode::getSubNodeCount() const {
                 return 0;
             }
@@ -37,6 +37,10 @@ namespace striboh {
             const BaseNode&
             BaseNode::getSubNode(size_t pIdx) const {
                 return *this;
+            }
+
+            BaseNode::~BaseNode() {
+
             }
 
         }

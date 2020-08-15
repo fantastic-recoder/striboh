@@ -13,22 +13,20 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct ImportNode : BaseNode {
-                std::string mFilename;
 
-                ImportNode() {}
+            constexpr const char *const K_IMPORT_NODE = "ImportNode";
 
-                ImportNode(const std::string& pFilename)
-                        : mFilename(pFilename) {}
+            struct ImportNode : public BaseValueNode<std::string> {
 
-                const std::string& getNodeType() const override;
+                ImportNode() : BaseValueNode<std::string>(K_IMPORT_NODE) {}
 
-                const std::string& getFilename() const {
-                    return mFilename;
+                ImportNode(const std::string& pFilename) : BaseValueNode<std::string>(K_IMPORT_NODE, pFilename) {}
+
+                const std::string getFilename() const {
+                    return getValueStr();
                 }
 
-                const std::string& getValue() const override {
-                    return getFilename();
+                virtual ~ImportNode() {
                 }
             };
         }

@@ -11,8 +11,10 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct TypeNode : BaseNode {
+            struct TypeNode : public BaseNode {
                 EBuildinTypes mBuildinType = EBuildinTypes::NONE;
+
+                TypeNode() : BaseNode("TypeNode") {}
 
                 operator const EBuildinTypes() const {
                     return mBuildinType;
@@ -34,11 +36,9 @@ namespace striboh {
                     mBuildinType = pType;
                 }
 
-                virtual const std::string&
-                getNodeType() const override;
 
-                virtual const std::string&
-                getValue() const override;
+                std::string
+                getValueStr() const override;
 
             };
         }

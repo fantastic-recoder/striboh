@@ -13,19 +13,28 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            struct ModuleListNode : BaseNode, std::vector<ModuleNode> {
-                const std::string&
-                getNodeType() const override;
 
-                const std::string&
-                getValue() const override;
+            static const char *const K_MODULE_LIST_NODE = "ModuleListNode";
 
-                virtual int
-                getSubNodeCount() const override;
+            struct ModuleListNode : BaseListNode<ModuleNode> {
+                ModuleListNode()
+                        : BaseListNode<ModuleNode>(K_MODULE_LIST_NODE) {}
 
-                virtual const BaseNode&
-                getSubNode(size_t pIdx) const override;
+                ModuleListNode(const ModuleListNode& pModuleListNode)
+                        : BaseListNode<ModuleNode>(K_MODULE_LIST_NODE, pModuleListNode) {}
 
+                ModuleListNode(ModuleListNode&& pModuleListNode)
+                        : BaseListNode<ModuleNode>(K_MODULE_LIST_NODE, pModuleListNode) {}
+
+                ModuleListNode& operator=(const ModuleListNode& pModuleListNode) {
+                    type_t::operator=(pModuleListNode);
+                    return *this;
+                }
+
+                ModuleListNode& operator=(ModuleListNode&& pModuleListNode) {
+                    type_t::operator=(pModuleListNode);
+                    return *this;
+                }
             };
         }
     }

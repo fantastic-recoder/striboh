@@ -10,25 +10,44 @@
 #include "stribohIdlAstBaseNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
 #include "stribohIdlAstIdentifierNode.hpp"
+#include "stribohIdlAstTypeNode.hpp"
 
 namespace striboh {
     namespace idl {
         namespace ast {
-            typedef boost::fusion::tuple<EBuildinTypes, IdentifierNode> TypedIdentifierBase;
 
-            struct TypedIdentifierNode : BaseNode, TypedIdentifierBase {
+            struct TypedIdentifierNode : public BaseNode, public boost::fusion::tuple<EBuildinTypes, IdentifierNode> {
+                TypedIdentifierNode()
+                        : BaseNode("TypedIdentifierNode") {}
 
-                const std::string&
-                getNodeType() const override;
+                TypedIdentifierNode(const TypeNode& pTypeNode)
+                        : BaseNode("TypedIdentifierNode") {}
 
-                const std::string&
-                getValue() const override;
+                size_t getSubNodeCount() const override {
+                    return 1UL;
+                }
 
-                int
-                getSubNodeCount() const override;
+                const BaseNode& getSubNode(size_t pIdx) const {
+                    return boost::fusion::at_c<1>(*this);
+                }
 
-                const BaseNode&
-                getSubNode(size_t pIdx) const override;
+                TypedIdentifierNode& operator=(TypedIdentifierNode&& pIdentifierNode) {
+                    boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
+                    boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
+                    return *this;
+                }
+
+                TypedIdentifierNode& operator=(const TypedIdentifierNode& pIdentifierNode) {
+                    boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
+                    boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
+                    return *this;
+                }
+
+                TypedIdentifierNode(const TypedIdentifierNode& pIdentifierNode) : BaseNode(
+                        pIdentifierNode.getNodeType()) {
+                    boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
+                    boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
+                }
 
             };
         }

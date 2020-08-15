@@ -18,23 +18,25 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            typedef boost::fusion::tuple<ImportListNode, ModuleListNode> RootNodeBase;
+            static const char *const K_ROOT_NODE = "RootNode";
 
-            struct RootNode : BaseNode, RootNodeBase {
+            struct RootNode : public BaseTupleNode<ImportListNode, ModuleListNode> {
                 typedef ModuleNode value_type;
                 std::vector<std::string> mErrors;
 
-                const ImportListNode& getImports() const { return boost::fusion::at_c<0>(*this); }
+                const ImportListNode& getImports() const { return getSubNode1(); }
 
-                ImportListNode& getImports() { return boost::fusion::at_c<0>(*this); }
+                ImportListNode& getImports() { return getSubNode1(); }
 
-                const ModuleListNode& getModules() const { return boost::fusion::at_c<1>(*this); }
+                const ModuleListNode& getModules() const { return getSubNode2(); }
 
-                ModuleListNode& getModules() { return boost::fusion::at_c<1>(*this); }
+                ModuleListNode& getModules() { return getSubNode2(); }
 
-                RootNode() {}
+                RootNode()
+                        : BaseTupleNode<ImportListNode, ModuleListNode>(K_ROOT_NODE) {}
 
-                RootNode(const RootNodeBase& pBase) : RootNodeBase(pBase) {}
+                RootNode(const RootNode::type_t& pBase)
+                        : BaseTupleNode<ImportListNode, ModuleListNode>(K_ROOT_NODE, pBase) {}
 
                 const std::vector<std::string>& getErrors() const {
                     return mErrors;
@@ -52,19 +54,10 @@ namespace striboh {
 
                 void mergeSubtree(const RootNode& pSubtree);
 
-                const std::string&
-                getNodeType() const override;
+                std::string
+                getValueStr() const override;
 
-                const std::string&
-                getValue() const override;
-
-                int
-                getSubNodeCount() const override;
-
-                const BaseNode&
-                getSubNode(size_t pIdx) const override;
-
-
+                virtual ~RootNode();
             };
 
             std::ostream& operator<<(std::ostream&, const RootNode&);
