@@ -13,21 +13,29 @@ namespace striboh {
 
             constexpr const char *const K_INTERFACE_NODE = "InterfaceNode";
 
-            struct InterfaceNode : public BaseNode {
-                InterfaceNode() : BaseNode(K_INTERFACE_NODE) {}
+            struct InterfaceNode : public BaseValueNode<std::string> {
+                InterfaceNode()
+                        : BaseValueNode<std::string>(K_INTERFACE_NODE) {}
 
-                InterfaceNode(const InterfaceNode&) : BaseNode(K_INTERFACE_NODE) {}
+                InterfaceNode(const InterfaceNode& pOther)
+                        : BaseValueNode<std::string>(K_INTERFACE_NODE, pOther.getValue()) {}
 
-                InterfaceNode(InterfaceNode&&) : BaseNode(K_INTERFACE_NODE) {}
+                InterfaceNode(InterfaceNode&& pOther)
+                        : BaseValueNode<std::string>(K_INTERFACE_NODE, pOther.getValue()) {}
 
-                InterfaceNode& operator=(InterfaceNode&&) {
+                InterfaceNode& operator=(InterfaceNode&& pOther) {
+                    setValue(pOther.getValue());
                     return *this;
                 }
 
-                InterfaceNode& operator=(const InterfaceNode&) {
+                InterfaceNode& operator=(const InterfaceNode& pOther) {
+                    setValue(pOther.getValue());
                     return *this;
                 }
 
+                const std::string getIdentifierStr() const {
+                    return getValue();
+                }
             };
         }
     }

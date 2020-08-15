@@ -51,8 +51,12 @@ namespace striboh {
                     return *this;
                 }
 
-                const ModuleListNode& getNodules() const {
+                const ModuleListNode& getModules() const {
                     return getSubNode1();
+                }
+
+                const InterfaceListNode& getInterfaces() const {
+                    return getSubNode2();
                 }
             };
 
