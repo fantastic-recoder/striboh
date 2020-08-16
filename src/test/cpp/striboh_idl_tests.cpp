@@ -29,25 +29,6 @@ module m0 {
 };
 )K_TST_IDL";
 
-    static const char *K_TST_IDL_MOD02 = R"K_TST_IDL(
-module m001 {
-};
-
-module m002 {
-  module m10 {
-  };
-};
-)K_TST_IDL";
-
-    static const char *K_TST_IDL_INT00 = R"K_TST_IDL(
-module mod0 {
-   module mod1 {
-      interface HelloWorld {
-         string echo( string p0 );
-      };
-   };
-};
-)K_TST_IDL";
 
     void printErrors(const ast::RootNode& myIdlAst) {
         for (int myCnt = 0; myCnt < myIdlAst.getErrors().size(); myCnt++) {
@@ -82,6 +63,18 @@ TEST(stribohIdlTests, testNestedModules) {
     EXPECT_EQ(string("m2"), myM2ModuleNode.getIdentifierStr());
 }
 
+namespace {
+    static const char *K_TST_IDL_MOD02 = R"K_TST_IDL(
+module m001 {
+};
+
+module m002 {
+  module m10 {
+  };
+};
+)K_TST_IDL";
+
+}
 TEST(stribohIdlTests, testSerialModules) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_MOD02);
@@ -102,6 +95,18 @@ TEST(stribohIdlTests, testSerialModules) {
     EXPECT_EQ(string("m10"), myM10ModuleNode.getIdentifierStr());
 }
 
+namespace {
+    static const char *K_TST_IDL_INT00 = R"K_TST_IDL(
+module mod0 {
+   module mod1 {
+      interface HelloWorld {
+         string echo( string p0 );
+      };
+   };
+};
+)K_TST_IDL";
+
+}
 
 TEST(stribohIdlTests, testHelloWorldInterface) {
     Includes myIncludes;
@@ -109,16 +114,16 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
     printErrors(myIdlAst);
     EXPECT_EQ(0, myIdlAst.getErrors().size());
     unsigned const long mySize = myIdlAst.getModules().size();
-    EXPECT_EQ(1, mySize);
+    ASSERT_EQ(1, mySize);
 
-    if (mySize == 0) return;
     const ast::ModuleNode& myM0ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("mod0"), myM0ModuleNode.getIdentifierStr());
     EXPECT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
 
-    if (mySize == 1) return;
     const ast::ModuleNode& myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("mod1"), myM1ModuleNode.getIdentifierStr());
     EXPECT_EQ(1UL, myM1ModuleNode.getModuleBody().getInterfaces().size());
-    EXPECT_EQ(string("HelloWorld"), myM1ModuleNode.getModuleBody().getInterfaces()[0].getIdentifierStr());
+    const ast::InterfaceNode& myHelloWorldIFace = myM1ModuleNode.getModuleBody().getInterfaces()[0];
+    EXPECT_EQ(string("HelloWorld"), myHelloWorldIFace.getIdentifierStr());
+    ASSERT_EQ(1UL, myHelloWorldIFace.getMethods().size());
 }

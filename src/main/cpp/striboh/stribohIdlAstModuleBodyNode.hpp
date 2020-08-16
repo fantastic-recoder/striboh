@@ -27,6 +27,10 @@ namespace striboh {
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleList) {
                 }
 
+                ModuleBodyNode(const InterfaceListNode& pInterfaceList) :
+                        BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pInterfaceList) {
+                }
+
                 ModuleBodyNode(ModuleListNode&& pModuleList) :
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleList) {
                 }

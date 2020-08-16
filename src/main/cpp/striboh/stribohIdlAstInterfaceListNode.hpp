@@ -16,16 +16,13 @@ namespace striboh {
             struct InterfaceListNode : public BaseListNode<InterfaceNode> {
 
                 InterfaceListNode()
-                        :
-                        BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE) {}
+                        : BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE) {}
 
                 InterfaceListNode(const InterfaceListNode& pInterfaceListNode)
-                        :
-                        BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE, pInterfaceListNode) {}
+                        : BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE, pInterfaceListNode) {}
 
                 InterfaceListNode(InterfaceListNode&& pInterfaceListNode)
-                        :
-                        BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE, pInterfaceListNode) {}
+                        : BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE, pInterfaceListNode) {}
 
                 InterfaceListNode& operator=(InterfaceListNode&& pInterfaceListNode) {
                     type_t::operator=(pInterfaceListNode);
@@ -38,6 +35,8 @@ namespace striboh {
                 }
 
             };
+
+            InterfaceListNode& operator+=(InterfaceListNode& pInterfaceNode, const InterfaceNode& pIdentifierNode);
 
         }
     }

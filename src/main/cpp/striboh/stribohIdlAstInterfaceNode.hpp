@@ -5,7 +5,10 @@
 #ifndef STRIBOH_STRIBOHIDLASTINTERFACENODE_HPP
 #define STRIBOH_STRIBOHIDLASTINTERFACENODE_HPP
 
+#include <string>
 #include "stribohIdlAstBaseNode.hpp"
+#include "stribohIdlAstIdentifierNode.hpp"
+#include "stribohIdlAstMethodNode.hpp"
 
 namespace striboh {
     namespace idl {
@@ -17,11 +20,11 @@ namespace striboh {
                 InterfaceNode()
                         : BaseValueNode<std::string>(K_INTERFACE_NODE) {}
 
-                InterfaceNode(const InterfaceNode& pOther)
-                        : BaseValueNode<std::string>(K_INTERFACE_NODE, pOther.getValue()) {}
+                InterfaceNode(const InterfaceNode& pOther);
 
-                InterfaceNode(InterfaceNode&& pOther)
-                        : BaseValueNode<std::string>(K_INTERFACE_NODE, pOther.getValue()) {}
+                InterfaceNode(InterfaceNode&& pOther);
+
+                InterfaceNode(const IdentifierNode& pIdent);
 
                 InterfaceNode& operator=(InterfaceNode&& pOther) {
                     setValue(pOther.getValue());
@@ -36,7 +39,23 @@ namespace striboh {
                 const std::string getIdentifierStr() const {
                     return getValue();
                 }
+
+                const std::vector<MethodNode>& getMethods() const {
+                    return mMethods;
+                }
+
+                std::vector<MethodNode>& getMethods() {
+                    return mMethods;
+                }
+
+            private:
+                std::vector<MethodNode> mMethods;
             };
+
+            InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const IdentifierNode& pIdentifier);
+
+            InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const MethodNode& pMethod);
+
         }
     }
 }

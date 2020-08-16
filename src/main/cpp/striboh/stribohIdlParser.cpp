@@ -140,15 +140,22 @@ namespace striboh {
 
                 typedIdentifier = type >> identifier;
 
-                method = typedIdentifier >> lit('(') >> typedIdentifier >> *(lit(',') >> typedIdentifier) >> lit(')')
-                                         >> semiColon;
+                method = typedIdentifier
+                        >> lit('(')
+                        >> typedIdentifier >> *(lit(',') >> typedIdentifier)
+                        >> lit(')')
+                        >> semiColon;
 
-                interface = keywordInterface >> identifier
-                                             >> openBlock
-                                             >> +method
-                                             >> closeBlock >> semiColon;
+                interface = keywordInterface
+                        >> identifier[_val += _1]
+                        >> openBlock
+                        >> +(method[_val += _1])
+                        >> closeBlock
+                        >> semiColon;
 
-                moduleBody %= moduleList | *interface;
+                interfaceList %= *(interface);
+
+                moduleBody = moduleList >> interfaceList;
 
                 module %= keywordModule >> identifier
                                         >> openBlock
@@ -190,7 +197,8 @@ namespace striboh {
             qi::rule<Iterator, ast::TypedIdentifierNode(), ascii::space_type> typedIdentifier;
             qi::rule<Iterator, ast::ImportListNode(), ascii::space_type> importList;
             qi::rule<Iterator, ast::ModuleListNode(), ascii::space_type> moduleList;
-            qi::rule<Iterator, ascii::space_type> interface;
+            qi::rule<Iterator, ast::InterfaceListNode(), ascii::space_type> interfaceList;
+            qi::rule<Iterator, ast::InterfaceNode(), ascii::space_type> interface;
             qi::rule<Iterator> keywordInterface, keywordModule, semiColon, openBlock, closeBlock, keywordImport,
                     keywordString, keywordInt;
 

@@ -13,10 +13,11 @@ namespace striboh {
         namespace ast {
 
             using std::cout;
+            using std::endl;
 
             ModuleNode::ModuleNode(const IdentifierNode& pIdent)
                     : BaseValueNode<IdentifierNode>(K_MODULE_NODE, pIdent), mBody(new ModuleBodyNode()) {
-                cout << "Creating module with identifier \"" << pIdent.getValue() << ".\"";
+                cout << "Creating module with identifier \"" << pIdent.getValue() << ".\"" << endl;
             }
 
             const std::string& ModuleNode::getIdentifierStr() const {

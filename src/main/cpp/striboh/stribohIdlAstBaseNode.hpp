@@ -53,9 +53,9 @@ namespace striboh {
 
             };
 
-            template<class TNode>
+            template<class TNodeValue>
             class BaseValueNode : public BaseNode {
-                TNode mValue;
+                TNodeValue mValue;
             public:
 
                 BaseValueNode& operator=(BaseValueNode&& pBaseValueNode) {
@@ -79,7 +79,7 @@ namespace striboh {
                 BaseValueNode(const std::string& pNodeName) :
                         BaseNode(pNodeName) {}
 
-                BaseValueNode(const std::string& pNodeName, const TNode& pSubNode) :
+                BaseValueNode(const std::string& pNodeName, const TNodeValue& pSubNode) :
                         BaseNode(pNodeName), mValue(pSubNode) {}
 
 
@@ -96,13 +96,13 @@ namespace striboh {
                     return toStr(mValue);
                 }
 
-                const TNode&
+                const TNodeValue&
                 getValue() const {
                     return mValue;
                 }
 
                 void
-                setValue(const TNode& pValue) {
+                setValue(const TNodeValue& pValue) {
                     mValue = pValue;
                 }
 
@@ -171,6 +171,14 @@ namespace striboh {
 
                 BaseTupleNode(const std::string& pNodeName, TSubNode1&& pSubNode1)
                         : BaseNode(pNodeName), type_t(pSubNode1) {}
+
+                BaseTupleNode(const std::string& pNodeName, const TSubNode2& pSubNode2)
+                        : BaseNode(pNodeName) {
+                    getSubNode2() = pSubNode2;
+                }
+
+                BaseTupleNode(const std::string& pNodeName, TSubNode2&& pSubNode2)
+                        : BaseNode(pNodeName), type_t(pSubNode2) {}
 
                 TSubNode1& getSubNode1() {
                     return boost::fusion::at_c<0>(*this);
