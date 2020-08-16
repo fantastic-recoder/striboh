@@ -18,7 +18,11 @@ namespace striboh {
 
             struct MethodNode : BaseListNode<TypedIdentifierNode> {
                 MethodNode() : BaseListNode<TypedIdentifierNode>(K_METHOD_NODE) {}
+
+                const std::string& getMethodName() const;
+
             };
+
         }
     }
 }

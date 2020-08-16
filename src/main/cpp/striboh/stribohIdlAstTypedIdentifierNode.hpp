@@ -20,9 +20,6 @@ namespace striboh {
                 TypedIdentifierNode()
                         : BaseNode("TypedIdentifierNode") {}
 
-                TypedIdentifierNode(const TypeNode& pTypeNode)
-                        : BaseNode("TypedIdentifierNode") {}
-
                 size_t getSubNodeCount() const override {
                     return 1UL;
                 }
@@ -47,6 +44,10 @@ namespace striboh {
                         pIdentifierNode.getNodeType()) {
                     boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
                     boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
+                }
+
+                const std::string& getIdentifierName() const {
+                    return boost::fusion::at_c<1>(*this).getValue();
                 }
 
             };

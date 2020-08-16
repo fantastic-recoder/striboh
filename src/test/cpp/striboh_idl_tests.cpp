@@ -126,4 +126,7 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
     const ast::InterfaceNode& myHelloWorldIFace = myM1ModuleNode.getModuleBody().getInterfaces()[0];
     EXPECT_EQ(string("HelloWorld"), myHelloWorldIFace.getIdentifierStr());
     ASSERT_EQ(1UL, myHelloWorldIFace.getMethods().size());
+
+    const auto myMethod1 = myHelloWorldIFace.getMethods()[0];
+    EXPECT_EQ(string("echo"), myMethod1.getMethodName());
 }
