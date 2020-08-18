@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <boost/format.hpp>
 #include <boost/fusion/tuple.hpp>
+#include <boost/log/trivial.hpp>
 
 namespace manip {
     struct LocationInfoPrinter;

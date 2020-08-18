@@ -7,9 +7,9 @@
 #include <iostream>
 #include <striboh/stribohIdlParser.hpp>
 #include <striboh/stribohIdlAstModuleBodyNode.hpp>
+#include <boost/log/trivial.hpp>
 
 using namespace striboh::idl;
-using std::cerr;
 using std::endl;
 using std::string;
 
@@ -32,7 +32,7 @@ module m0 {
 
     void printErrors(const ast::RootNode& myIdlAst) {
         for (int myCnt = 0; myCnt < myIdlAst.getErrors().size(); myCnt++) {
-            cerr << myIdlAst.getErrors()[myCnt] << endl;
+            BOOST_LOG_TRIVIAL(error) << myIdlAst.getErrors()[myCnt];
         }
     }
 

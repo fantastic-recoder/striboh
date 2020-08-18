@@ -44,9 +44,6 @@ namespace striboh {
 
         using std::string;
         using std::vector;
-        using std::cout;
-        using std::cerr;
-        using std::endl;
         using std::ostream;
         using boost::format;
         using qi::lit;
@@ -72,9 +69,9 @@ namespace striboh {
 
             template<typename T1, typename T2, typename T3, typename T4>
             qi::error_handler_result operator()(T1 b, T2 e, T3 where, T4 const& what) const {
-                std::cerr << "Error: expecting " << what << " in line " << get_line(where) << ": \n"
-                          << std::string(b, e) << "\n"
-                          << std::setw(std::distance(b, where)) << '^' << "---- here\n";
+                BOOST_LOG_TRIVIAL(error) << "Error: expecting " << what << " in line " << get_line(where) << ": \n"
+                                         << std::string(b, e) << "\n"
+                                         << std::setw(std::distance(b, where)) << '^' << "---- here\n";
                 return qi::fail;
             }
         };
@@ -93,7 +90,7 @@ namespace striboh {
 
             template<typename Val, typename First, typename Last>
             void operator()(Val& v, First f, Last l) const {
-                std::cout << "\nannotating " << typeid(v).name() << " '" << std::string(f, l) << "'\n";
+                BOOST_LOG_TRIVIAL(trace) << "annotating " << typeid(v).name() << " '" << std::string(f, l) << "'";
                 do_annotate(v, f, l, mFirst);
             }
 

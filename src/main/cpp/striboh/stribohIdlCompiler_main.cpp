@@ -12,9 +12,6 @@
 
 using std::string;
 using std::vector;
-using std::cout;
-using std::cerr;
-using std::endl;
 using striboh::idl::ast::RootNode;
 
 namespace po=boost::program_options;
@@ -37,16 +34,15 @@ int main(int pArgc, char* pArgv[]) {
     po::notify(myVarMap);
 
     if (myVarMap.count("help")) {
-        cout << myOptDesc << "\n";
+        BOOST_LOG_TRIVIAL(info) << myOptDesc;
         return 1;
     }
     vector<string> myIncludes;
-    if (myVarMap.count("include-path"))
-    {
-        myIncludes = myVarMap["include-path"].as< vector<string> >();
-        cout << "Include paths are:\n";
-        for( auto myInclude: myIncludes) {
-            cout << myInclude << "\n";
+    if (myVarMap.count("include-path")) {
+        myIncludes = myVarMap["include-path"].as<vector<string> >();
+        BOOST_LOG_TRIVIAL(info) << "Include paths are:";
+        for (auto myInclude: myIncludes) {
+            BOOST_LOG_TRIVIAL(info) << myInclude;
         }
     }
     vector<RootNode> myParsedIdls;
@@ -54,30 +50,34 @@ int main(int pArgc, char* pArgv[]) {
     {
         auto myInputs=myVarMap["input-file"].as< vector<string> >();
         for(const auto& myInput:myInputs) {
-            cout << "Processing " << myInput << "\n";
+            BOOST_LOG_TRIVIAL(info) << "Processing " << myInput;
             try {
                 const RootNode myParseIdl = striboh::idl::parseIdlFile(myIncludes, fs::path(myInput));
                 if (!myParseIdl.hasErrors()) {
-                    std::cout << "-------------------------\n";
-                    std::cout << "Parsing of \"" << myInput << "\" succeeded\n";
-                    std::cout << "-------------------------\n";
+                    BOOST_LOG_TRIVIAL(info)
+                        << "-------------------------\n"
+                        << "Parsing of \"" << myInput << "\" succeeded\n"
+                        << "-------------------------\n";
                     myParsedIdls.push_back(myParseIdl);
                 } else {
                     for (string myError: myParseIdl.getErrors()) {
-                        cerr << "-------------------------\n";
-                        cerr << myError << endl;
-                        cerr << "-------------------------\n";
+                        BOOST_LOG_TRIVIAL(error)
+                            << "-------------------------\n"
+                            << myError << "\n"
+                            << "-------------------------\n";
                     }
                 }
             } catch( std::exception& pExc ) {
-                cerr << "Something unexpected happened ... " << pExc.what() << endl;
+                BOOST_LOG_TRIVIAL(error)
+                    << "Something unexpected happened ... " << pExc.what();
             }
         }
     }
     if(myVarMap.count("dump-tree"))
     {
         for( auto& myNode:myParsedIdls) {
-            cout << myNode;
+            BOOST_LOG_TRIVIAL(info)
+                << myNode;
         }
     }
     return 0;

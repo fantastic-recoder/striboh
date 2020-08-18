@@ -12,12 +12,9 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            using std::cout;
-            using std::endl;
-
             ModuleNode::ModuleNode(const IdentifierNode& pIdent)
                     : BaseValueNode<IdentifierNode>(K_MODULE_NODE, pIdent), mBody(new ModuleBodyNode()) {
-                cout << "Creating module with identifier \"" << pIdent.getValue() << ".\"" << endl;
+                BOOST_LOG_TRIVIAL(trace) << "Creating module with identifier \"" << pIdent.getValue() << ".\"";
             }
 
             const std::string& ModuleNode::getIdentifierStr() const {

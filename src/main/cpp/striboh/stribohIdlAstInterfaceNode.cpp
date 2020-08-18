@@ -9,12 +9,9 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            using std::cout;
-            using std::endl;
-
             InterfaceNode::InterfaceNode(const IdentifierNode& pIdent)
                     : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()) {
-                cout << "Creating interface \"" << pIdent << "\"." << endl;
+                BOOST_LOG_TRIVIAL(trace) << "Creating interface \"" << pIdent << "\".";
             }
 
             InterfaceNode::InterfaceNode(const InterfaceNode& pOther)
@@ -28,13 +25,14 @@ namespace striboh {
 
             InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const IdentifierNode& pNode) {
                 pInterfaceNode.setValue(pNode.getValue());
-                cout << "Parsed interface \"" << pInterfaceNode.getIdentifierStr() << "\"." << endl;
+                BOOST_LOG_TRIVIAL(trace) << "Parsed interface \"" << pInterfaceNode.getIdentifierStr() << "\".";
                 return pInterfaceNode;
             }
 
             InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const MethodNode& pMethod) {
                 pInterfaceNode.getMethods().push_back(pMethod);
-                cout << "Parsed method \"" << pInterfaceNode.getMethods().back().getValueStr() << "\"." << endl;
+                BOOST_LOG_TRIVIAL(trace) << "Parsed method \"" << pInterfaceNode.getMethods().back().getValueStr()
+                                         << "\".";
                 return pInterfaceNode;
             }
 

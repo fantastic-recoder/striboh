@@ -9,9 +9,6 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            using std::cout;
-            using std::endl;
-
             InterfaceListNode& operator+=(InterfaceListNode& pInterfaceListNode, const InterfaceNode& pInterfaceNode) {
                 pInterfaceListNode.push_back(pInterfaceNode);
                 return pInterfaceListNode;
