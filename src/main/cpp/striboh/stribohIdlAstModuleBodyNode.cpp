@@ -10,7 +10,8 @@ namespace striboh {
         namespace ast {
 
             ModuleNode& operator+=(ModuleNode& pModule, const ModuleBodyNode& pModBody) {
-                BOOST_LOG_TRIVIAL(error) << "TODO Implement this!";
+                BOOST_LOG_TRIVIAL(trace) << "Adding body to module " << pModBody.getValueStr();
+                pModule.addModuleBody(pModBody);
                 return pModule;
             }
 

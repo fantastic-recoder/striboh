@@ -26,8 +26,6 @@ namespace striboh {
                     return getValueStr();
                 }
 
-                virtual ~ImportNode() {
-                }
             };
         }
     }

@@ -50,8 +50,6 @@ namespace striboh {
                 void
                 printAstNode(const int pIndent, std::ostream& pOstream) const;
 
-                virtual ~BaseNode();
-
             };
 
             template<class TNodeValue>
@@ -59,10 +57,6 @@ namespace striboh {
                 TNodeValue mValue;
             public:
 
-                BaseValueNode& operator=(BaseValueNode&& pBaseValueNode) {
-                    mValue = std::move(pBaseValueNode.mValue);
-                    return *this;
-                }
 
                 BaseValueNode& operator=(const BaseValueNode& pBaseValueNode) {
                     mValue = pBaseValueNode.mValue;
@@ -70,10 +64,6 @@ namespace striboh {
                 }
 
                 BaseValueNode(const BaseValueNode& pBaseValueNode) :
-                        BaseNode(pBaseValueNode.mNodeTypeName),
-                        mValue(pBaseValueNode.mValue) {}
-
-                BaseValueNode(BaseValueNode&& pBaseValueNode) :
                         BaseNode(pBaseValueNode.mNodeTypeName),
                         mValue(pBaseValueNode.mValue) {}
 
@@ -117,8 +107,6 @@ namespace striboh {
                     return *this;
                 }
 
-                virtual ~BaseValueNode() {
-                }
             };
 
             template<class TNode>
@@ -150,8 +138,6 @@ namespace striboh {
                 getSubNode(size_t pIdx) const override {
                     return (*this)[pIdx];
                 }
-
-                virtual ~BaseListNode() {}
             };
 
             template<class TSubNode1, class TSubNode2>

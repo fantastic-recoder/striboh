@@ -39,8 +39,7 @@ namespace striboh {
 
                 ModuleNode& operator=(const ModuleNode&);
 
-                virtual ~ModuleNode();
-
+                ~ModuleNode();
             private:
                 std::unique_ptr<ModuleBodyNode> mBody;
             };

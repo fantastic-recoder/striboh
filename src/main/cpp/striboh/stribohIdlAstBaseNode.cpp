@@ -39,10 +39,6 @@ namespace striboh {
                 return *this;
             }
 
-            BaseNode::~BaseNode() {
-
-            }
-
         }
     }
 }

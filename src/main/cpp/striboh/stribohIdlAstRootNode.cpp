@@ -34,6 +34,7 @@ namespace striboh {
 
             std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) {
                 pNode.printAstNode(0, pOstream);
+                return pOstream;
             }
 
             void RootNode::mergeSubtree(const RootNode& pSubtree) {
@@ -46,10 +47,6 @@ namespace striboh {
                 getModules().insert(getModules().begin(),
                                     pSubtree.getModules().begin(),
                                     pSubtree.getModules().end());
-            }
-
-            RootNode::~RootNode() {
-
             }
 
             std::string RootNode::getValueStr() const {

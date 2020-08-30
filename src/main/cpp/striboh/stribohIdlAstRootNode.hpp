@@ -57,7 +57,6 @@ namespace striboh {
                 std::string
                 getValueStr() const override;
 
-                virtual ~RootNode();
             };
 
             std::ostream& operator<<(std::ostream&, const RootNode&);
