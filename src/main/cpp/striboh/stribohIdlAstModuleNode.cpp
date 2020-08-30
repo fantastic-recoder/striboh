@@ -52,6 +52,7 @@ namespace striboh {
 
             ModuleNode& operator+=(ModuleNode& pModuleNode, const ModuleBodyNode& pModuleBodyNode) {
                 pModuleNode.addModuleBody(pModuleBodyNode);
+                return pModuleNode;
             }
 
         }

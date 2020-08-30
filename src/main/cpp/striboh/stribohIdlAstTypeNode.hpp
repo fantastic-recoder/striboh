@@ -34,6 +34,7 @@ namespace striboh {
 
                 TypeNode& operator=(const EBuildinTypes pType) {
                     mBuildinType = pType;
+                    return *this;
                 }
 
 
