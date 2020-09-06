@@ -7,12 +7,14 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 #include <boost/fusion/tuple.hpp>
 
 #include "stribohIdlAstBaseNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
 #include "stribohIdlAstImportListNode.hpp"
 #include "stribohIdlAstModuleListNode.hpp"
+#include <boost/type_index.hpp>
 
 namespace striboh {
     namespace idl {
@@ -59,7 +61,7 @@ namespace striboh {
 
             };
 
-            std::ostream& operator<<(std::ostream&, const RootNode&);
+            std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) ;
         }
     }
 }

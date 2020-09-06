@@ -26,12 +26,12 @@ namespace striboh {
                     return 1L;
                 }
 
-            };
+                virtual std::string
+                getValueStr() const override {
+                    return getValue();
+                }
 
-            inline std::ostream& operator<<(std::ostream& pOstream, const IdentifierNode& pNode) {
-                pOstream << pNode.getValue();
-                return pOstream;
-            }
+            };
 
         }
     }

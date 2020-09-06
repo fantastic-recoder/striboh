@@ -11,7 +11,7 @@ namespace striboh {
 
             InterfaceNode::InterfaceNode(const IdentifierNode& pIdent)
                     : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()) {
-                BOOST_LOG_TRIVIAL(trace) << "Creating interface \"" << pIdent << "\".";
+                BOOST_LOG_TRIVIAL(trace) << "Creating interface \"" << pIdent.getValue() << "\".";
             }
 
             InterfaceNode::InterfaceNode(const InterfaceNode& pOther)

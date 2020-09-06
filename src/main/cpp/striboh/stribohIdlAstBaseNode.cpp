@@ -23,12 +23,6 @@ namespace striboh {
                 pOstream << myIdent << "}" << std::endl;
             }
 
-            std::string
-            BaseNode::getValueStr() const {
-                static std::string K_EMPTY("**empty**");
-                return K_EMPTY;
-            }
-
             size_t
             BaseNode::getSubNodeCount() const {
                 return 0;

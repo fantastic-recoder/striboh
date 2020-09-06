@@ -1,4 +1,4 @@
-import "src/test/striboh.idl/test_file_01.striboh.idl";
+import "../../src/test/striboh.idl/test_file_01.striboh.idl";
 
 module Mmmm {
 

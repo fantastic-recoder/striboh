@@ -40,6 +40,12 @@ namespace striboh {
                 ModuleNode& operator=(const ModuleNode&);
 
                 ~ModuleNode();
+
+                virtual std::string
+                getValueStr() const {
+                    return getValue().getValue();
+                }
+
             private:
                 std::unique_ptr<ModuleBodyNode> mBody;
             };

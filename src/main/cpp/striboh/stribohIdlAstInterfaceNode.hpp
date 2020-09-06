@@ -48,6 +48,11 @@ namespace striboh {
                     return mMethods;
                 }
 
+                virtual std::string
+                getValueStr() const {
+                    return getValue();
+                }
+
             private:
                 std::vector<MethodNode> mMethods;
             };

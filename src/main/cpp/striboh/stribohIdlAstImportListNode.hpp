@@ -21,7 +21,10 @@ namespace striboh {
             struct ImportListNode : BaseListNode<ImportNode> {
                 ImportListNode() : BaseListNode<ImportNode>(K_IMPORT_LIST_NODE) {}
             };
+
+            ImportListNode& operator+= (ImportListNode&, const ImportNode&);
         }
+
     }
 }
 

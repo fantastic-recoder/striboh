@@ -28,26 +28,13 @@ namespace striboh {
                     return boost::fusion::at_c<1>(*this);
                 }
 
-                TypedIdentifierNode& operator=(TypedIdentifierNode&& pIdentifierNode) {
-                    boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
-                    boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
-                    return *this;
-                }
-
-                TypedIdentifierNode& operator=(const TypedIdentifierNode& pIdentifierNode) {
-                    boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
-                    boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
-                    return *this;
-                }
-
-                TypedIdentifierNode(const TypedIdentifierNode& pIdentifierNode) : BaseNode(
-                        pIdentifierNode.getNodeType()) {
-                    boost::fusion::at_c<0>(*this) = boost::fusion::at_c<0>(pIdentifierNode);
-                    boost::fusion::at_c<1>(*this) = boost::fusion::at_c<1>(pIdentifierNode);
-                }
-
                 const std::string& getIdentifierName() const {
                     return boost::fusion::at_c<1>(*this).getValue();
+                }
+
+                virtual std::string
+                getValueStr() const override {
+                    return getIdentifierName();
                 }
 
             };

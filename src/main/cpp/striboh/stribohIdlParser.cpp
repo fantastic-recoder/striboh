@@ -504,9 +504,9 @@ namespace striboh {
 
                 quoted_file_name %= lexeme['"' >> (+(char_ - '"')) >> '"'];
 
-                import = keywordImport >> quoted_file_name >> semiColon;
+                import = keywordImport >> quoted_file_name[_val += _1] >> semiColon;
 
-                importList = *import;
+                importList = *import[ _val += _1 ];
 
                 type = keywordString[_val = ast::EBuildinTypes::STRING] | keywordInt[_val = ast::EBuildinTypes::INT];
 

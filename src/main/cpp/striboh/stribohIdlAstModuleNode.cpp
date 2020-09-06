@@ -14,7 +14,7 @@ namespace striboh {
 
             ModuleNode::ModuleNode(const IdentifierNode& pIdent)
                     : BaseValueNode<IdentifierNode>(K_MODULE_NODE, pIdent), mBody(new ModuleBodyNode()) {
-                BOOST_LOG_TRIVIAL(trace) << "Creating module with identifier \"" << pIdent.getValue() << ".\"";
+                BOOST_LOG_TRIVIAL(trace) << "Creating module with identifier \"" << getIdentifierStr() << ".\"";
             }
 
             const std::string& ModuleNode::getIdentifierStr() const {

@@ -26,7 +26,6 @@ namespace striboh {
              */
             struct BaseNode {
                 unsigned line, column, length;
-                const std::string mNodeTypeName;
 
                 manip::LocationInfoPrinter printLoc() const;
 
@@ -39,7 +38,7 @@ namespace striboh {
                 }
 
                 virtual std::string
-                getValueStr() const;
+                getValueStr() const = 0;
 
                 virtual size_t
                 getSubNodeCount() const;
@@ -49,7 +48,8 @@ namespace striboh {
 
                 void
                 printAstNode(const int pIndent, std::ostream& pOstream) const;
-
+            private:
+                std::string mNodeTypeName;
             };
 
             template<class TNodeValue>
@@ -63,29 +63,12 @@ namespace striboh {
                     return *this;
                 }
 
-                BaseValueNode(const BaseValueNode& pBaseValueNode) :
-                        BaseNode(pBaseValueNode.mNodeTypeName),
-                        mValue(pBaseValueNode.mValue) {}
-
                 BaseValueNode(const std::string& pNodeName) :
                         BaseNode(pNodeName) {}
 
                 BaseValueNode(const std::string& pNodeName, const TNodeValue& pSubNode) :
                         BaseNode(pNodeName), mValue(pSubNode) {}
 
-
-                template<typename TVal2Str>
-                std::string
-                toStr(const TVal2Str& pVal2Str) const {
-                    std::ostringstream oOStrStream;
-                    oOStrStream << pVal2Str;
-                    return oOStrStream.str();
-                }
-
-                std::string
-                getValueStr() const override {
-                    return toStr(mValue);
-                }
 
                 const TNodeValue&
                 getValue() const {
@@ -138,6 +121,11 @@ namespace striboh {
                 getSubNode(size_t pIdx) const override {
                     return (*this)[pIdx];
                 }
+
+                virtual std::string
+                getValueStr() const {
+                    return getNodeType();
+                }
             };
 
             template<class TSubNode1, class TSubNode2>
@@ -183,7 +171,6 @@ namespace striboh {
                     return boost::fusion::at_c<1>(*this);
                 }
 
-
                 size_t getSubNodeCount() const override {
                     return getSubNode1().size() + getSubNode2().size();
                 }
@@ -203,7 +190,14 @@ namespace striboh {
                     }
                     return getSubNode2()[pIdx - myImportListSize];
                 }
+
+                virtual std::string
+                getValueStr() const {
+                    return getNodeType();
+                }
+
             };
+
         } // ast
     } // idl
 } // striboh

@@ -19,7 +19,7 @@ namespace fs=boost::filesystem;
 
 int main(int pArgc, char* pArgv[]) {
 // Declare the supported options.
-    po::options_description myOptDesc("Darboh options");
+    po::options_description myOptDesc(fs::basename(pArgv[0])+string(" options"));
     po::positional_options_description myPosOpt;
     myPosOpt.add("input-file", -1);
 

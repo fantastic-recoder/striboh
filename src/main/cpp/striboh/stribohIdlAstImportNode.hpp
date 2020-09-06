@@ -23,10 +23,18 @@ namespace striboh {
                 ImportNode(const std::string& pFilename) : BaseValueNode<std::string>(K_IMPORT_NODE, pFilename) {}
 
                 const std::string getFilename() const {
-                    return getValueStr();
+                    return getValue();
                 }
 
+                virtual std::string
+                getValueStr() const {
+                    return getValue();
+                }
+
+
             };
+
+            ImportNode& operator += ( ImportNode& pNode, const std::string& pFileName);
         }
     }
 }
