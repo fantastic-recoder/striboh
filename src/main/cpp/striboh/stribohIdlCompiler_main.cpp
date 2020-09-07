@@ -6,6 +6,9 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
 
 #include "stribohIdlParser.hpp"
 
@@ -28,11 +31,41 @@ int main(int pArgc, char* pArgv[]) {
             ("include-path,I", po::value<vector<string>>(), "include directory")
             ("input-file", po::value<vector<string>>(), "input file")
             ("dump-tree,d","dump the resulting AST tree.")
+            ("verbose,v", po::value<int>(), "verbose logging 0..5")
             ;
     po::variables_map myVarMap;
     po::store(po::command_line_parser (pArgc, pArgv).options(myOptDesc).positional(myPosOpt).run(), myVarMap);
     po::notify(myVarMap);
 
+    if (myVarMap.count("verbose")) {
+        auto myVerbose=myVarMap["verbose"].as< int >();
+        if(myVerbose<0 || myVerbose>5) {
+            BOOST_LOG_TRIVIAL(fatal) << "Verbose value " << myVerbose << " is out of range 0-5!";
+            return 2;
+        }
+        switch(myVerbose) {
+            case 0:
+                boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
+            break;
+            case 1:
+                boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+                break;
+            case 2:
+                boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+                break;
+            case 3:
+                boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
+                break;
+            case 4:
+                boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::error);
+                break;
+            case 5:
+                boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::fatal);
+                break;
+        }
+    } else {
+        boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+    }
     if (myVarMap.count("help")) {
         BOOST_LOG_TRIVIAL(info) << myOptDesc;
         return 1;
@@ -55,20 +88,16 @@ int main(int pArgc, char* pArgv[]) {
                 const RootNode myParseIdl = striboh::idl::parseIdlFile(myIncludes, fs::path(myInput));
                 if (!myParseIdl.hasErrors()) {
                     BOOST_LOG_TRIVIAL(info)
-                        << "-------------------------\n"
-                        << "Parsing of \"" << myInput << "\" succeeded\n"
-                        << "-------------------------\n";
+                        << "Parsing of \"" << myInput << "\" succeeded\n";
                     myParsedIdls.push_back(myParseIdl);
                 } else {
                     for (string myError: myParseIdl.getErrors()) {
                         BOOST_LOG_TRIVIAL(error)
-                            << "-------------------------\n"
-                            << myError << "\n"
-                            << "-------------------------\n";
+                            << myError << "\n";
                     }
                 }
             } catch( std::exception& pExc ) {
-                BOOST_LOG_TRIVIAL(error)
+                BOOST_LOG_TRIVIAL(fatal)
                     << "Something unexpected happened ... " << pExc.what();
             }
         }
