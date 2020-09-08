@@ -376,21 +376,75 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <gtest/gtest.h>
+#include "stribohBaseOrb.hpp"
 
-#include <string>
-#include <iostream>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
-#include <striboh/stribohBaseOrb.hpp>
+#include <thread>
 #include <boost/log/trivial.hpp>
 
-using namespace striboh::base;
-using std::endl;
-using std::string;
+namespace striboh {
+    namespace base {
 
-TEST(stribohBaseTests, testStribohOrbShutdown) {
-    Orb orb;
-    orb.serve();
-    orb.shutdown();
-}
+        const std::atomic<EOrbState>& Orb::serve() {
+            if (mOperationalState != EOrbState::K_NOMINAL) {
+                BOOST_LOG_TRIVIAL(warning) << "ORB is not ready.";
+            } else {
+                mOperationalState = EOrbState::K_STARTING;
+                mServantThread = std::thread([this] { this->dispatch(); });
+                do {
+                    BOOST_LOG_TRIVIAL(trace) << "Waiting for main servant. state = " << mOperationalState;
+                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+                } while (mOperationalState != EOrbState::K_STARTED);
+            }
+            return mOperationalState;
+        }
+
+        void  Orb::dispatch() {
+            do{
+                mOperationalState = EOrbState::K_STARTED;
+                BOOST_LOG_TRIVIAL(trace) << "Going to sleep. state = " << mOperationalState;
+                std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+            } while (mOperationalState==EOrbState::K_STARTED);
+            BOOST_LOG_TRIVIAL(info) << "Shutdown completed. state = " << mOperationalState;
+            return;
+        }
+
+        const std::atomic<EOrbState>&  Orb::shutdown() {
+            if(mOperationalState==EOrbState::K_STARTED) {
+                mOperationalState = EOrbState::K_SHUTTING_DOWN;
+                BOOST_LOG_TRIVIAL(info) << "Going to shutdown. state = " << mOperationalState;
+                mServantThread.join();
+                mOperationalState = EOrbState::K_NOMINAL;
+            } else {
+                BOOST_LOG_TRIVIAL(warning) << "ORB is not started.";
+            }
+            BOOST_LOG_TRIVIAL(info) << "ORB shut down. state = " << mOperationalState;
+            return mOperationalState;
+        }
+
+        void Orb::initialize() {
+
+        }
+
+        std::ostream& operator << (std::ostream& pOstr, const EOrbState& pOrbState) {
+            switch(pOrbState) {
+                case EOrbState::K_STARTED:
+                pOstr<<"started";
+                break;
+                case EOrbState::K_STARTING:
+                    pOstr<<"starting";
+                    break;
+                case EOrbState::K_NOMINAL:
+                    pOstr<<"nominal";
+                    break;
+                case EOrbState::K_SHUTTING_DOWN:
+                    pOstr<<"shutting-down";
+                    break;
+                default:
+                    pOstr<<"unknown";
+                    break;
+            }
+            return pOstr;
+        }
+
+    }// namespace base
+}// namespace striboh

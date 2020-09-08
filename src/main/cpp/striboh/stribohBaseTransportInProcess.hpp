@@ -376,21 +376,19 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <gtest/gtest.h>
+#ifndef STRIBOH_STRIBOHBASETRANSPORTINPROCESS_HPP
+#define STRIBOH_STRIBOHBASETRANSPORTINPROCESS_HPP
 
-#include <string>
-#include <iostream>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
-#include <striboh/stribohBaseOrb.hpp>
-#include <boost/log/trivial.hpp>
+#include "stribohBaseTransportIFace.hpp"
 
-using namespace striboh::base;
-using std::endl;
-using std::string;
+namespace striboh {
+    namespace base {
+        class TransportInProcess : TransportIFace {
 
-TEST(stribohBaseTests, testStribohOrbShutdown) {
-    Orb orb;
-    orb.serve();
-    orb.shutdown();
+        };
+
+    }
 }
+
+
+#endif //STRIBOH_STRIBOHBASETRANSPORTINPROCESS_HPP

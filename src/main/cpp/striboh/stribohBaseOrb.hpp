@@ -376,21 +376,41 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <gtest/gtest.h>
+#ifndef STRIBOH_BASE_ORB_HPP
+#define STRIBOH_BASE_ORB_HPP
 
-#include <string>
-#include <iostream>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
-#include <striboh/stribohBaseOrb.hpp>
-#include <boost/log/trivial.hpp>
+#include <atomic>
+#include <thread>
 
-using namespace striboh::base;
-using std::endl;
-using std::string;
+namespace striboh {
+    namespace base {
 
-TEST(stribohBaseTests, testStribohOrbShutdown) {
-    Orb orb;
-    orb.serve();
-    orb.shutdown();
+        enum class EOrbState {
+            K_NOMINAL,
+            K_STARTING,
+            K_STARTED,
+            K_SHUTTING_DOWN
+        };
+
+        std::ostream& operator << (std::ostream& , const EOrbState& );
+
+        class Orb {
+        public:
+            void initialize();
+
+            const std::atomic<EOrbState>& serve();
+
+            const std::atomic<EOrbState>& shutdown();
+
+        private:
+
+            void dispatch();
+
+            std::atomic<EOrbState> mOperationalState = EOrbState::K_NOMINAL;
+            std::thread mServantThread;
+        };
+
+    }
 }
+
+#endif //STRIBOH_BASE_ORB_HPP
