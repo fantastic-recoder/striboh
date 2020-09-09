@@ -376,35 +376,22 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <gtest/gtest.h>
 
+#ifndef STRIBOH_STRIBOHBASEHOLDINTERFACE_HPP
+#define STRIBOH_STRIBOHBASEHOLDINTERFACE_HPP
+
+#include <vector>
 #include <string>
-#include <iostream>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
-#include <striboh/stribohBroker.hpp>
-#include <boost/log/trivial.hpp>
-#include <striboh/stribohBaseMessage.hpp>
-#include <striboh/stribohBaseHoldInterface.hpp>
-#include <striboh/stribohBaseHoldMethod.hpp>
-#include <striboh/stribohBaseHoldParameters.hpp>
 
-using namespace striboh::base;
-using std::endl;
-using std::string;
-using striboh::base::HoldInterface;
-using striboh::base::HoldParameters;
+namespace striboh {
+    namespace base {
 
-TEST(stribohBaseTests, testStribohOrbShutdown) {
-    Broker aBroker;
-    aBroker.serve();
-    aBroker.shutdown();
+        class HoldInterface {
+        public:
+            HoldInterface(std::initializer_list<std::string>);
+        };
+    }
 }
 
-TEST(stribohBaseTests, testSimpleMessageTransfer) {
-    Broker aBroker;
-    aBroker.serve();
-    Message m {HoldInterface{"m0", "Hello"} , HoldMethod{"echo"} , HoldParameters{"Hi!" } };
-    aBroker.deal(m);
-    aBroker.shutdown();
-}
+
+#endif //STRIBOH_STRIBOHBASEHOLDINTERFACE_HPP

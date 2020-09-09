@@ -381,32 +381,35 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <atomic>
 #include <thread>
+#include "stribohBaseMessage.hpp"
 
 namespace striboh {
     namespace base {
 
-        enum class EOrbState {
+        enum class EBrokerState {
             K_NOMINAL,
             K_STARTING,
             K_STARTED,
             K_SHUTTING_DOWN
         };
 
-        std::ostream& operator << (std::ostream& , const EOrbState& );
+        std::ostream& operator << (std::ostream& , const EBrokerState& );
 
-        class Orb {
+        class Broker {
         public:
             void initialize();
 
-            const std::atomic<EOrbState>& serve();
+            const std::atomic<EBrokerState>& serve();
 
-            const std::atomic<EOrbState>& shutdown();
+            const std::atomic<EBrokerState>& shutdown();
+
+            void deal(striboh::base::Message pMessage);
 
         private:
 
             void dispatch();
 
-            std::atomic<EOrbState> mOperationalState = EOrbState::K_NOMINAL;
+            std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
             std::thread mServantThread;
         };
 

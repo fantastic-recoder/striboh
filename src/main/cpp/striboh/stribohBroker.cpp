@@ -376,35 +376,79 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <gtest/gtest.h>
+#include "stribohBroker.hpp"
 
-#include <string>
-#include <iostream>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
-#include <striboh/stribohBroker.hpp>
+#include <thread>
 #include <boost/log/trivial.hpp>
-#include <striboh/stribohBaseMessage.hpp>
-#include <striboh/stribohBaseHoldInterface.hpp>
-#include <striboh/stribohBaseHoldMethod.hpp>
-#include <striboh/stribohBaseHoldParameters.hpp>
 
-using namespace striboh::base;
-using std::endl;
-using std::string;
-using striboh::base::HoldInterface;
-using striboh::base::HoldParameters;
+namespace striboh {
+    namespace base {
 
-TEST(stribohBaseTests, testStribohOrbShutdown) {
-    Broker aBroker;
-    aBroker.serve();
-    aBroker.shutdown();
-}
+        const std::atomic<EBrokerState>& Broker::serve() {
+            if (mOperationalState != EBrokerState::K_NOMINAL) {
+                BOOST_LOG_TRIVIAL(warning) << "ORB is not ready.";
+            } else {
+                mOperationalState = EBrokerState::K_STARTING;
+                mServantThread = std::thread([this] { this->dispatch(); });
+                do {
+                    BOOST_LOG_TRIVIAL(trace) << "Waiting for main servant. state = " << mOperationalState;
+                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+                } while (mOperationalState != EBrokerState::K_STARTED);
+            }
+            return mOperationalState;
+        }
 
-TEST(stribohBaseTests, testSimpleMessageTransfer) {
-    Broker aBroker;
-    aBroker.serve();
-    Message m {HoldInterface{"m0", "Hello"} , HoldMethod{"echo"} , HoldParameters{"Hi!" } };
-    aBroker.deal(m);
-    aBroker.shutdown();
-}
+        void  Broker::dispatch() {
+            do{
+                mOperationalState = EBrokerState::K_STARTED;
+                BOOST_LOG_TRIVIAL(trace) << "Going to sleep. state = " << mOperationalState;
+                std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+            } while (mOperationalState == EBrokerState::K_STARTED);
+            BOOST_LOG_TRIVIAL(info) << "Shutdown completed. state = " << mOperationalState;
+            return;
+        }
+
+        const std::atomic<EBrokerState>&  Broker::shutdown() {
+            if(mOperationalState == EBrokerState::K_STARTED) {
+                mOperationalState = EBrokerState::K_SHUTTING_DOWN;
+                BOOST_LOG_TRIVIAL(info) << "Going to shutdown. state = " << mOperationalState;
+                mServantThread.join();
+                mOperationalState = EBrokerState::K_NOMINAL;
+            } else {
+                BOOST_LOG_TRIVIAL(warning) << "ORB is not started.";
+            }
+            BOOST_LOG_TRIVIAL(info) << "ORB shut down. state = " << mOperationalState;
+            return mOperationalState;
+        }
+
+        void Broker::initialize() {
+
+        }
+
+        void Broker::deal(striboh::base::Message pMessage) {
+
+        }
+
+        std::ostream& operator << (std::ostream& pOstr, const EBrokerState& pOrbState) {
+            switch(pOrbState) {
+                case EBrokerState::K_STARTED:
+                pOstr<<"started";
+                break;
+                case EBrokerState::K_STARTING:
+                    pOstr<<"starting";
+                    break;
+                case EBrokerState::K_NOMINAL:
+                    pOstr<<"nominal";
+                    break;
+                case EBrokerState::K_SHUTTING_DOWN:
+                    pOstr<<"shutting-down";
+                    break;
+                default:
+                    pOstr<<"unknown";
+                    break;
+            }
+            return pOstr;
+        }
+
+    }// namespace base
+}// namespace striboh
