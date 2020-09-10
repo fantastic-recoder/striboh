@@ -8,7 +8,7 @@ enable_testing()
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
+add_subdirectory(src/main/cpp/msgpack-c)
+add_subdirectory(src/main/cpp/NamedType)
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
-
-

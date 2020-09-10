@@ -429,25 +429,29 @@ namespace striboh {
 
         }
 
-        std::ostream& operator << (std::ostream& pOstr, const EBrokerState& pOrbState) {
+        void Broker::addServant(const Signature& pSignature, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut) {
+
+        }
+
+        std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {
             switch(pOrbState) {
                 case EBrokerState::K_STARTED:
-                pOstr<<"started";
+                    pOstream<<"started";
                 break;
                 case EBrokerState::K_STARTING:
-                    pOstr<<"starting";
+                    pOstream<<"starting";
                     break;
                 case EBrokerState::K_NOMINAL:
-                    pOstr<<"nominal";
+                    pOstream<<"nominal";
                     break;
                 case EBrokerState::K_SHUTTING_DOWN:
-                    pOstr<<"shutting-down";
+                    pOstream<<"shutting-down";
                     break;
                 default:
-                    pOstr<<"unknown";
+                    pOstream<<"unknown";
                     break;
             }
-            return pOstr;
+            return pOstream;
         }
 
     }// namespace base

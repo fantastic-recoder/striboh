@@ -377,19 +377,97 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEHOLDPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEHOLDPARAMETERS_HPP
+#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
 
 #include <string>
+#include <vector>
+#include <variant>
+#include <algorithm>
+
+#include <msgpack.hpp>
+#include <variant>
+
+#include "stribohBaseSignature.hpp"
 
 namespace striboh {
     namespace base {
-        class HoldParameters {
+
+        class ParameterDesc {
+            const EDir mDir;
+            const ETypes mType;
+            const std::string_view mName;
         public:
-            HoldParameters(std::initializer_list<std::string>);
+            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
+            {}
+        };
+
+        class ParameterList {
+        public:
+            explicit ParameterList(std::vector<ParameterDesc>);
+        };
+
+        class ParameterValues {
+        public:
+            typedef std::variant<int,std::string> Parameter_t;
+            typedef std::vector<Parameter_t> ParameterList_t;
+            typedef std::vector<ETypes> TypesList_t;
+
+            ParameterValues() = default;
+
+            template<typename ParVal0, typename... ParVal_t>
+            explicit ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
+                add(pVal0, pValues...);
+            }
+
+            template<typename ParVal0, typename... ParVal_t>
+            ParameterValues& add(const ParVal0 pVal0, ParVal_t... pValues) {
+                add(pVal0);
+                add(pValues...);
+                mPackedCount++;
+                return *this;
+            }
+
+            ParameterValues& add(const ParameterValues& pValues) {
+                return *this;
+            }
+
+            ParameterValues& add(const std::string& pVal) {
+                msgpack::sbuffer myBuffer;
+                msgpack::pack(myBuffer, int(ETypes::K_STRING));
+                msgpack::pack(myBuffer, pVal);
+                mPackedBuffer.resize(mPackedBuffer.size()+myBuffer.size());
+                std::copy(myBuffer.data(), myBuffer.data() + myBuffer.size(), mPackedBuffer.begin());
+                return *this;
+            }
+
+            void unpack();
+
+            template<typename T>
+            T get(size_t pIdx) const {
+                return std::get<T>(mValues[pIdx]);
+            }
+
+            size_t size() const {
+                return mValues.size();
+            }
+
+            bool unpacked() const {
+                return mIsUnpacked;
+            }
+
+        private:
+            bool mIsUnpacked = false;
+            size_t mPackedCount = 0;
+            ParameterList_t mValues;
+            TypesList_t mTypes;
+            std::vector<char> mPackedBuffer;
+
+            void unpackString(const ETypes &myType, msgpack::object_handle &oh);
+
         };
 
     }
 }
 
-#endif //STRIBOH_STRIBOHBASEHOLDPARAMETERS_HPP
+#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP

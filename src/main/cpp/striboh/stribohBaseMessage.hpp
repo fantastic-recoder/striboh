@@ -7,16 +7,28 @@
 
 #include <string>
 
+#include "stribohBaseParameters.hpp"
+
 namespace striboh {
     namespace base {
 
-        class HoldInterface;
-        class HoldMethod;
-        class HoldParameters;
+        class Signature;
+        class ParameterValues;
 
         class Message {
         public:
-            Message(HoldInterface, HoldMethod, HoldParameters);
+            Message();
+
+            Message(const Message&)=default;
+
+            Message(Message&&)=default;
+
+            Message(const Signature&, const ParameterValues& );
+
+            Message& add(const ParameterValues& pValues);
+
+        private:
+            ParameterValues mValues;
         };
 
     }

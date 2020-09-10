@@ -1,3 +1,6 @@
 [submodule "src/main/cpp/NamedType"]
 	path = src/main/cpp/NamedType
 	url = https://github.com/joboccara/NamedType.git
+[submodule "src/main/cpp/msgpack-c"]
+	path = src/main/cpp/msgpack-c
+	url = https://github.com/msgpack/msgpack-c.git

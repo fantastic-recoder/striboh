@@ -4,9 +4,23 @@
 
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseHoldInterface.hpp"
-#include "stribohBaseHoldMethod.hpp"
-#include "stribohBaseHoldParameters.hpp"
+#include "stribohBaseMethodName.hpp"
+#include "stribohBaseParameters.hpp"
 
-striboh::base::Message::Message(striboh::base::HoldInterface, striboh::base::HoldMethod, striboh::base::HoldParameters) {
+namespace striboh {
+    namespace base {
+        Message::Message( const Signature&, const ParameterValues& ){
 
+        }
+
+        Message::Message() {
+
+        }
+
+        Message &Message::add(const ParameterValues& pValues) {
+            mValues.add(pValues);
+            return *this;
+        }
+
+    }
 }

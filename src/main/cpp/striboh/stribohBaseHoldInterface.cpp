@@ -4,6 +4,6 @@
 
 #include "stribohBaseHoldInterface.hpp"
 
-striboh::base::HoldInterface::HoldInterface(std::initializer_list<std::string>) {
+striboh::base::InterfaceName::InterfaceName(std::initializer_list<std::string>) {
 
 }

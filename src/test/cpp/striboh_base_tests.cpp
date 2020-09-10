@@ -386,25 +386,54 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/log/trivial.hpp>
 #include <striboh/stribohBaseMessage.hpp>
 #include <striboh/stribohBaseHoldInterface.hpp>
-#include <striboh/stribohBaseHoldMethod.hpp>
-#include <striboh/stribohBaseHoldParameters.hpp>
+#include <striboh/stribohBaseMethodName.hpp>
+#include <striboh/stribohBaseParameters.hpp>
+#include "striboh/stribohBaseSignature.hpp"
 
 using namespace striboh::base;
 using std::endl;
 using std::string;
-using striboh::base::HoldInterface;
-using striboh::base::HoldParameters;
+using striboh::base::InterfaceName;
+using striboh::base::MethodName;
+using striboh::base::ParameterList;
+using striboh::base::ParameterValues;
+using striboh::base::ETypes;
 
-TEST(stribohBaseTests, testStribohOrbShutdown) {
+TEST(stribohBaseTests, testStribohBrokerShutdown) {
     Broker aBroker;
     aBroker.serve();
     aBroker.shutdown();
 }
 
+TEST(stribohBaseTests, testAddAndGetValues) {
+    ParameterValues myList;
+    const std::string myVal0("Test 0.");
+    myList.add(myVal0);
+    //myList.add(6);
+    myList.unpack();
+    ASSERT_EQ(myVal0,myList.get<std::string>(0));
+}
+
 TEST(stribohBaseTests, testSimpleMessageTransfer) {
     Broker aBroker;
     aBroker.serve();
-    Message m {HoldInterface{"m0", "Hello"} , HoldMethod{"echo"} , HoldParameters{"Hi!" } };
+    static const Signature mySignature{InterfaceName{"m0", "Hello"}, MethodName{"echo"}, {
+        ParameterList {
+                {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+        }
+    }};
+    ParameterValues myReply;
+    aBroker.addServant(
+        mySignature,
+        [](const ParameterValues& pIncoming,ParameterValues& pOut)
+        {
+            pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0)) ;
+        },
+        myReply
+    );
+
+    Message m {mySignature, ParameterValues{ std::string("Peter!") } };
     aBroker.deal(m);
+    ASSERT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));
     aBroker.shutdown();
 }

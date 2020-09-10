@@ -386,9 +386,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh {
     namespace base {
 
-        class HoldInterface {
+        class InterfaceName {
         public:
-            HoldInterface(std::initializer_list<std::string>);
+            InterfaceName(std::initializer_list<std::string>);
         };
     }
 }

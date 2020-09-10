@@ -405,6 +405,8 @@ namespace striboh {
 
             void deal(striboh::base::Message pMessage);
 
+            void addServant(const Signature& pSignature, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut);
+
         private:
 
             void dispatch();
