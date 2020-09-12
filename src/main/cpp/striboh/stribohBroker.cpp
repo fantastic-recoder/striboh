@@ -380,6 +380,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <thread>
 #include <boost/log/trivial.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 
 namespace striboh {
     namespace base {
@@ -389,7 +390,7 @@ namespace striboh {
                 BOOST_LOG_TRIVIAL(warning) << "ORB is not ready.";
             } else {
                 mOperationalState = EBrokerState::K_STARTING;
-                mServantThread = std::thread([this] { this->dispatch(); });
+                mReceiver = std::thread([this] { this->dispatch(); });
                 do {
                     BOOST_LOG_TRIVIAL(trace) << "Waiting for main servant. state = " << mOperationalState;
                     std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
@@ -412,7 +413,7 @@ namespace striboh {
             if(mOperationalState == EBrokerState::K_STARTED) {
                 mOperationalState = EBrokerState::K_SHUTTING_DOWN;
                 BOOST_LOG_TRIVIAL(info) << "Going to shutdown. state = " << mOperationalState;
-                mServantThread.join();
+                mReceiver.join();
                 mOperationalState = EBrokerState::K_NOMINAL;
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "ORB is not started.";
@@ -425,12 +426,19 @@ namespace striboh {
 
         }
 
-        void Broker::deal(striboh::base::Message pMessage) {
+        ParameterValues Broker::invoke(const Signature&, const Uuid_t& pInstanceId, ParameterValues pValues) {
+            ParameterValues myRetVal;
+            return myRetVal;
+        }
+
+        void Broker::addServant(const Signature& pMethodSignature, const Uuid_t& pInstanceId, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut) {
 
         }
 
-        void Broker::addServant(const Signature& pSignature, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut) {
-
+        Broker::Uuid_t Broker::generateUuid() {
+            static boost::uuids::random_generator theGenerator;
+            boost::uuids::uuid myUuid=theGenerator();
+            return myUuid;
         }
 
         std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {

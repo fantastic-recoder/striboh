@@ -379,9 +379,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #ifndef STRIBOH_BASE_ORB_HPP
 #define STRIBOH_BASE_ORB_HPP
 
+#include <array>
 #include <atomic>
 #include <thread>
-#include "stribohBaseMessage.hpp"
+#include <boost/uuid/uuid.hpp>
+
+#include "stribohBaseParameters.hpp"
 
 namespace striboh {
     namespace base {
@@ -395,24 +398,36 @@ namespace striboh {
 
         std::ostream& operator << (std::ostream& , const EBrokerState& );
 
+        class Signature;
+
         class Broker {
         public:
-            void initialize();
+            typedef boost::uuids::uuid Uuid_t;
 
-            const std::atomic<EBrokerState>& serve();
+            void
+            initialize();
 
-            const std::atomic<EBrokerState>& shutdown();
+            const std::atomic<EBrokerState>&
+            serve();
 
-            void deal(striboh::base::Message pMessage);
+            const std::atomic<EBrokerState>&
+            shutdown();
 
-            void addServant(const Signature& pSignature, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut);
+            ParameterValues
+            invoke(const Signature& pMethodSignature, const Uuid_t& pInstanceId,  ParameterValues pValues);
+
+            void
+            addServant(const Signature& pMethodSignature, const Uuid_t& pInstanceId, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut);
+
+            static Uuid_t generateUuid();
 
         private:
 
             void dispatch();
 
             std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
-            std::thread mServantThread;
+            std::thread mReceiver;
+            std::thread mSender;
         };
 
     }

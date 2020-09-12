@@ -414,26 +414,35 @@ TEST(stribohBaseTests, testAddAndGetValues) {
     ASSERT_EQ(myVal0,myList.get<std::string>(0));
 }
 
+TEST(stribohBaseTests, testUuidGeneration) {
+    Broker::Uuid_t myUuid0=Broker::generateUuid();
+    Broker::Uuid_t myUuid1=Broker::generateUuid();
+    ASSERT_NE(myUuid0,myUuid1);
+}
+
 TEST(stribohBaseTests, testSimpleMessageTransfer) {
     Broker aBroker;
     aBroker.serve();
+
+    Broker::Uuid_t myInstanceId = Broker::generateUuid();
     static const Signature mySignature{InterfaceName{"m0", "Hello"}, MethodName{"echo"}, {
         ParameterList {
                 {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
         }
     }};
+    const Broker::Uuid_t myUuid(Broker::generateUuid());
     ParameterValues myReply;
     aBroker.addServant(
         mySignature,
+        myUuid,
         [](const ParameterValues& pIncoming,ParameterValues& pOut)
         {
             pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0)) ;
         },
         myReply
     );
-
-    Message m {mySignature, ParameterValues{ std::string("Peter!") } };
-    aBroker.deal(m);
-    ASSERT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));
+    ParameterValues myRetVal = aBroker.invoke(mySignature, myUuid, ParameterValues{std::string("Peter!")});
+    ASSERT_TRUE(myRetVal.size()==1) << "Parameter list is empty, should have 1 element!";
+    EXPECT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));
     aBroker.shutdown();
 }
