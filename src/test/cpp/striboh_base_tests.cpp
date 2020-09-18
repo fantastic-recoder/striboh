@@ -409,9 +409,10 @@ TEST(stribohBaseTests, testAddAndGetValues) {
     ParameterValues myList;
     const std::string myVal0("Test 0.");
     myList.add(myVal0);
-    //myList.add(6);
+    myList.add(42);
     myList.unpack();
     ASSERT_EQ(myVal0,myList.get<std::string>(0));
+    ASSERT_EQ(42,myList.get<int>(1));
 }
 
 TEST(stribohBaseTests, testUuidGeneration) {

@@ -17,7 +17,8 @@ namespace striboh {
         };
 
         enum class ETypes {
-            K_STRING = 10
+            K_STRING = 10,
+            K_INT    = 12
         };
 
         class InterfaceName;

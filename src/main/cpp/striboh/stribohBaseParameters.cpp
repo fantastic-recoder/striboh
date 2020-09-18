@@ -393,11 +393,22 @@ namespace striboh {
             msgpack::sbuffer myBuffer;
             msgpack::pack(myBuffer, int(ETypes::K_STRING));
             msgpack::pack(myBuffer, pVal);
-            mPackedBuffer.resize(mPackedBuffer.size()+myBuffer.size());
-            std::copy(myBuffer.data(), myBuffer.data() + myBuffer.size(), mPackedBuffer.begin());
+            mPackedBuffer.resize(mPackedBuffer.size() + myBuffer.size() );
+            std::copy(myBuffer.data(),myBuffer.data() + myBuffer.size(),mPackedBuffer.begin() + mLastOffset);
+            mLastOffset += myBuffer.size();
             return *this;
         }
 
+        ParameterValues &
+        ParameterValues::add(const int pVal) {
+            msgpack::sbuffer myBuffer;
+            msgpack::pack(myBuffer, int(ETypes::K_INT));
+            msgpack::pack(myBuffer, pVal);
+            mPackedBuffer.resize(mPackedBuffer.size() + myBuffer.size() );
+            std::copy(myBuffer.data(),myBuffer.data() + myBuffer.size(),mPackedBuffer.begin() + mLastOffset);
+            mLastOffset += myBuffer.size();
+            return *this;
+        }
 
         void ParameterValues::unpack() {
             // now starts streaming deserialization.
@@ -409,6 +420,8 @@ namespace striboh {
                 msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
                 if (myType == ETypes::K_STRING) {
                     unpackString(myType, myObjHandle);
+                } else if(myType== ETypes::K_INT) {
+                    unpackInt(myType, myObjHandle);
                 }
             };
             mIsUnpacked = true;
@@ -427,14 +440,21 @@ namespace striboh {
         void
         ParameterValues::unpackString(const ETypes pType, msgpack::object_handle &pObjectHandle) {
             auto myObj=pObjectHandle.get();
-//            if(myObj.type != msgpack::type::STR) {
+//TODO figure this out            if(myObj.type != msgpack::type::STR) {
 //                BOOST_LOG_TRIVIAL(error) << "Expected String, got " << myObj.type;
-//            } else {
-                std::string myVal;
-                myObj.convert(myVal);
-                mTypes.push_back(pType);
-                mValues.push_back(myVal);
 //            }
+            std::string myVal;
+            myObj.convert(myVal);
+            mTypes.push_back(pType);
+            mValues.push_back(myVal);
+        }
+
+        void ParameterValues::unpackInt(const ETypes pType, msgpack::object_handle &pObjectHandle) {
+            auto myObj=pObjectHandle.get();
+            int myIntVal;
+            myObj.convert(myIntVal);
+            mTypes.push_back(pType);
+            mValues.push_back(myIntVal);
         }
 
     }

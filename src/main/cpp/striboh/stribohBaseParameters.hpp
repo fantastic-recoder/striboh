@@ -438,6 +438,9 @@ namespace striboh {
             ParameterValues&
             add(const std::string& pVal);
 
+            ParameterValues&
+            add(const int pVal);
+
             void
             unpack();
 
@@ -459,7 +462,8 @@ namespace striboh {
 
         private:
             bool mIsUnpacked = false;
-            size_t mPackedCount = 0;
+            size_t mPackedCount = 0L;
+            size_t mLastOffset = 0L;
             ParameterList_t mValues;
             TypesList_t mTypes;
             std::vector<char> mPackedBuffer;
@@ -467,8 +471,12 @@ namespace striboh {
             void
             unpackString(const ETypes pType, msgpack::object_handle &pObjectHandle);
 
+            void
+            unpackInt( const ETypes pTypes, msgpack::object_handle &pObjectHandle);
+
             ETypes
             unpackParameterType(const size_t pBufLength, size_t& pBufOffset, msgpack::object_handle &pObjHandle) const;
+
         };
 
     }
