@@ -419,11 +419,13 @@ namespace striboh {
             void
             addServant(const Signature& pMethodSignature, const Uuid_t& pInstanceId, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut);
 
-            static Uuid_t generateUuid();
+            static Uuid_t
+            generateUuid();
 
         private:
 
-            void dispatch();
+            void
+            dispatch();
 
             std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
             std::thread mReceiver;

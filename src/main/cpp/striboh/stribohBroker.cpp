@@ -426,7 +426,8 @@ namespace striboh {
 
         }
 
-        ParameterValues Broker::invoke(const Signature&, const Uuid_t& pInstanceId, ParameterValues pValues) {
+        ParameterValues
+        Broker::invoke(const Signature&, const Uuid_t& pInstanceId, ParameterValues pValues) {
             ParameterValues myRetVal;
             return myRetVal;
         }

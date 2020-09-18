@@ -381,7 +381,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 #include <iostream>
 #include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
 #include <striboh/stribohBroker.hpp>
 #include <boost/log/trivial.hpp>
 #include <striboh/stribohBaseMessage.hpp>
@@ -393,6 +392,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 using namespace striboh::base;
 using std::endl;
 using std::string;
+using std::count;
 using striboh::base::InterfaceName;
 using striboh::base::MethodName;
 using striboh::base::ParameterList;
@@ -417,7 +417,13 @@ TEST(stribohBaseTests, testAddAndGetValues) {
 TEST(stribohBaseTests, testUuidGeneration) {
     Broker::Uuid_t myUuid0=Broker::generateUuid();
     Broker::Uuid_t myUuid1=Broker::generateUuid();
-    ASSERT_NE(myUuid0,myUuid1);
+    EXPECT_NE(myUuid0,myUuid1);
+    std::stringstream aStream;
+    aStream << myUuid0 << endl;
+    BOOST_LOG_TRIVIAL(debug) << "UUID:" << myUuid0 << " : " << aStream.str();
+    Broker::Uuid_t myUuid2;
+    aStream >> myUuid2;
+    EXPECT_EQ(myUuid0,myUuid2) << "UUID not written and read correctly!";
 }
 
 TEST(stribohBaseTests, testSimpleMessageTransfer) {

@@ -416,43 +416,44 @@ namespace striboh {
             ParameterValues() = default;
 
             template<typename ParVal0, typename... ParVal_t>
-            explicit ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
+            explicit
+            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
                 add(pVal0, pValues...);
             }
 
             template<typename ParVal0, typename... ParVal_t>
-            ParameterValues& add(const ParVal0 pVal0, ParVal_t... pValues) {
+            ParameterValues&
+            add(const ParVal0 pVal0, ParVal_t... pValues) {
                 add(pVal0);
                 add(pValues...);
                 mPackedCount++;
                 return *this;
             }
 
-            ParameterValues& add(const ParameterValues& pValues) {
+            ParameterValues&
+            add(const ParameterValues& pValues) {
                 return *this;
             }
 
-            ParameterValues& add(const std::string& pVal) {
-                msgpack::sbuffer myBuffer;
-                msgpack::pack(myBuffer, int(ETypes::K_STRING));
-                msgpack::pack(myBuffer, pVal);
-                mPackedBuffer.resize(mPackedBuffer.size()+myBuffer.size());
-                std::copy(myBuffer.data(), myBuffer.data() + myBuffer.size(), mPackedBuffer.begin());
-                return *this;
-            }
+            ParameterValues&
+            add(const std::string& pVal);
 
-            void unpack();
+            void
+            unpack();
 
             template<typename T>
-            T get(size_t pIdx) const {
+            T
+            get(size_t pIdx) const {
                 return std::get<T>(mValues[pIdx]);
             }
 
-            size_t size() const {
+            size_t
+            size() const {
                 return mValues.size();
             }
 
-            bool unpacked() const {
+            bool
+            unpacked() const {
                 return mIsUnpacked;
             }
 
@@ -463,8 +464,11 @@ namespace striboh {
             TypesList_t mTypes;
             std::vector<char> mPackedBuffer;
 
-            void unpackString(const ETypes &myType, msgpack::object_handle &oh);
+            void
+            unpackString(const ETypes pType, msgpack::object_handle &pObjectHandle);
 
+            ETypes
+            unpackParameterType(const size_t pBufLength, size_t& pBufOffset, msgpack::object_handle &pObjHandle) const;
         };
 
     }
