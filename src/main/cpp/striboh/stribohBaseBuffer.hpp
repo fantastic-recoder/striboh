@@ -376,65 +376,21 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_ORB_HPP
-#define STRIBOH_BASE_ORB_HPP
 
-#include <array>
-#include <atomic>
-#include <thread>
-#include <boost/uuid/uuid.hpp>
+#ifndef STRIBOH_STRIBOHBASEBUFFER_HPP
+#define STRIBOH_STRIBOHBASEBUFFER_HPP
 
-#include "stribohBaseParameters.hpp"
+#include <vector>
 
 namespace striboh {
     namespace base {
-
-        enum class EBrokerState {
-            K_NOMINAL,
-            K_STARTING,
-            K_STARTED,
-            K_SHUTTING_DOWN
-        };
-
-        std::ostream& operator << (std::ostream& , const EBrokerState& );
-
-        class Interface;
-
-        class Broker {
+        class Buffer: public std::vector<char> {
         public:
-            typedef boost::uuids::uuid Uuid_t;
-            typedef std::map<Uuid_t ,Interface> Instances_t;
-
-            void
-            initialize();
-
-            const std::atomic<EBrokerState>&
-            serve();
-
-            const std::atomic<EBrokerState>&
-            shutdown();
-
-            ParameterValues
-            invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues);
-
-            const Uuid_t
-            addServant(Interface& pMethodSignature);
-
-            static Uuid_t
-            generateUuid();
-
-        private:
-
-            void
-            dispatch();
-
-            std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
-            std::thread mReceiver;
-            std::thread mSender;
-            Instances_t mInstances;
+            size_t write(const char*, std::size_t);
         };
 
     }
 }
 
-#endif //STRIBOH_BASE_ORB_HPP
+
+#endif //STRIBOH_STRIBOHBASEBUFFER_HPP

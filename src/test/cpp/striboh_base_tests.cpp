@@ -384,8 +384,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBroker.hpp>
 #include <boost/log/trivial.hpp>
 #include <striboh/stribohBaseMessage.hpp>
-#include <striboh/stribohBaseHoldInterface.hpp>
-#include <striboh/stribohBaseMethodName.hpp>
+#include <striboh/stribohBaseInterfaceName.hpp>
+#include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseParameters.hpp>
 #include "striboh/stribohBaseSignature.hpp"
 
@@ -394,7 +394,7 @@ using std::endl;
 using std::string;
 using std::count;
 using striboh::base::InterfaceName;
-using striboh::base::MethodName;
+using striboh::base::Method;
 using striboh::base::ParameterList;
 using striboh::base::ParameterValues;
 using striboh::base::ETypes;
@@ -431,25 +431,22 @@ TEST(stribohBaseTests, testSimpleMessageTransfer) {
     Broker aBroker;
     aBroker.serve();
 
-    Broker::Uuid_t myInstanceId = Broker::generateUuid();
-    static const Signature mySignature{InterfaceName{"m0", "Hello"}, MethodName{"echo"}, {
-        ParameterList {
-                {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
-        }
-    }};
-    const Broker::Uuid_t myUuid(Broker::generateUuid());
-    ParameterValues myReply;
-    aBroker.addServant(
-        mySignature,
-        myUuid,
-        [](const ParameterValues& pIncoming,ParameterValues& pOut)
-        {
-            pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0)) ;
-        },
-        myReply
-    );
-    ParameterValues myRetVal = aBroker.invoke(mySignature, myUuid, ParameterValues{std::string("Peter!")});
-    ASSERT_TRUE(myRetVal.size()==1) << "Parameter list is empty, should have 1 element!";
+// {"m0", "Hello"}
+    static Interface myInterface{
+            Method{"echo",
+                   ParameterList {
+                           {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                   },
+                   [](const ParameterValues& pIncoming,ParameterValues& pOut)
+                   {
+                       pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0)) ;
+                   }
+            }
+    };
+    Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
+    ParameterValues myReply = aBroker.invoke(myUuid, "echo", ParameterValues{std::string("Peter!")});
+    myReply.unpack();
+    ASSERT_TRUE(myReply.size()==1) << "Parameter list is empty, should have 1 element!";
     EXPECT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));
     aBroker.shutdown();
 }

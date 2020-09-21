@@ -388,6 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <msgpack.hpp>
 #include <variant>
 
+#include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
 
 namespace striboh {
@@ -411,7 +412,6 @@ namespace striboh {
         public:
             typedef std::variant<int,std::string> Parameter_t;
             typedef std::vector<Parameter_t> ParameterList_t;
-            typedef std::vector<ETypes> TypesList_t;
 
             ParameterValues() = default;
 
@@ -465,17 +465,13 @@ namespace striboh {
             size_t mPackedCount = 0L;
             size_t mLastOffset = 0L;
             ParameterList_t mValues;
-            TypesList_t mTypes;
-            std::vector<char> mPackedBuffer;
+            Buffer mPackedBuffer;
 
             void
-            unpackString(const ETypes pType, msgpack::object_handle &pObjectHandle);
+            unpackString(msgpack::object &pObjectHandle);
 
             void
-            unpackInt( const ETypes pTypes, msgpack::object_handle &pObjectHandle);
-
-            ETypes
-            unpackParameterType(const size_t pBufLength, size_t& pBufOffset, msgpack::object_handle &pObjHandle) const;
+            unpackInt(msgpack::object &pObjectHandle);
 
         };
 

@@ -390,23 +390,15 @@ namespace striboh {
 
         ParameterValues&
         ParameterValues::add(const std::string& pVal) {
-            msgpack::sbuffer myBuffer;
-            msgpack::pack(myBuffer, int(ETypes::K_STRING));
-            msgpack::pack(myBuffer, pVal);
-            mPackedBuffer.resize(mPackedBuffer.size() + myBuffer.size() );
-            std::copy(myBuffer.data(),myBuffer.data() + myBuffer.size(),mPackedBuffer.begin() + mLastOffset);
-            mLastOffset += myBuffer.size();
+            msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
             return *this;
         }
 
         ParameterValues &
         ParameterValues::add(const int pVal) {
-            msgpack::sbuffer myBuffer;
-            msgpack::pack(myBuffer, int(ETypes::K_INT));
-            msgpack::pack(myBuffer, pVal);
-            mPackedBuffer.resize(mPackedBuffer.size() + myBuffer.size() );
-            std::copy(myBuffer.data(),myBuffer.data() + myBuffer.size(),mPackedBuffer.begin() + mLastOffset);
-            mLastOffset += myBuffer.size();
+            msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
             return *this;
         }
 
@@ -416,44 +408,27 @@ namespace striboh {
             std::size_t aOff = 0;
             msgpack::object_handle myObjHandle;
             while (aOff != myBufLength) {
-                ETypes myType=unpackParameterType(myBufLength, aOff, myObjHandle);
                 msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-                if (myType == ETypes::K_STRING) {
-                    unpackString(myType, myObjHandle);
-                } else if(myType== ETypes::K_INT) {
-                    unpackInt(myType, myObjHandle);
+                auto myObj = myObjHandle.get();
+                if( myObj.type == msgpack::type::STR ) {
+                    unpackString( myObj );
+                } else if( myObj.type == msgpack::type::POSITIVE_INTEGER || myObj.type == msgpack::type::NEGATIVE_INTEGER ) {
+                    unpackInt( myObj );
                 }
             };
             mIsUnpacked = true;
         }
 
-        ETypes
-        ParameterValues::unpackParameterType(const size_t pBufLength, size_t& pBufOffset,
-                                             msgpack::object_handle &pObjHandle) const {
-            msgpack::unpack(pObjHandle, mPackedBuffer.data(), pBufLength, pBufOffset);
-            msgpack::object myObj(pObjHandle.get());
-            int myTypeVal=0;
-            myObj.convert(myTypeVal);
-            return ETypes(myTypeVal);
-        }
-
         void
-        ParameterValues::unpackString(const ETypes pType, msgpack::object_handle &pObjectHandle) {
-            auto myObj=pObjectHandle.get();
-//TODO figure this out            if(myObj.type != msgpack::type::STR) {
-//                BOOST_LOG_TRIVIAL(error) << "Expected String, got " << myObj.type;
-//            }
+        ParameterValues::unpackString(msgpack::object& pObj ) {
             std::string myVal;
-            myObj.convert(myVal);
-            mTypes.push_back(pType);
+            pObj.convert(myVal);
             mValues.push_back(myVal);
         }
 
-        void ParameterValues::unpackInt(const ETypes pType, msgpack::object_handle &pObjectHandle) {
-            auto myObj=pObjectHandle.get();
+        void ParameterValues::unpackInt( msgpack::object &pObj ) {
             int myIntVal;
-            myObj.convert(myIntVal);
-            mTypes.push_back(pType);
+            pObj.convert(myIntVal);
             mValues.push_back(myIntVal);
         }
 

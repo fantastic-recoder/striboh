@@ -12,4 +12,4 @@ target_include_directories(striboh_base_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST
 target_link_libraries(striboh_base_tests striboh_base gmock gtest_main gtest boost_log boost_filesystem boost_system boost_thread pthread)
 add_test(NAME striboh_base_tests COMMAND striboh_idl_tests)
 
-add_custom_target("All_Striboh_tests" DEPENDS striboh_idl_tests striboh_base_tests striboh_idl_compiler)
+add_custom_target("All_Striboh_tests" DEPENDS striboh_idl_tests striboh_base_tests)

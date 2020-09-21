@@ -376,11 +376,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include "stribohBroker.hpp"
 
 #include <thread>
 #include <boost/log/trivial.hpp>
 #include <boost/uuid/uuid_generators.hpp>
+
+#include "stribohBroker.hpp"
+#include "stribohBaseInterfaceName.hpp"
 
 namespace striboh {
     namespace base {
@@ -427,13 +429,26 @@ namespace striboh {
         }
 
         ParameterValues
-        Broker::invoke(const Signature&, const Uuid_t& pInstanceId, ParameterValues pValues) {
+        Broker::invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) {
             ParameterValues myRetVal;
+            auto myInterfaceIt=mInstances.find(pInstanceId);
+            if(myInterfaceIt != mInstances.end()) {
+                auto myMethodIt = myInterfaceIt->second.findMethod(pMethodName);
+                if( myMethodIt != myInterfaceIt->second.end() ) {
+                    if(!pValues.unpacked()) {
+                        pValues.unpack();
+                    }
+                    myMethodIt->invoke(pValues,myRetVal);
+                }
+            }
             return myRetVal;
         }
 
-        void Broker::addServant(const Signature& pMethodSignature, const Uuid_t& pInstanceId, void (*pFunction)(const ParameterValues&, ParameterValues& ), ParameterValues& pOut) {
-
+        const Broker::Uuid_t
+        Broker::addServant(Interface& pInterface) {
+            Uuid_t myUuid = generateUuid();
+            mInstances.try_emplace(myUuid,pInterface);
+            return myUuid;
         }
 
         Broker::Uuid_t Broker::generateUuid() {

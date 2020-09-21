@@ -22,12 +22,13 @@ namespace striboh {
         };
 
         class InterfaceName;
-        class MethodName;
+
+        class Method;
         class ParameterList;
 
         class Signature {
         public:
-            Signature(const InterfaceName& , const MethodName&, const ParameterList& );
+            Signature(const InterfaceName& , const Method&, const ParameterList& );
         };
     }
 }

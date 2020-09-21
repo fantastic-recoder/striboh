@@ -377,21 +377,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEHOLDINTERFACE_HPP
-#define STRIBOH_STRIBOHBASEHOLDINTERFACE_HPP
-
-#include <vector>
-#include <string>
+#include "stribohBaseMethod.hpp"
 
 namespace striboh {
     namespace base {
 
-        class InterfaceName {
-        public:
-            InterfaceName(std::initializer_list<std::string>);
-        };
     }
 }
-
-
-#endif //STRIBOH_STRIBOHBASEHOLDINTERFACE_HPP

@@ -3,8 +3,8 @@
 //
 
 #include "stribohBaseMessage.hpp"
-#include "stribohBaseHoldInterface.hpp"
-#include "stribohBaseMethodName.hpp"
+#include "stribohBaseInterfaceName.hpp"
+#include "stribohBaseMethod.hpp"
 #include "stribohBaseParameters.hpp"
 
 namespace striboh {

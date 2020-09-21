@@ -12,3 +12,4 @@ conan_basic_setup()
 add_subdirectory(src/main/cpp/NamedType)
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
+
