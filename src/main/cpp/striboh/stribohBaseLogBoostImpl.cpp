@@ -377,106 +377,27 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#include <boost/log/trivial.hpp>
 
-#include <string>
-#include <vector>
-#include <variant>
-#include <algorithm>
-
-#include <msgpack.hpp>
-#include <variant>
-
-#include "stribohBaseBuffer.hpp"
-#include "stribohBaseSignature.hpp"
+#include "stribohBaseLogBoostImpl.hpp"
 
 namespace striboh {
     namespace base {
 
-        class ParameterDesc {
-            const EDir mDir;
-            const ETypes mType;
-            const std::string_view mName;
-        public:
-            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
-            {}
-        };
+        void LogBoostImpl::doDebug(const std::string pMsg) {
+            BOOST_LOG_TRIVIAL(debug) << pMsg;
+        }
 
-        class ParameterList {
-        public:
-            explicit ParameterList(){}
-            explicit ParameterList(std::vector<ParameterDesc>);
-        };
+        void LogBoostImpl::doError(const std::string pMsg) {
+            BOOST_LOG_TRIVIAL(error) << pMsg;
+        }
 
-        class ParameterValues {
-        public:
-            typedef std::variant<int,std::string> Parameter_t;
-            typedef std::vector<Parameter_t> ParameterList_t;
+        void LogBoostImpl::doWarn(const std::string pMsg) {
+            BOOST_LOG_TRIVIAL(warning) << pMsg;
+        }
 
-            ParameterValues() = default;
-
-            template<typename ParVal0, typename... ParVal_t>
-            explicit
-            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0, pValues...);
-            }
-
-            template<typename ParVal0, typename... ParVal_t>
-            ParameterValues&
-            add(const ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0);
-                add(pValues...);
-                mPackedCount++;
-                return *this;
-            }
-
-            ParameterValues&
-            add(const ParameterValues& pValues) {
-                return *this;
-            }
-
-            ParameterValues&
-            add(const std::string& pVal);
-
-            ParameterValues&
-            add(const int pVal);
-
-            void
-            unpack();
-
-            template<typename T>
-            T
-            get(size_t pIdx) const {
-                return std::get<T>(mValues[pIdx]);
-            }
-
-            size_t
-            size() const {
-                return mValues.size();
-            }
-
-            bool
-            unpacked() const {
-                return mIsUnpacked;
-            }
-
-        private:
-            bool mIsUnpacked = false;
-            size_t mPackedCount = 0L;
-            size_t mLastOffset = 0L;
-            ParameterList_t mValues;
-            Buffer mPackedBuffer;
-
-            void
-            unpackString(msgpack::object &pObjectHandle);
-
-            void
-            unpackInt(msgpack::object &pObjectHandle);
-
-        };
-
+        void LogBoostImpl::doInfo(const std::string pMsg) {
+            BOOST_LOG_TRIVIAL(info) << pMsg;
+        }
     }
 }
-
-#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP

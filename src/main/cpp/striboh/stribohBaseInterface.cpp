@@ -376,107 +376,38 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#include <boost/log/trivial.hpp>
 
-#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
-
-#include <string>
-#include <vector>
-#include <variant>
-#include <algorithm>
-
-#include <msgpack.hpp>
-#include <variant>
-
-#include "stribohBaseBuffer.hpp"
-#include "stribohBaseSignature.hpp"
+#include "stribohBaseInterface.hpp"
 
 namespace striboh {
     namespace base {
+        Interface::Interface( std::initializer_list<std::string> pPath, std::initializer_list<Method> pMethodList ):
+        mPath{pPath},
+        mMethods{pMethodList}
+        {
+            BOOST_LOG_TRIVIAL(debug) << "We have " << mMethods.size() << ".";
+        }
 
-        class ParameterDesc {
-            const EDir mDir;
-            const ETypes mType;
-            const std::string_view mName;
-        public:
-            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
-            {}
-        };
+        Interface::Methods_t::iterator
+        Interface::findMethod(const std::string &pMethodName) {
+            return std::find_if(mMethods.begin(),mMethods.end(), [pMethodName]( const Method& pMethod)->bool {
+                if(pMethod.getName().compare(pMethodName)==0) {
+                    return true;
+                }
+                return false;
+            });
+        }
 
-        class ParameterList {
-        public:
-            explicit ParameterList(){}
-            explicit ParameterList(std::vector<ParameterDesc>);
-        };
+        Interface::Methods_t::iterator
+        Interface::end() {
+            return mMethods.end();
+        }
 
-        class ParameterValues {
-        public:
-            typedef std::variant<int,std::string> Parameter_t;
-            typedef std::vector<Parameter_t> ParameterList_t;
-
-            ParameterValues() = default;
-
-            template<typename ParVal0, typename... ParVal_t>
-            explicit
-            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0, pValues...);
-            }
-
-            template<typename ParVal0, typename... ParVal_t>
-            ParameterValues&
-            add(const ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0);
-                add(pValues...);
-                mPackedCount++;
-                return *this;
-            }
-
-            ParameterValues&
-            add(const ParameterValues& pValues) {
-                return *this;
-            }
-
-            ParameterValues&
-            add(const std::string& pVal);
-
-            ParameterValues&
-            add(const int pVal);
-
-            void
-            unpack();
-
-            template<typename T>
-            T
-            get(size_t pIdx) const {
-                return std::get<T>(mValues[pIdx]);
-            }
-
-            size_t
-            size() const {
-                return mValues.size();
-            }
-
-            bool
-            unpacked() const {
-                return mIsUnpacked;
-            }
-
-        private:
-            bool mIsUnpacked = false;
-            size_t mPackedCount = 0L;
-            size_t mLastOffset = 0L;
-            ParameterList_t mValues;
-            Buffer mPackedBuffer;
-
-            void
-            unpackString(msgpack::object &pObjectHandle);
-
-            void
-            unpackInt(msgpack::object &pObjectHandle);
-
-        };
+        const Interface::Path_t &
+        Interface::getPath() const {
+            return mPath;
+        }
 
     }
 }
-
-#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP

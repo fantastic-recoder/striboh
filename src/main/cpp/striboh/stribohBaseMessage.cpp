@@ -3,7 +3,7 @@
 //
 
 #include "stribohBaseMessage.hpp"
-#include "stribohBaseInterfaceName.hpp"
+#include "stribohBaseInterface.hpp"
 #include "stribohBaseMethod.hpp"
 #include "stribohBaseParameters.hpp"
 

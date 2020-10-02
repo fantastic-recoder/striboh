@@ -377,106 +377,125 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#include <thread>
+#include <boost/log/trivial.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 
-#include <string>
-#include <vector>
-#include <variant>
-#include <algorithm>
-
-#include <msgpack.hpp>
-#include <variant>
-
-#include "stribohBaseBuffer.hpp"
-#include "stribohBaseSignature.hpp"
+#include "stribohBaseBroker.hpp"
+#include "stribohBaseInterface.hpp"
 
 namespace striboh {
     namespace base {
 
-        class ParameterDesc {
-            const EDir mDir;
-            const ETypes mType;
-            const std::string_view mName;
-        public:
-            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
-            {}
-        };
+        using std::string;
 
-        class ParameterList {
-        public:
-            explicit ParameterList(){}
-            explicit ParameterList(std::vector<ParameterDesc>);
-        };
-
-        class ParameterValues {
-        public:
-            typedef std::variant<int,std::string> Parameter_t;
-            typedef std::vector<Parameter_t> ParameterList_t;
-
-            ParameterValues() = default;
-
-            template<typename ParVal0, typename... ParVal_t>
-            explicit
-            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0, pValues...);
+        const std::atomic<EBrokerState>& Broker::serve() {
+            if (mOperationalState != EBrokerState::K_NOMINAL) {
+                BOOST_LOG_TRIVIAL(warning) << "ORB is not ready.";
+            } else {
+                mOperationalState = EBrokerState::K_STARTING;
+                mReceiver = std::async([this] () ->void { std::launch::async, this->dispatch(); });
+                do {
+                    BOOST_LOG_TRIVIAL(trace) << "Waiting for main servant. state = " << mOperationalState;
+                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+                } while (mOperationalState != EBrokerState::K_STARTED);
             }
+            return mOperationalState;
+        }
 
-            template<typename ParVal0, typename... ParVal_t>
-            ParameterValues&
-            add(const ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0);
-                add(pValues...);
-                mPackedCount++;
-                return *this;
+        void  Broker::dispatch() {
+            do{
+                mOperationalState = EBrokerState::K_STARTED;
+                BOOST_LOG_TRIVIAL(trace) << "Going to sleep. state = " << mOperationalState;
+                std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+            } while (mOperationalState == EBrokerState::K_STARTED);
+            BOOST_LOG_TRIVIAL(info) << "Shutdown completed. state = " << mOperationalState;
+            return;
+        }
+
+        const std::atomic<EBrokerState>&  Broker::shutdown() {
+            if(mOperationalState == EBrokerState::K_STARTED) {
+                mOperationalState = EBrokerState::K_SHUTTING_DOWN;
+                BOOST_LOG_TRIVIAL(info) << "Going to shutdown. state = " << mOperationalState;
+                mReceiver.wait();
+                mOperationalState = EBrokerState::K_NOMINAL;
+            } else {
+                BOOST_LOG_TRIVIAL(warning) << "ORB is not started.";
             }
+            BOOST_LOG_TRIVIAL(info) << "ORB shut down. state = " << mOperationalState;
+            return mOperationalState;
+        }
 
-            ParameterValues&
-            add(const ParameterValues& pValues) {
-                return *this;
+        void Broker::initialize() {
+
+        }
+
+        ParameterValues
+        Broker::invoke(const Uuid_t& pInstanceId, const string& pMethodName, ParameterValues pValues) {
+            ParameterValues myRetVal;
+            auto myInterfaceIt=mInstances.find(pInstanceId);
+            if(myInterfaceIt != mInstances.end()) {
+                auto myMethodIt = myInterfaceIt->second.findMethod(pMethodName);
+                if (myMethodIt != myInterfaceIt->second.end()) {
+                    if (!pValues.unpacked()) {
+                        pValues.unpack();
+                    }
+                    myMethodIt->invoke(pValues, myRetVal, Context(*this) );
+                }
             }
+            // send the buffer over and retrieve the result
+            return myRetVal;
+        }
 
-            ParameterValues&
-            add(const std::string& pVal);
-
-            ParameterValues&
-            add(const int pVal);
-
-            void
-            unpack();
-
-            template<typename T>
-            T
-            get(size_t pIdx) const {
-                return std::get<T>(mValues[pIdx]);
+        const Broker::Uuid_t
+        Broker::addServant(Interface& pInterface) {
+            Uuid_t myUuid = generateUuid();
+            auto myPair = mInstances.try_emplace(myUuid,pInterface);
+            std::vector<NameTreeNode>* myChildNodes = &mRoot.getChildNodes();
+            for(string mDir:myPair.first->second.getPath()) {
+                auto myBegin = myChildNodes->begin();
+                auto myEnd = myChildNodes->end();
+                auto myFound = find_if(myBegin,myEnd,[mDir] (const NameTreeNode& pDirNode) -> bool {
+                    if(mDir == pDirNode.getName())
+                        return true;
+                    return false;
+                });
+                if(myFound==myEnd) {
+                    auto& myNewNode(myChildNodes->emplace_back(NameTreeNode(mDir)));
+                    myChildNodes = &myNewNode.getChildNodes();
+                } else {
+                    myChildNodes = &myFound->getChildNodes();
+                }
             }
+            return myUuid;
+        }
 
-            size_t
-            size() const {
-                return mValues.size();
+        Broker::Uuid_t Broker::generateUuid() {
+            static boost::uuids::random_generator theGenerator;
+            boost::uuids::uuid myUuid=theGenerator();
+            return myUuid;
+        }
+
+        std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {
+            switch(pOrbState) {
+                case EBrokerState::K_STARTED:
+                    pOstream<<"started";
+                break;
+                case EBrokerState::K_STARTING:
+                    pOstream<<"starting";
+                    break;
+                case EBrokerState::K_NOMINAL:
+                    pOstream<<"nominal";
+                    break;
+                case EBrokerState::K_SHUTTING_DOWN:
+                    pOstream<<"shutting-down";
+                    break;
+                default:
+                    pOstream<<"unknown";
+                    break;
             }
+            return pOstream;
+        }
 
-            bool
-            unpacked() const {
-                return mIsUnpacked;
-            }
-
-        private:
-            bool mIsUnpacked = false;
-            size_t mPackedCount = 0L;
-            size_t mLastOffset = 0L;
-            ParameterList_t mValues;
-            Buffer mPackedBuffer;
-
-            void
-            unpackString(msgpack::object &pObjectHandle);
-
-            void
-            unpackInt(msgpack::object &pObjectHandle);
-
-        };
-
-    }
-}
-
-#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP
+    }// namespace base
+}// namespace striboh

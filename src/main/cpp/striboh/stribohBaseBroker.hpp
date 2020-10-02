@@ -376,107 +376,100 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#ifndef STRIBOH_BASE_ORB_HPP
+#define STRIBOH_BASE_ORB_HPP
 
-#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#include <array>
+#include <atomic>
+#include <thread>
+#include <future>
+#include <boost/uuid/uuid.hpp>
 
-#include <string>
-#include <vector>
-#include <variant>
-#include <algorithm>
-
-#include <msgpack.hpp>
-#include <variant>
-
-#include "stribohBaseBuffer.hpp"
-#include "stribohBaseSignature.hpp"
+#include "stribohBaseParameters.hpp"
 
 namespace striboh {
     namespace base {
 
-        class ParameterDesc {
-            const EDir mDir;
-            const ETypes mType;
-            const std::string_view mName;
-        public:
-            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
-            {}
+        enum class EBrokerState {
+            K_NOMINAL,
+            K_STARTING,
+            K_STARTED,
+            K_SHUTTING_DOWN
         };
 
-        class ParameterList {
+        std::ostream& operator << (std::ostream& , const EBrokerState& );
+
+        class Interface;
+
+        class NameTreeNode {
         public:
-            explicit ParameterList(){}
-            explicit ParameterList(std::vector<ParameterDesc>);
-        };
+            typedef std::vector<NameTreeNode> ChildNodes_t;
 
-        class ParameterValues {
-        public:
-            typedef std::variant<int,std::string> Parameter_t;
-            typedef std::vector<Parameter_t> ParameterList_t;
+            NameTreeNode() = default;
 
-            ParameterValues() = default;
+            explicit NameTreeNode(const std::string pName ):mName(pName) {}
 
-            template<typename ParVal0, typename... ParVal_t>
-            explicit
-            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0, pValues...);
+            const std::string &getName() const {
+                return mName;
             }
 
-            template<typename ParVal0, typename... ParVal_t>
-            ParameterValues&
-            add(const ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0);
-                add(pValues...);
-                mPackedCount++;
-                return *this;
+            void setName(const std::string &pName) {
+                mName = pName;
             }
 
-            ParameterValues&
-            add(const ParameterValues& pValues) {
-                return *this;
+            const std::vector<NameTreeNode> &getChildNodes() const {
+                return mChildNodes;
             }
 
-            ParameterValues&
-            add(const std::string& pVal);
-
-            ParameterValues&
-            add(const int pVal);
-
-            void
-            unpack();
-
-            template<typename T>
-            T
-            get(size_t pIdx) const {
-                return std::get<T>(mValues[pIdx]);
+            std::vector<NameTreeNode> & getChildNodes() {
+                return mChildNodes;
             }
 
-            size_t
-            size() const {
-                return mValues.size();
-            }
-
-            bool
-            unpacked() const {
-                return mIsUnpacked;
+            void setChildNodes(const std::vector<NameTreeNode> &pChildNodes) {
+                mChildNodes = pChildNodes;
             }
 
         private:
-            bool mIsUnpacked = false;
-            size_t mPackedCount = 0L;
-            size_t mLastOffset = 0L;
-            ParameterList_t mValues;
-            Buffer mPackedBuffer;
+            ChildNodes_t mChildNodes;
+            std::string mName;
+        };
+
+
+        class Broker {
+        public:
+            typedef boost::uuids::uuid Uuid_t;
+            typedef std::map<Uuid_t ,Interface> Instances_t;
 
             void
-            unpackString(msgpack::object &pObjectHandle);
+            initialize();
+
+            const std::atomic<EBrokerState>&
+            serve();
+
+            const std::atomic<EBrokerState>&
+            shutdown();
+
+            ParameterValues
+            invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues);
+
+            const Uuid_t
+            addServant(Interface& pMethodSignature);
+
+            static Uuid_t
+            generateUuid();
+
+        private:
 
             void
-            unpackInt(msgpack::object &pObjectHandle);
+            dispatch();
 
+            std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
+            Instances_t mInstances;
+            NameTreeNode mRoot;
+            std::future<void> mReceiver;
         };
 
     }
 }
 
-#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#endif //STRIBOH_BASE_ORB_HPP

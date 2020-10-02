@@ -376,107 +376,41 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-
-#include <thread>
 #include <boost/log/trivial.hpp>
-#include <boost/uuid/uuid_generators.hpp>
 
-#include "stribohBroker.hpp"
-#include "stribohBaseInterfaceName.hpp"
+#include <striboh/stribohBaseInterface.hpp>
+#include <striboh/stribohBaseBroker.hpp>
 
-namespace striboh {
-    namespace base {
+using std::endl;
+using namespace striboh::base;
 
-        const std::atomic<EBrokerState>& Broker::serve() {
-            if (mOperationalState != EBrokerState::K_NOMINAL) {
-                BOOST_LOG_TRIVIAL(warning) << "ORB is not ready.";
-            } else {
-                mOperationalState = EBrokerState::K_STARTING;
-                mReceiver = std::thread([this] { this->dispatch(); });
-                do {
-                    BOOST_LOG_TRIVIAL(trace) << "Waiting for main servant. state = " << mOperationalState;
-                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
-                } while (mOperationalState != EBrokerState::K_STARTED);
-            }
-            return mOperationalState;
-        }
+int main( const int argc, const char* argv[]) {
+    BOOST_LOG_TRIVIAL(info)  << "Server " << argv[0] << " starting." ;
+    Broker aBroker;
+    aBroker.serve();
 
-        void  Broker::dispatch() {
-            do{
-                mOperationalState = EBrokerState::K_STARTED;
-                BOOST_LOG_TRIVIAL(trace) << "Going to sleep. state = " << mOperationalState;
-                std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
-            } while (mOperationalState == EBrokerState::K_STARTED);
-            BOOST_LOG_TRIVIAL(info) << "Shutdown completed. state = " << mOperationalState;
-            return;
-        }
-
-        const std::atomic<EBrokerState>&  Broker::shutdown() {
-            if(mOperationalState == EBrokerState::K_STARTED) {
-                mOperationalState = EBrokerState::K_SHUTTING_DOWN;
-                BOOST_LOG_TRIVIAL(info) << "Going to shutdown. state = " << mOperationalState;
-                mReceiver.join();
-                mOperationalState = EBrokerState::K_NOMINAL;
-            } else {
-                BOOST_LOG_TRIVIAL(warning) << "ORB is not started.";
-            }
-            BOOST_LOG_TRIVIAL(info) << "ORB shut down. state = " << mOperationalState;
-            return mOperationalState;
-        }
-
-        void Broker::initialize() {
-
-        }
-
-        ParameterValues
-        Broker::invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) {
-            ParameterValues myRetVal;
-            auto myInterfaceIt=mInstances.find(pInstanceId);
-            if(myInterfaceIt != mInstances.end()) {
-                auto myMethodIt = myInterfaceIt->second.findMethod(pMethodName);
-                if( myMethodIt != myInterfaceIt->second.end() ) {
-                    if(!pValues.unpacked()) {
-                        pValues.unpack();
-                    }
-                    myMethodIt->invoke(pValues,myRetVal);
+    Interface myInterface{
+        {"m0", "Hello"},
+        {
+             Method{"echo",
+                ParameterList{
+                        {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                },
+                [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
+                    pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
                 }
+             },
+            Method{"shutdown",
+               ParameterList{},
+               [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
+                   pCtx.getBroker().shutdown();
+               }
             }
-            return myRetVal;
-        }
 
-        const Broker::Uuid_t
-        Broker::addServant(Interface& pInterface) {
-            Uuid_t myUuid = generateUuid();
-            mInstances.try_emplace(myUuid,pInterface);
-            return myUuid;
         }
-
-        Broker::Uuid_t Broker::generateUuid() {
-            static boost::uuids::random_generator theGenerator;
-            boost::uuids::uuid myUuid=theGenerator();
-            return myUuid;
-        }
-
-        std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {
-            switch(pOrbState) {
-                case EBrokerState::K_STARTED:
-                    pOstream<<"started";
-                break;
-                case EBrokerState::K_STARTING:
-                    pOstream<<"starting";
-                    break;
-                case EBrokerState::K_NOMINAL:
-                    pOstream<<"nominal";
-                    break;
-                case EBrokerState::K_SHUTTING_DOWN:
-                    pOstream<<"shutting-down";
-                    break;
-                default:
-                    pOstream<<"unknown";
-                    break;
-            }
-            return pOstream;
-        }
-
-    }// namespace base
-}// namespace striboh
+    };
+    BOOST_LOG_TRIVIAL(debug)  << "Adding echo servant..." ;
+    Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
+    BOOST_LOG_TRIVIAL(debug)  << "Echo servant." ;
+    return 2;
+}

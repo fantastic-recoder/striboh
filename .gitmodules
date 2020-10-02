@@ -4,3 +4,9 @@
 [submodule "src/main/cpp/msgpack-c"]
 	path = src/main/cpp/msgpack-c
 	url = https://github.com/msgpack/msgpack-c.git
+[submodule "src/main/cpp/di"]
+	path = src/main/cpp/di
+	url = https://github.com/boost-ext/di.git
+[submodule "src/main/cpp/fmt"]
+	path = src/main/cpp/fmt
+	url = https://github.com/fmtlib/fmt

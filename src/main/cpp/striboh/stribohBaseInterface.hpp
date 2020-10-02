@@ -377,106 +377,45 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#ifndef STRIBOH_BASE_INTERFACE_HPP
+#define STRIBOH_BASE_INTERFACE_HPP
 
-#include <string>
 #include <vector>
-#include <variant>
-#include <algorithm>
+#include <map>
+#include <string>
 
-#include <msgpack.hpp>
-#include <variant>
-
-#include "stribohBaseBuffer.hpp"
-#include "stribohBaseSignature.hpp"
+#include "stribohBaseMethod.hpp"
 
 namespace striboh {
     namespace base {
 
-        class ParameterDesc {
-            const EDir mDir;
-            const ETypes mType;
-            const std::string_view mName;
+        class Broker;
+        class Context;
+
+        class Interface {
         public:
-            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
-            {}
-        };
+            typedef std::vector<Method> Methods_t;
+            typedef std::vector<std::string> Path_t;
 
-        class ParameterList {
-        public:
-            explicit ParameterList(){}
-            explicit ParameterList(std::vector<ParameterDesc>);
-        };
+            Interface( std::initializer_list<std::string> pPath, std::initializer_list<Method> );
 
-        class ParameterValues {
-        public:
-            typedef std::variant<int,std::string> Parameter_t;
-            typedef std::vector<Parameter_t> ParameterList_t;
+            Methods_t::iterator findMethod( const std::string &pMethodName );
 
-            ParameterValues() = default;
+            Methods_t::iterator end();
 
-            template<typename ParVal0, typename... ParVal_t>
-            explicit
-            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0, pValues...);
+            const Path_t &getPath() const;
+
+            bool isLocal() const {
+                return true;
             }
 
-            template<typename ParVal0, typename... ParVal_t>
-            ParameterValues&
-            add(const ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0);
-                add(pValues...);
-                mPackedCount++;
-                return *this;
-            }
 
-            ParameterValues&
-            add(const ParameterValues& pValues) {
-                return *this;
-            }
-
-            ParameterValues&
-            add(const std::string& pVal);
-
-            ParameterValues&
-            add(const int pVal);
-
-            void
-            unpack();
-
-            template<typename T>
-            T
-            get(size_t pIdx) const {
-                return std::get<T>(mValues[pIdx]);
-            }
-
-            size_t
-            size() const {
-                return mValues.size();
-            }
-
-            bool
-            unpacked() const {
-                return mIsUnpacked;
-            }
 
         private:
-            bool mIsUnpacked = false;
-            size_t mPackedCount = 0L;
-            size_t mLastOffset = 0L;
-            ParameterList_t mValues;
-            Buffer mPackedBuffer;
-
-            void
-            unpackString(msgpack::object &pObjectHandle);
-
-            void
-            unpackInt(msgpack::object &pObjectHandle);
-
+            Methods_t mMethods;
+            Path_t    mPath;
         };
-
     }
 }
 
-#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#endif //STRIBOH_BASE_INTERFACE_HPP

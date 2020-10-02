@@ -11,9 +11,20 @@
 namespace striboh {
     namespace base {
 
+        class Broker;
+
+        class Context {
+        public:
+            Context( Broker& pBroker): mBroker(pBroker) {}
+            Broker& getBroker() { return mBroker; }
+            const Broker& getBroker() const { return mBroker; }
+        private:
+            Broker& mBroker;
+        };
+
         class Method {
         public:
-            typedef void(*MethodGlue_t)(const ParameterValues&, ParameterValues& ) ;
+            typedef void(*MethodGlue_t)( const ParameterValues&, ParameterValues&, Context ) ;
 
             explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation )
             : mName(pName), mImplementation(pImplementation)
@@ -23,9 +34,9 @@ namespace striboh {
                 return mName;
             }
 
-            void invoke(const ParameterValues& pIns, ParameterValues& pOut) {
+            void invoke(const ParameterValues& pIns, ParameterValues& pOut, Context pCtx) {
                 if(mImplementation)
-                    mImplementation(pIns,pOut);
+                    mImplementation(pIns,pOut,pCtx);
             }
         private:
             const std::string mName;

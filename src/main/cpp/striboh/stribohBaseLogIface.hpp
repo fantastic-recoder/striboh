@@ -376,32 +376,68 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#ifndef STRIBOH_STRIBOHBASELOGIFACE_HPP
+#define STRIBOH_STRIBOHBASELOGIFACE_HPP
 
-#ifndef STRIBOH_STRIBOHBASEINTERFACENAME_HPP
-#define STRIBOH_STRIBOHBASEINTERFACENAME_HPP
-
-#include <vector>
 #include <string>
-
-#include "stribohBaseMethod.hpp"
+#include <fmt/format.h>
 
 namespace striboh {
     namespace base {
+        enum class ELogLevel {
+            DBG=0,ERR=1,WRN=2,INF=3
+        };
 
-        class Interface {
+        class LogIface {
+            ELogLevel mLevel=ELogLevel::WRN;
+
         public:
-            typedef std::vector<Method> Methods_t;
-            Interface(std::initializer_list<Method>);
+            ELogLevel getLevel() const {
+                return mLevel;
+            }
 
-            Methods_t::iterator findMethod(const std::string &pMethodName);
+            void setLevel(ELogLevel pLevel) {
+                mLevel = pLevel;
+            }
 
-            Methods_t::iterator end();
+            template<class ...TArgs>
+            void
+            debug(std::string_view pFmt, TArgs ...pTArgs) {
+                if(mLevel>=ELogLevel::DBG) {
+                    doDebug(fmt::format(pFmt,pTArgs...));
+                }
+            }
 
-        private:
-            Methods_t mMethods;
+            template<class ...TArgs>
+            void
+            warn(std::string_view pFmt, TArgs ...pTArgs) {
+                if(mLevel>=ELogLevel::WRN) {
+                    doWarn(fmt::format(pFmt,pTArgs...));
+                }
+            }
+
+            template<class ...TArgs>
+            void
+            info(std::string_view pFmt, TArgs ...pTArgs) {
+                if(mLevel>=ELogLevel::INF) {
+                    doInfo(fmt::format(pFmt,pTArgs...));
+                }
+            }
+
+            template<class ...TArgs>
+            void
+            error(std::string_view pFmt, TArgs ...pTArgs) {
+                if(mLevel>=ELogLevel::ERR) {
+                    doError(fmt::format(pFmt,pTArgs...));
+                }
+            }
+
+            virtual void doDebug( const std::string pMsg ) = 0;
+            virtual void doError( const std::string pMsg ) = 0;
+            virtual void doWarn( const std::string pMsg ) = 0;
+            virtual void doInfo( const std::string pMsg ) = 0;
         };
     }
 }
 
-
-#endif //STRIBOH_STRIBOHBASEINTERFACENAME_HPP
+#endif //STRIBOH_STRIBOHBASELOGIFACE_HPP

@@ -380,16 +380,20 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <string>
 #include <iostream>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohBroker.hpp>
+#include <chrono>
+#include <striboh/stribohBaseBroker.hpp>
+
 #include <boost/log/trivial.hpp>
+#include <boost/process.hpp>
+
 #include <striboh/stribohBaseMessage.hpp>
-#include <striboh/stribohBaseInterfaceName.hpp>
+#include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseParameters.hpp>
-#include "striboh/stribohBaseSignature.hpp"
+#include <striboh/stribohBaseSignature.hpp>
 
 using namespace striboh::base;
+using namespace std::chrono_literals;
 using std::endl;
 using std::string;
 using std::count;
@@ -398,6 +402,11 @@ using striboh::base::Method;
 using striboh::base::ParameterList;
 using striboh::base::ParameterValues;
 using striboh::base::ETypes;
+using boost::process::child;
+using boost::process::system;
+using boost::process::std_in;
+using boost::process::std_out;
+using boost::process::std_err;
 
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
     Broker aBroker;
@@ -427,20 +436,21 @@ TEST(stribohBaseTests, testUuidGeneration) {
     EXPECT_EQ(myUuid0,myUuid2) << "UUID not written and read correctly!";
 }
 
-TEST(stribohBaseTests, testSimpleMessageTransfer) {
+TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     Broker aBroker;
     aBroker.serve();
 
-// {"m0", "Hello"}
-    static Interface myInterface{
-            Method{"echo",
-                   ParameterList {
-                           {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
-                   },
-                   [](const ParameterValues& pIncoming,ParameterValues& pOut)
-                   {
-                       pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0)) ;
-                   }
+    Interface myInterface{
+            {"m0", "Hello"},
+            {
+                    Method{"echo",
+                           ParameterList{
+                                   {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                           },
+                           [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
+                               pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                           }
+                    }
             }
     };
     Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
@@ -449,4 +459,16 @@ TEST(stribohBaseTests, testSimpleMessageTransfer) {
     ASSERT_TRUE(myReply.size()==1) << "Parameter list is empty, should have 1 element!";
     EXPECT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));
     aBroker.shutdown();
+}
+
+TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
+    Broker aBroker;
+    child myServer("./striboh_test_echo_server", std_out > stdout, std_err > stderr, std_in < stdin );
+    BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
+    auto myStatus=myServer.wait_for(15s);
+    EXPECT_TRUE(myStatus) << "Server did not shutdown!";
+    if(!myServer)
+        myServer.terminate();
+    myServer.wait_for(15s);
+    EXPECT_EQ(0,myServer.exit_code());
 }
