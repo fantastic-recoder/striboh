@@ -383,6 +383,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/beast/version.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/strand.hpp>
+#include <boost/log/trivial.hpp>
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
@@ -393,6 +394,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <vector>
 #include <cstdlib>
 
+#include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
@@ -404,7 +406,9 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace striboh {
     namespace base {
 
-        // Return a reasonable mime type based on the extension of a file.
+        static const char *const theAppJson = "application/json";
+
+// Return a reasonable mime type based on the extension of a file.
         beast::string_view
         mime_type(beast::string_view path) {
             using beast::iequals;
@@ -420,7 +424,7 @@ namespace striboh {
             if (iequals(ext, ".css")) return "text/css";
             if (iequals(ext, ".txt")) return "text/plain";
             if (iequals(ext, ".js")) return "application/javascript";
-            if (iequals(ext, ".json")) return "application/json";
+            if (iequals(ext, ".json")) return theAppJson;
             if (iequals(ext, ".xml")) return "application/xml";
             if (iequals(ext, ".swf")) return "application/x-shockwave-flash";
             if (iequals(ext, ".flv")) return "video/x-flv";
@@ -448,14 +452,14 @@ namespace striboh {
                 class Body, class Allocator,
                 class Send>
         void
-        handleHttpRequest(http::request<Body, http::basic_fields<Allocator>> &&req, Send &&send) {
+        handleHttpRequest(http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend) {
             // Returns a bad request response
             auto const bad_request =
-                    [&req](beast::string_view why) {
-                        http::response<http::string_body> res{http::status::bad_request, req.version()};
+                    [&pRequest](beast::string_view why) {
+                        http::response<http::string_body> res{http::status::bad_request, pRequest.version()};
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                         res.set(http::field::content_type, "text/html");
-                        res.keep_alive(req.keep_alive());
+                        res.keep_alive(pRequest.keep_alive());
                         res.body() = std::string(why);
                         res.prepare_payload();
                         return res;
@@ -463,11 +467,11 @@ namespace striboh {
 
             // Returns a not found response
             auto const not_found =
-                    [&req](beast::string_view target) {
-                        http::response<http::string_body> res{http::status::not_found, req.version()};
+                    [&pRequest](beast::string_view target) {
+                        http::response<http::string_body> res{http::status::not_found, pRequest.version()};
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                         res.set(http::field::content_type, "text/html");
-                        res.keep_alive(req.keep_alive());
+                        res.keep_alive(pRequest.keep_alive());
                         res.body() = "The resource '" + std::string(target) + "' was not found.";
                         res.prepare_payload();
                         return res;
@@ -475,69 +479,51 @@ namespace striboh {
 
             // Returns a server error response
             auto const server_error =
-                    [&req](beast::string_view what) {
-                        http::response<http::string_body> res{http::status::internal_server_error, req.version()};
+                    [&pRequest](beast::string_view what) {
+                        http::response<http::string_body> res{http::status::internal_server_error, pRequest.version()};
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                         res.set(http::field::content_type, "text/html");
-                        res.keep_alive(req.keep_alive());
+                        res.keep_alive(pRequest.keep_alive());
                         res.body() = "An error occurred: '" + std::string(what) + "'";
                         res.prepare_payload();
                         return res;
                     };
 
             // Make sure we can handle the method
-            if (req.method() != http::verb::get &&
-                req.method() != http::verb::head)
-                return send(bad_request("Unknown HTTP-method"));
+            if (pRequest.method() != http::verb::get &&
+                pRequest.method() != http::verb::head)
+                return pSend(bad_request("Unknown HTTP-method"));
 
             // Request path must be absolute and not contain "..".
-            if (req.target().empty() ||
-                req.target()[0] != '/' ||
-                req.target().find("..") != beast::string_view::npos)
-                return send(bad_request("Illegal request-target"));
+            if (pRequest.target().empty() ||
+                pRequest.target()[0] != '/' ||
+                pRequest.target().find("..") != beast::string_view::npos)
+                return pSend(bad_request("Illegal request-target"));
 
-            // Build the path to the requested file
-            //std::string path = path_cat(doc_root, req.target());
-            if (req.target().back() == '/')
-                /*path.append("index.html")*/;
-
-            // Attempt to open the file
-            beast::error_code ec;
-            http::file_body::value_type body;
-            /*
-            body.open(path.c_str(), beast::file_mode::scan, ec);*/
-
-            // Handle the case where the file doesn't exist
-            if (ec == beast::errc::no_such_file_or_directory)
-                return send(not_found(req.target()));
-
-            // Handle an unknown error
-            if (ec)
-                return send(server_error(ec.message()));
-
-            // Cache the size since we need it after the move
-            auto const size = body.size();
-
+            static std::string_view theResponse(R"res(
+            { "Message" : "Hello world." }
+            )res" );
             // Respond to HEAD request
-            if (req.method() == http::verb::head) {
-                http::response<http::empty_body> res{http::status::ok, req.version()};
+            if (pRequest.method() == http::verb::head) {
+                http::response<http::empty_body> res{http::status::ok, pRequest.version()};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                //res.set(http::field::content_type, mime_type(path));
-                res.content_length(size);
-                res.keep_alive(req.keep_alive());
-                return send(std::move(res));
+                res.set(http::field::content_type, theAppJson);
+                res.content_length(theResponse.length());
+                res.keep_alive(pRequest.keep_alive());
+                return pSend(std::move(res));
             }
 
             // Respond to GET request
-            http::response<http::file_body> res{
+            http::response<http::string_body> res{
                     std::piecewise_construct,
-                    std::make_tuple(std::move(body)),
-                    std::make_tuple(http::status::ok, req.version())};
+                    std::make_tuple(theResponse),
+                    std::make_tuple(http::status::ok, pRequest.version())};
             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-            //res.set(http::field::content_type, mime_type(path));
-            res.content_length(size);
-            res.keep_alive(req.keep_alive());
-            return send(std::move(res));
+            res.set(http::field::content_type, theAppJson);
+            res.set(http::field::content_encoding,"UTF-8");
+            res.content_length(theResponse.length());
+            res.keep_alive(pRequest.keep_alive());
+            return pSend(std::move(res));
         }
 
 
@@ -647,7 +633,7 @@ namespace striboh {
 
             // Start the asynchronous operation
             void
-            onRun() {
+            onWsRun() {
                 // Set suggested timeout settings for the websocket
                 ws_->set_option(
                         websocket::stream_base::timeout::suggested(
@@ -689,11 +675,9 @@ namespace striboh {
             void
             onWsRead(beast::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
-
                 // This indicates that the session was closed
                 if (ec == websocket::error::closed)
                     return;
-
                 if (ec)
                     fail(ec, "read");
 
@@ -811,6 +795,7 @@ namespace striboh {
         private:
             void
             doAccept() {
+                BOOST_LOG_TRIVIAL(info) << "Accepting ";
                 // The new connection gets its own strand
                 acceptor_.async_accept(
                         net::make_strand(ioc_),
@@ -833,27 +818,42 @@ namespace striboh {
             }
         };
 
-        int beast_main() {
+        void
+        BeastServer::shutdown() {
+            mLog.info("Commencing shutdown...");
+            mIoc.stop();
+            mLog.info("... shutdown completed.");
+        }
+
+        BeastServer::BeastServer(int pNum, LogIface& pLog)
+        : mThreadNum(std::max<int>(1, pNum))
+        , mIoc(mThreadNum)
+        , mLog(pLog)
+        {
+        }
+
+        void BeastServer::run() {
+            std::thread myServerThread([this]()->void {doRun();} );
+            myServerThread.detach();
+            return;
+        }
+
+        int BeastServer::doRun() {
             auto const aAddress = net::ip::make_address("0.0.0.0");
             auto const aPort = static_cast<unsigned short>(63898);
-            auto const aThreadNum = std::max<int>(1, 3);
-
-            // The io_context is required for all I/O
-            net::io_context ioc{aThreadNum};
 
             // Create and launch a listening on port aPort
-            std::make_shared<Listener>(ioc, tcp::endpoint{aAddress, aPort})->run();
+            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort})->run();
 
             // Run the I/O service on the requested number of threads
             std::vector<std::thread> v;
-            v.reserve(aThreadNum - 1);
-            for (auto i = aThreadNum - 1; i > 0; --i)
+            v.reserve(mThreadNum - 1);
+            for (auto i = mThreadNum - 1; i > 0; --i)
                 v.emplace_back(
-                        [&ioc] {
-                            ioc.run();
+                        [this] {
+                            mIoc.run();
                         });
-            ioc.run();
-
+            mIoc.run();
             return EXIT_SUCCESS;
         }
 

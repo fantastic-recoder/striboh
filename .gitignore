@@ -32,3 +32,10 @@
 *.app
 /cmake-build-debug/
 /build/
+
+# Eclipse
+.cproject
+.project
+CMakeLists.txt.user
+*.kdev4
+

@@ -380,9 +380,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseBroker.hpp>
+#include <striboh/stribohBaseBeastServer.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
 
 using std::endl;
 using namespace striboh::base;
+using namespace std::chrono_literals;
 
 int main( const int argc, const char* argv[]) {
     BOOST_LOG_TRIVIAL(info)  << "Server " << argv[0] << " starting." ;
@@ -409,8 +412,14 @@ int main( const int argc, const char* argv[]) {
 
         }
     };
+    LogBoostImpl myLog;
+    BeastServer myServer(3,myLog);
+    myServer.run();
     BOOST_LOG_TRIVIAL(debug)  << "Adding echo servant..." ;
     Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
-    BOOST_LOG_TRIVIAL(debug)  << "Echo servant." ;
+    BOOST_LOG_TRIVIAL(debug)  << "Echo servant added." ;
+    sleep(30);
+    myServer.shutdown();
+    aBroker.shutdown();
     return 2;
 }
