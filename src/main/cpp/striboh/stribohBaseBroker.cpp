@@ -378,55 +378,59 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include <thread>
-#include <boost/log/trivial.hpp>
-#include <boost/uuid/uuid_generators.hpp>
 
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseInterface.hpp"
+#include "stribohBaseNameTreeNode.hpp"
+#include "stribohBaseBrokerIface.hpp"
 
 namespace striboh {
     namespace base {
 
         using std::string;
 
-        const std::atomic<EBrokerState>& Broker::serve() {
+        const std::atomic<EBrokerState>&
+        Broker::serve() {
             if (mOperationalState != EBrokerState::K_NOMINAL) {
-                BOOST_LOG_TRIVIAL(warning) << "ORB is not ready.";
+                getLog().warn( "ORB is not ready." );
             } else {
                 mOperationalState = EBrokerState::K_STARTING;
                 mReceiver = std::async([this] () ->void { std::launch::async, this->dispatch(); });
                 do {
-                    BOOST_LOG_TRIVIAL(trace) << "Waiting for main servant. state = " << mOperationalState;
-                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+                    getLog().debug("Waiting for main servant. state = {}", toString(mOperationalState));
+                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(10000));
                 } while (mOperationalState != EBrokerState::K_STARTED);
             }
             return mOperationalState;
         }
 
-        void  Broker::dispatch() {
+        void
+        Broker::dispatch() {
             do{
                 mOperationalState = EBrokerState::K_STARTED;
-                BOOST_LOG_TRIVIAL(trace) << "Going to sleep. state = " << mOperationalState;
+                getLog().debug("Going to sleep. state = {}", toString(mOperationalState));
                 std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
             } while (mOperationalState == EBrokerState::K_STARTED);
-            BOOST_LOG_TRIVIAL(info) << "Shutdown completed. state = " << mOperationalState;
+            getLog().info( "Shutdown completed. state = {}", toString( mOperationalState));
             return;
         }
 
-        const std::atomic<EBrokerState>&  Broker::shutdown() {
+        const std::atomic<EBrokerState>&
+        Broker::shutdown() {
             if(mOperationalState == EBrokerState::K_STARTED) {
                 mOperationalState = EBrokerState::K_SHUTTING_DOWN;
-                BOOST_LOG_TRIVIAL(info) << "Going to shutdown. state = " << mOperationalState;
+                getLog().info( "Going to shutdown. state = {}", toString(mOperationalState));
                 mReceiver.wait();
                 mOperationalState = EBrokerState::K_NOMINAL;
             } else {
-                BOOST_LOG_TRIVIAL(warning) << "ORB is not started.";
+                getLog().warn( "ORB is not started." );
             }
-            BOOST_LOG_TRIVIAL(info) << "ORB shut down. state = " << mOperationalState;
+            getLog().info("ORB shut down. state = {}", toString(mOperationalState));
             return mOperationalState;
         }
 
-        void Broker::initialize() {
+        void
+        Broker::initialize() {
 
         }
 
@@ -468,33 +472,6 @@ namespace striboh {
                 }
             }
             return myUuid;
-        }
-
-        Broker::Uuid_t Broker::generateUuid() {
-            static boost::uuids::random_generator theGenerator;
-            boost::uuids::uuid myUuid=theGenerator();
-            return myUuid;
-        }
-
-        std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {
-            switch(pOrbState) {
-                case EBrokerState::K_STARTED:
-                    pOstream<<"started";
-                break;
-                case EBrokerState::K_STARTING:
-                    pOstream<<"starting";
-                    break;
-                case EBrokerState::K_NOMINAL:
-                    pOstream<<"nominal";
-                    break;
-                case EBrokerState::K_SHUTTING_DOWN:
-                    pOstream<<"shutting-down";
-                    break;
-                default:
-                    pOstream<<"unknown";
-                    break;
-            }
-            return pOstream;
         }
 
     }// namespace base

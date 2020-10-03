@@ -382,24 +382,40 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <boost/asio.hpp>
 
+#include "stribohBaseServerIface.hpp"
+#include "stribohBaseBrokerIface.hpp"
+
 namespace striboh {
     namespace base {
 
         class LogIface;
 
-        class BeastServer {
+        /*!
+         * HTTP/WS Server accepting connections.
+         */
+        class BeastServer : public ServerIface {
         public:
-            explicit BeastServer(int pNum, LogIface& pLog);
+            explicit BeastServer(int pNum, BrokerIface& pBroker, LogIface& pLog);
 
-            void run();
-            void shutdown();
+            void run() override;
+
+            void shutdown() override;
+
+            BrokerIface& getBroker() { return mBroker; }
         private:
+
             LogIface& mLog;
+
+            //! The number of acceptor tasks - the reserved size of \sa BeastServer::mAcceptTasks
             int mThreadNum ;
-            /// @brief The io_context is required for all I/O
+
+            //! The tasks will end up here
+            std::vector<std::future<void>> mAcceptTasks;
+
+            //! \brief The io_context is required for all boost::asio I/O.
             boost::asio::io_context mIoc;
 
-            int doRun() ;
+            BrokerIface& mBroker;
         };
     } // base
 } // striboh

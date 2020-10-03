@@ -391,6 +391,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseParameters.hpp>
 #include <striboh/stribohBaseSignature.hpp>
+#include "stribohBaseBrokerIface.hpp"
 
 using namespace striboh::base;
 using namespace std::chrono_literals;

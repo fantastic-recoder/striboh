@@ -389,8 +389,11 @@ using namespace std::chrono_literals;
 
 int main( const int argc, const char* argv[]) {
     BOOST_LOG_TRIVIAL(info)  << "Server " << argv[0] << " starting." ;
-    Broker aBroker;
+    LogBoostImpl myLog;
+    Broker aBroker(myLog);
+    BeastServer myServer(3,aBroker,myLog);
     aBroker.serve();
+    myServer.run();
 
     Interface myInterface{
         {"m0", "Hello"},
@@ -412,9 +415,6 @@ int main( const int argc, const char* argv[]) {
 
         }
     };
-    LogBoostImpl myLog;
-    BeastServer myServer(3,myLog);
-    myServer.run();
     BOOST_LOG_TRIVIAL(debug)  << "Adding echo servant..." ;
     Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
     BOOST_LOG_TRIVIAL(debug)  << "Echo servant added." ;

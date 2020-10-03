@@ -376,68 +376,47 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_STRIBOHBASELOGIFACE_HPP
-#define STRIBOH_STRIBOHBASELOGIFACE_HPP
 
-#include <string>
-#include <fmt/format.h>
+#include <boost/uuid/uuid_generators.hpp>
+
+#include "stribohBaseBrokerIface.hpp"
 
 namespace striboh {
     namespace base {
-        enum class ELogLevel {
-            NONE= -1000,DBG=3,WRN=2,INF=1,ERR=0
-        };
+        BrokerIface::Uuid_t
+        BrokerIface::generateUuid() {
+            static boost::uuids::random_generator theGenerator;
+            boost::uuids::uuid myUuid = theGenerator();
+            return myUuid;
+        }
 
-        class LogIface {
-            ELogLevel mThreshold=ELogLevel::DBG;
-
-        public:
-            ELogLevel getThreshold() const {
-                return mThreshold;
+        std::string toString(const EBrokerState& pOrbState) {
+            switch(pOrbState) {
+                case EBrokerState::K_STARTED:
+                    return "started";
+                    break;
+                case EBrokerState::K_STARTING:
+                    return "starting";
+                    break;
+                case EBrokerState::K_NOMINAL:
+                    return "nominal";
+                    break;
+                case EBrokerState::K_SHUTTING_DOWN:
+                    return "shutting-down";
+                    break;
+                default:
+                    break;
             }
+            return "unknown";
+        }
 
-            void setThreshold(ELogLevel pLevel) {
-                mThreshold = pLevel;
-            }
+        std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {
+            pOstream << toString(pOrbState);
+            return pOstream;
+        }
 
-            template<class ...TArgs>
-            void
-            debug(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::DBG) {
-                    doDebug(fmt::format(pFmt,pTArgs...));
-                }
-            }
 
-            template<class ...TArgs>
-            void
-            warn(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::WRN) {
-                    doWarn(fmt::format(pFmt,pTArgs...));
-                }
-            }
-
-            template<class ...TArgs>
-            void
-            info(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::INF) {
-                    doInfo(fmt::format(pFmt,pTArgs...));
-                }
-            }
-
-            template<class ...TArgs>
-            void
-            error(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::ERR) {
-                    doError(fmt::format(pFmt,pTArgs...));
-                }
-            }
-        protected:
-            virtual void doDebug( const std::string pMsg ) = 0;
-            virtual void doError( const std::string pMsg ) = 0;
-            virtual void doWarn( const std::string pMsg ) = 0;
-            virtual void doInfo( const std::string pMsg ) = 0;
-        };
     }
 }
 
-#endif //STRIBOH_STRIBOHBASELOGIFACE_HPP
+

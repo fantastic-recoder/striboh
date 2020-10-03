@@ -386,77 +386,35 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/uuid/uuid.hpp>
 
 #include "stribohBaseParameters.hpp"
+#include "stribohBaseBrokerIface.hpp"
+#include "stribohBaseNameTreeNode.hpp"
 
 namespace striboh {
     namespace base {
 
-        enum class EBrokerState {
-            K_NOMINAL,
-            K_STARTING,
-            K_STARTED,
-            K_SHUTTING_DOWN
-        };
-
-        std::ostream& operator << (std::ostream& , const EBrokerState& );
-
         class Interface;
 
-        class NameTreeNode {
+        class Broker : public BrokerIface {
         public:
-            typedef std::vector<NameTreeNode> ChildNodes_t;
-
-            NameTreeNode() = default;
-
-            explicit NameTreeNode(const std::string pName ):mName(pName) {}
-
-            const std::string &getName() const {
-                return mName;
-            }
-
-            void setName(const std::string &pName) {
-                mName = pName;
-            }
-
-            const std::vector<NameTreeNode> &getChildNodes() const {
-                return mChildNodes;
-            }
-
-            std::vector<NameTreeNode> & getChildNodes() {
-                return mChildNodes;
-            }
-
-            void setChildNodes(const std::vector<NameTreeNode> &pChildNodes) {
-                mChildNodes = pChildNodes;
-            }
-
-        private:
-            ChildNodes_t mChildNodes;
-            std::string mName;
-        };
-
-
-        class Broker {
-        public:
-            typedef boost::uuids::uuid Uuid_t;
             typedef std::map<Uuid_t ,Interface> Instances_t;
 
+            Broker( LogIface& pLogIface ):
+            BrokerIface(pLogIface){}
+
             void
-            initialize();
+            initialize() override;
 
             const std::atomic<EBrokerState>&
-            serve();
+            serve() override;
 
             const std::atomic<EBrokerState>&
-            shutdown();
+            shutdown() override;
 
             ParameterValues
-            invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues);
+            invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) override;
 
             const Uuid_t
-            addServant(Interface& pMethodSignature);
-
-            static Uuid_t
-            generateUuid();
+            addServant(Interface& pMethodSignature) override;
 
         private:
 

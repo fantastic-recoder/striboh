@@ -376,68 +376,71 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_STRIBOHBASELOGIFACE_HPP
-#define STRIBOH_STRIBOHBASELOGIFACE_HPP
 
+#ifndef STRIBOH_STRIBOHBASEBROKERIFACE_HPP
+#define STRIBOH_STRIBOHBASEBROKERIFACE_HPP
+
+#include <array>
+#include <atomic>
 #include <string>
-#include <fmt/format.h>
+#include <boost/uuid/uuid.hpp>
+#include "stribohBaseParameters.hpp"
+#include "stribohBaseNameTreeNode.hpp"
+#include "stribohBaseLogIface.hpp"
+#include "stribohBaseServerIface.hpp"
 
 namespace striboh {
     namespace base {
-        enum class ELogLevel {
-            NONE= -1000,DBG=3,WRN=2,INF=1,ERR=0
+
+        enum class EBrokerState {
+            K_NOMINAL,
+            K_STARTING,
+            K_STARTED,
+            K_SHUTTING_DOWN
         };
 
-        class LogIface {
-            ELogLevel mThreshold=ELogLevel::DBG;
+        std::ostream& operator << (std::ostream& , const EBrokerState& );
 
-        public:
-            ELogLevel getThreshold() const {
-                return mThreshold;
+        std::string toString(const EBrokerState& );
+
+        class Interface;
+
+        struct BrokerIface {
+            typedef boost::uuids::uuid Uuid_t;
+
+            BrokerIface( LogIface& pLogIface ):
+            mLogIface(pLogIface){}
+
+            const LogIface &getLog() const {
+                return mLogIface;
             }
 
-            void setThreshold(ELogLevel pLevel) {
-                mThreshold = pLevel;
+            LogIface &getLog() {
+                return mLogIface;
             }
 
-            template<class ...TArgs>
-            void
-            debug(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::DBG) {
-                    doDebug(fmt::format(pFmt,pTArgs...));
-                }
-            }
+            static boost::uuids::uuid
+            generateUuid();
 
-            template<class ...TArgs>
-            void
-            warn(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::WRN) {
-                    doWarn(fmt::format(pFmt,pTArgs...));
-                }
-            }
+            virtual void
+            initialize() = 0;
 
-            template<class ...TArgs>
-            void
-            info(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::INF) {
-                    doInfo(fmt::format(pFmt,pTArgs...));
-                }
-            }
+            virtual const std::atomic<EBrokerState>&
+            serve() = 0;
 
-            template<class ...TArgs>
-            void
-            error(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::ERR) {
-                    doError(fmt::format(pFmt,pTArgs...));
-                }
-            }
-        protected:
-            virtual void doDebug( const std::string pMsg ) = 0;
-            virtual void doError( const std::string pMsg ) = 0;
-            virtual void doWarn( const std::string pMsg ) = 0;
-            virtual void doInfo( const std::string pMsg ) = 0;
+            virtual const std::atomic<EBrokerState>&
+            shutdown() = 0;
+
+            virtual ParameterValues
+            invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) = 0;
+
+            virtual const Uuid_t
+            addServant(Interface& pMethodSignature) = 0;
+
+        private:
+            LogIface& mLogIface;
         };
     }
 }
 
-#endif //STRIBOH_STRIBOHBASELOGIFACE_HPP
+#endif //STRIBOH_STRIBOHBASEBROKERIFACE_HPP

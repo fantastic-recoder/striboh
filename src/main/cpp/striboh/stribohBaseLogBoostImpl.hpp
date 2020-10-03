@@ -384,7 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh {
     namespace base {
         class LogBoostImpl: public LogIface {
-        public:
+        protected:
             void doDebug(const std::string pMsg) override;
 
             void doError(const std::string pMsg) override;

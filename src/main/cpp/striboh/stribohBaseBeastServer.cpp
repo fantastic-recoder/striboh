@@ -396,6 +396,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
+#include "stribohBaseBrokerIface.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -408,7 +409,7 @@ namespace striboh {
 
         static const char *const theAppJson = "application/json";
 
-// Return a reasonable mime type based on the extension of a file.
+        //! Return a reasonable mime type based on the extension of a file.
         beast::string_view
         mime_type(beast::string_view path) {
             using beast::iequals;
@@ -563,9 +564,8 @@ namespace striboh {
                     self_.res_ = sp;
 
                     // Write the response
-                    beast::tcp_stream& myStreamRef(*self_.stream_.get());
                     http::async_write(
-                            myStreamRef,
+                            *self_.stream_,
                             *sp,
                             beast::bind_front_handler(
                                     &WebSession::onHttpWrite,
@@ -752,7 +752,8 @@ namespace striboh {
         public:
             Listener(
                     net::io_context &ioc,
-                    tcp::endpoint endpoint)
+                    tcp::endpoint endpoint,
+                    BrokerIface& pBroker)
                     : ioc_(ioc), acceptor_(net::make_strand(ioc)) {
                 beast::error_code ec;
 
@@ -825,37 +826,29 @@ namespace striboh {
             mLog.info("... shutdown completed.");
         }
 
-        BeastServer::BeastServer(int pNum, LogIface& pLog)
+        BeastServer::BeastServer(int pNum, BrokerIface& pBroker,  LogIface& pLog)
         : mThreadNum(std::max<int>(1, pNum))
+        , mBroker(pBroker)
         , mIoc(mThreadNum)
         , mLog(pLog)
         {
         }
 
         void BeastServer::run() {
-            std::thread myServerThread([this]()->void {doRun();} );
-            myServerThread.detach();
-            return;
-        }
-
-        int BeastServer::doRun() {
             auto const aAddress = net::ip::make_address("0.0.0.0");
             auto const aPort = static_cast<unsigned short>(63898);
 
             // Create and launch a listening on port aPort
-            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort})->run();
+            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort},getBroker())->run();
 
             // Run the I/O service on the requested number of threads
-            std::vector<std::thread> v;
-            v.reserve(mThreadNum - 1);
+            mAcceptTasks.reserve(mThreadNum - 1);
             for (auto i = mThreadNum - 1; i > 0; --i)
-                v.emplace_back(
-                        [this] {
-                            mIoc.run();
-                        });
-            mIoc.run();
-            return EXIT_SUCCESS;
+                mAcceptTasks.emplace_back(std::async(std::launch::async, [this]()->void{mIoc.run(); } ));
+            mAcceptTasks.emplace_back(std::async(std::launch::async, [this]()->void{mIoc.run(); } ));
+            return;
         }
+
 
     }
 }
