@@ -416,6 +416,9 @@ namespace striboh {
             const Uuid_t
             addServant(Interface& pMethodSignature) override;
 
+            TResolveResult
+            resolve(const std::string_view& pPath ) const override;
+
         private:
 
             void
@@ -425,6 +428,11 @@ namespace striboh {
             Instances_t mInstances;
             NameTreeNode mRoot;
             std::future<void> mReceiver;
+
+            bool resolveSubNodes(std::vector<std::string>::iterator &pSegmentPtr,
+                                 const std::vector<std::string>::iterator pSegmentEnd,
+                                 TResolveResult &pRetVal,
+                                 const NameTreeNode * pCurrentNode) const;
         };
 
     }

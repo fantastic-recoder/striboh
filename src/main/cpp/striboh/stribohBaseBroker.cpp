@@ -384,6 +384,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseBrokerIface.hpp"
 
+#include <boost/algorithm/string.hpp>
+
 namespace striboh {
     namespace base {
 
@@ -456,7 +458,7 @@ namespace striboh {
             Uuid_t myUuid = generateUuid();
             auto myPair = mInstances.try_emplace(myUuid,pInterface);
             std::vector<NameTreeNode>* myChildNodes = &mRoot.getChildNodes();
-            for(string mDir:myPair.first->second.getPath()) {
+            for(string mDir : myPair.first->second.getPath()) {
                 auto myBegin = myChildNodes->begin();
                 auto myEnd = myChildNodes->end();
                 auto myFound = find_if(myBegin,myEnd,[mDir] (const NameTreeNode& pDirNode) -> bool {
@@ -472,6 +474,42 @@ namespace striboh {
                 }
             }
             return myUuid;
+        }
+
+        bool
+        Broker::resolveSubNodes
+        (
+            std::vector<std::string>::iterator& pSegmentPtr,
+            const std::vector<std::string>::iterator pSegmentEnd,
+            TResolveResult& pRetVal,
+            const NameTreeNode* pCurrentNode
+        ) const
+        {
+            if (pCurrentNode->getName() == *pSegmentPtr) {
+                if (pSegmentPtr == pSegmentEnd) {
+                    for (const auto &mySubNodeRef : pCurrentNode->getChildNodes()) {
+                        std::get<1>(pRetVal).emplace_back(mySubNodeRef.getName());
+                    }
+                    std::get<0>(pRetVal) = EResolveResult::OK;
+                    return true;
+                } else {
+                    for (const auto &mySubNodeRef : pCurrentNode->getChildNodes()) {
+                        if( resolveSubNodes(++pSegmentPtr, pSegmentEnd, pRetVal, &mySubNodeRef) )
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        TResolveResult Broker::resolve(const std::string_view &pPath) const {
+            TResolveResult myRetVal{EResolveResult::NOT_FOUND,std::vector<PathSegment>()};
+            std::vector<std::string> myPathSegments;
+            boost::split(myPathSegments,pPath,boost::is_any_of("/"));
+            const NameTreeNode* myCurrentNode = &mRoot;
+            auto myPathBegin=myPathSegments.begin();
+            resolveSubNodes(myPathBegin, myPathSegments.end(),myRetVal, myCurrentNode);
+            return myRetVal;
         }
 
     }// namespace base

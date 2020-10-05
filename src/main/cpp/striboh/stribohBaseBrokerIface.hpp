@@ -384,6 +384,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <atomic>
 #include <string>
 #include <boost/uuid/uuid.hpp>
+#include <NamedType/named_type.hpp>
+
 #include "stribohBaseParameters.hpp"
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseLogIface.hpp"
@@ -399,11 +401,20 @@ namespace striboh {
             K_SHUTTING_DOWN
         };
 
+        enum class EResolveResult {
+            NOT_FOUND,
+            OK
+        };
+
         std::ostream& operator << (std::ostream& , const EBrokerState& );
 
         std::string toString(const EBrokerState& );
 
         class Interface;
+
+        using PathSegment = fluent::NamedType<std::string_view,struct PathSegmentTag>;
+
+        typedef std::tuple<EResolveResult,std::vector<PathSegment>> TResolveResult;
 
         struct BrokerIface {
             typedef boost::uuids::uuid Uuid_t;
@@ -437,6 +448,8 @@ namespace striboh {
             virtual const Uuid_t
             addServant(Interface& pMethodSignature) = 0;
 
+            virtual TResolveResult
+            resolve(const std::string_view& pPath ) const = 0;
         private:
             LogIface& mLogIface;
         };

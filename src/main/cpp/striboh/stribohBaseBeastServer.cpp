@@ -403,6 +403,9 @@ namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+using std::tuple;
+using std::vector;
+using std::string;
 
 namespace striboh {
     namespace base {
@@ -443,6 +446,13 @@ namespace striboh {
             return "application/text";
         }
 
+        TResolveResult
+        createHttpResponse(beast::string_view pTarget, const BrokerIface& pBroker) {
+            TResolveResult myResponse;
+            std::get<EResolveResult>(myResponse)=EResolveResult::NOT_FOUND;
+            return myResponse;
+        }
+
         /**
          *   This function produces an HTTP response for the given
          *   request. The type of the response object depends on the
@@ -453,7 +463,13 @@ namespace striboh {
                 class Body, class Allocator,
                 class Send>
         void
-        handleHttpRequest(http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend) {
+        handleHttpRequest
+        (
+                http::request<Body, http::basic_fields<Allocator>> &&pRequest,
+                Send &&pSend,
+                BrokerIface& pBroker
+        )
+        {
             // Returns a bad request response
             auto const bad_request =
                     [&pRequest](beast::string_view why) {
@@ -501,8 +517,15 @@ namespace striboh {
                 pRequest.target().find("..") != beast::string_view::npos)
                 return pSend(bad_request("Illegal request-target"));
 
+            if(pRequest.target().length()>1) {
+                auto myResponse = createHttpResponse(pRequest.target(), pBroker);
+                if(std::get<EResolveResult>(myResponse) == EResolveResult::NOT_FOUND) {
+                    return pSend(not_found(pRequest.target()));
+                }
+            }
+            // on root send hello
             static std::string_view theResponse(R"res(
-            { "Message" : "Hello world." }
+            { "Message" : "Hello from striboh." }
             )res" );
             // Respond to HEAD request
             if (pRequest.method() == http::verb::head) {
@@ -561,11 +584,11 @@ namespace striboh {
 
                     // Store a type-erased version of the shared
                     // pointer in the class to keep it alive.
-                    self_.res_ = sp;
+                    self_.mRes = sp;
 
                     // Write the response
                     http::async_write(
-                            *self_.stream_,
+                            *self_.mTcpStream,
                             *sp,
                             beast::bind_front_handler(
                                     &WebSession::onHttpWrite,
@@ -575,18 +598,19 @@ namespace striboh {
             };
 
             beast::flat_buffer buffer_;
-            std::shared_ptr<beast::tcp_stream> stream_;
-            std::shared_ptr<websocket::stream<beast::tcp_stream>> ws_;
-            http::request<http::string_body> req_;
-            std::shared_ptr<void> res_;
+            std::shared_ptr<beast::tcp_stream> mTcpStream;
+            std::shared_ptr<websocket::stream<beast::tcp_stream>> mWebSocketStream;
+            http::request<http::string_body> mRequest;
+            std::shared_ptr<void> mRes;
             HttpSendLambda mLambda;
+            BrokerIface& mBroker;
 
         public:
             // Take ownership of the socket
             explicit
-            WebSession(tcp::socket &&pSocket)
-                    : mLambda(*this),
-                      stream_(std::make_shared<beast::tcp_stream>(std::move(pSocket))) {
+            WebSession(tcp::socket &&pSocket, BrokerIface& pBroker)
+                    : mLambda(*this), mBroker(pBroker),
+                      mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))) {
             }
 
             // Get on the correct executor
@@ -596,7 +620,7 @@ namespace striboh {
                 // on the I/O objects in this session. Although not strictly necessary
                 // for single-threaded contexts, this example code is written to be
                 // thread-safe by default.
-                net::dispatch(stream_->get_executor(),
+                net::dispatch(mTcpStream->get_executor(),
                               beast::bind_front_handler(
                                       &WebSession::doHttpRead,
                                       shared_from_this()));
@@ -606,11 +630,11 @@ namespace striboh {
             doHttpRead() {
                 // Make the request empty before reading,
                 // otherwise the operation behavior is undefined.
-                req_ = {};
+                mRequest = {};
                 // Set the timeout.
-                stream_->expires_after(std::chrono::seconds(30));
+                mTcpStream->expires_after(std::chrono::seconds(30));
                 // Read a request
-                http::async_read(*stream_, buffer_, req_,
+                http::async_read(*mTcpStream, buffer_, mRequest,
                                  beast::bind_front_handler(
                                          &WebSession::onHttpRead,
                                          shared_from_this()));
@@ -628,26 +652,26 @@ namespace striboh {
                 if (ec)
                     return fail(ec, "read");
                 // Send the response
-                handleHttpRequest(std::move(req_), mLambda);
+                handleHttpRequest(std::move(mRequest), mLambda, mBroker);
             }
 
             // Start the asynchronous operation
             void
             onWsRun() {
                 // Set suggested timeout settings for the websocket
-                ws_->set_option(
+                mWebSocketStream->set_option(
                         websocket::stream_base::timeout::suggested(
                                 beast::role_type::server));
 
                 // Set a decorator to change the Server of the handshake
-                ws_->set_option(websocket::stream_base::decorator(
+                mWebSocketStream->set_option(websocket::stream_base::decorator(
                         [](websocket::response_type &res) {
                             res.set(http::field::server,
                                     std::string(BOOST_BEAST_VERSION_STRING) +
                                     " stribohBeastServer");
                         }));
                 // Accept the websocket handshake
-                ws_->async_accept(
+                mWebSocketStream->async_accept(
                         beast::bind_front_handler(
                                 &WebSession::onAccept,
                                 shared_from_this()));
@@ -665,7 +689,7 @@ namespace striboh {
             void
             doWsRead() {
                 // Read a message into our buffer
-                ws_->async_read(
+                mWebSocketStream->async_read(
                         buffer_,
                         beast::bind_front_handler(
                                 &WebSession::onWsRead,
@@ -682,8 +706,8 @@ namespace striboh {
                     fail(ec, "read");
 
                 // Echo the message
-                ws_->text(ws_->got_text());
-                ws_->async_write(
+                mWebSocketStream->text(mWebSocketStream->got_text());
+                mWebSocketStream->async_write(
                         buffer_.data(),
                         beast::bind_front_handler(
                                 &WebSession::onWsWrite,
@@ -694,8 +718,8 @@ namespace striboh {
             doCloseHttpStream() {
                 // Send a TCP shutdown
                 beast::error_code ec;
-                if (stream_)
-                    stream_->socket().shutdown(tcp::socket::shutdown_send, ec);
+                if (mTcpStream)
+                    mTcpStream->socket().shutdown(tcp::socket::shutdown_send, ec);
                 // At this point the connection is closed gracefully
             }
 
@@ -718,7 +742,7 @@ namespace striboh {
                 }
 
                 // We're done with the response so delete it
-                res_ = nullptr;
+                mRes = nullptr;
 
                 // Read another request
                 doHttpRead();
@@ -746,40 +770,46 @@ namespace striboh {
          * Accepts incoming connections and launches the sessions
          */
         class Listener : public std::enable_shared_from_this<Listener> {
-            net::io_context &ioc_;
-            tcp::acceptor acceptor_;
+            net::io_context &mIoc;
+            tcp::acceptor mAcceptor;
+            BrokerIface& mBroker;
 
         public:
-            Listener(
-                    net::io_context &ioc,
-                    tcp::endpoint endpoint,
-                    BrokerIface& pBroker)
-                    : ioc_(ioc), acceptor_(net::make_strand(ioc)) {
+            Listener
+            (
+                net::io_context &ioc,
+                tcp::endpoint endpoint,
+                BrokerIface& pBroker
+            )
+            : mIoc(ioc)
+            , mAcceptor(net::make_strand(ioc))
+            , mBroker(pBroker)
+            {
                 beast::error_code ec;
 
                 // Open the acceptor
-                acceptor_.open(endpoint.protocol(), ec);
+                mAcceptor.open(endpoint.protocol(), ec);
                 if (ec) {
                     fail(ec, "open");
                     return;
                 }
 
                 // Allow address reuse
-                acceptor_.set_option(net::socket_base::reuse_address(true), ec);
+                mAcceptor.set_option(net::socket_base::reuse_address(true), ec);
                 if (ec) {
                     fail(ec, "set_option");
                     return;
                 }
 
                 // Bind to the server address
-                acceptor_.bind(endpoint, ec);
+                mAcceptor.bind(endpoint, ec);
                 if (ec) {
                     fail(ec, "bind");
                     return;
                 }
 
                 // Start listening for connections
-                acceptor_.listen(
+                mAcceptor.listen(
                         net::socket_base::max_listen_connections, ec);
                 if (ec) {
                     fail(ec, "listen");
@@ -798,8 +828,8 @@ namespace striboh {
             doAccept() {
                 BOOST_LOG_TRIVIAL(info) << "Accepting ";
                 // The new connection gets its own strand
-                acceptor_.async_accept(
-                        net::make_strand(ioc_),
+                mAcceptor.async_accept(
+                        net::make_strand(mIoc),
                         beast::bind_front_handler(
                                 &Listener::onAccept,
                                 shared_from_this()));
@@ -811,7 +841,7 @@ namespace striboh {
                     fail(ec, "accept");
                 } else {
                     // Create the session and run it
-                    std::make_shared<WebSession>(std::move(socket))->run();
+                    std::make_shared<WebSession>(std::move(socket),mBroker)->run();
                 }
 
                 // Accept another connection
