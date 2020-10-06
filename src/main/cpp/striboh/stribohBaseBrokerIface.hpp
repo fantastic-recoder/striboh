@@ -412,7 +412,16 @@ namespace striboh {
 
         class Interface;
 
-        using PathSegment = fluent::NamedType<std::string_view,struct PathSegmentTag>;
+        using PathSegment
+           = fluent::NamedType<std::string,struct PathSegmentTag>;
+        using Path
+           = fluent::NamedType<std::set<PathSegment>,struct PathTag>;
+        using PathIterator
+           = Path::UnderlyingType::iterator;
+
+        inline auto operator < (const PathSegment& p0, const PathSegment& p1) {
+            return p0.get() < p1.get();
+        }
 
         typedef std::tuple<EResolveResult,std::vector<PathSegment>> TResolveResult;
 
@@ -449,7 +458,7 @@ namespace striboh {
             addServant(Interface& pMethodSignature) = 0;
 
             virtual TResolveResult
-            resolve(const std::string_view& pPath ) const = 0;
+            resolve(const std::string& pPath ) const = 0;
         private:
             LogIface& mLogIface;
         };

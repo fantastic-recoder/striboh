@@ -446,13 +446,6 @@ namespace striboh {
             return "application/text";
         }
 
-        TResolveResult
-        createHttpResponse(beast::string_view pTarget, const BrokerIface& pBroker) {
-            TResolveResult myResponse;
-            std::get<EResolveResult>(myResponse)=EResolveResult::NOT_FOUND;
-            return myResponse;
-        }
-
         /**
          *   This function produces an HTTP response for the given
          *   request. The type of the response object depends on the
@@ -517,16 +510,41 @@ namespace striboh {
                 pRequest.target().find("..") != beast::string_view::npos)
                 return pSend(bad_request("Illegal request-target"));
 
-            if(pRequest.target().length()>1) {
-                auto myResponse = createHttpResponse(pRequest.target(), pBroker);
-                if(std::get<EResolveResult>(myResponse) == EResolveResult::NOT_FOUND) {
-                    return pSend(not_found(pRequest.target()));
-                }
+            auto myResolved = pBroker.resolve(std::string(pRequest.target()));
+
+            std::string theResponse;
+            if (std::get<0>(myResolved) == EResolveResult::NOT_FOUND) {
+                return pSend(not_found(pRequest.target()));
             }
-            // on root send hello
-            static std::string_view theResponse(R"res(
-            { "Message" : "Hello from striboh." }
-            )res" );
+            // found
+            if (std::get<0>(myResolved) == EResolveResult::OK) {
+                static std::string_view theResponse00(R"res(
+                { "Message" : "Hello from striboh.", "modules" : [
+                )res");
+                static std::string_view theResponse10(R"res(
+                ]}
+                )res");
+                std::ostringstream myOstream;
+                myOstream << theResponse00;
+                bool start = true;
+                for (auto mySegment: std::get<1>(myResolved)) {
+                    if (start) {
+                        start = false;
+                    } else {
+                        myOstream << ", ";
+                    }
+                    myOstream << "\"" << mySegment.get() << "\"";
+                }
+                myOstream << theResponse10 << std::endl;
+                theResponse = myOstream.str();
+            }
+            if(theResponse.empty()) {
+                // on root send hello
+                static std::string_view theResponse20(R"res(
+                { "Message" : "Hello from striboh." }
+                )res");
+                theResponse = theResponse20;
+            }
             // Respond to HEAD request
             if (pRequest.method() == http::verb::head) {
                 http::response<http::empty_body> res{http::status::ok, pRequest.version()};
@@ -536,7 +554,6 @@ namespace striboh {
                 res.keep_alive(pRequest.keep_alive());
                 return pSend(std::move(res));
             }
-
             // Respond to GET request
             http::response<http::string_body> res{
                     std::piecewise_construct,

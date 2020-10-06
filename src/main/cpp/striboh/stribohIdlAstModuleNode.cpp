@@ -34,8 +34,8 @@ namespace striboh {
             }
 
             ModuleNode::ModuleNode(const ModuleNode& pModuleNode) :
-                    BaseValueNode<IdentifierNode>(K_MODULE_NODE, pModuleNode.getValue()),
-                    mBody(new ModuleBodyNode(pModuleNode.getModuleBody())) {
+                BaseValueNode<IdentifierNode>(K_MODULE_NODE, pModuleNode.getValue()),
+                mBody(new ModuleBodyNode(pModuleNode.getModuleBody())) {
             }
 
             ModuleNode& ModuleNode::operator=(const ModuleNode& pModuleNode) {
@@ -45,7 +45,13 @@ namespace striboh {
             }
 
             ModuleNode::ModuleNode()
-                    : BaseValueNode<IdentifierNode>(K_MODULE_NODE), mBody(new ModuleBodyNode()) {
+                : BaseValueNode<IdentifierNode>(K_MODULE_NODE)
+                        , mBody(new ModuleBodyNode()) {
+            }
+
+            ModuleNode::ModuleNode(const std::string &pIdent)
+                : BaseValueNode<IdentifierNode>(K_MODULE_NODE,IdentifierNode(pIdent))
+                        , mBody(new ModuleBodyNode()) {
             }
 
             ModuleNode::~ModuleNode() = default;

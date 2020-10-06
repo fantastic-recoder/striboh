@@ -11,11 +11,11 @@ add_test(NAME striboh_idl_tests COMMAND striboh_idl_tests)
 
 add_executable(striboh_test_echo_server striboh_test_echo_server.cpp)
 target_include_directories(striboh_test_echo_server PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
-target_link_libraries(striboh_test_echo_server striboh_base ${STRIBOH_LIBS})
+target_link_libraries(striboh_test_echo_server striboh_base striboh_idl ${STRIBOH_LIBS})
 
 add_executable(striboh_base_tests striboh_base_tests.cpp)
 target_include_directories(striboh_base_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
-target_link_libraries(striboh_base_tests striboh_base gmock gtest_main gtest ${STRIBOH_LIBS})
+target_link_libraries(striboh_base_tests striboh_base striboh_idl gmock gtest_main gtest ${STRIBOH_LIBS})
 add_test(NAME striboh_base_tests COMMAND striboh_idl_tests)
 
 add_dependencies(striboh_base_tests striboh_test_echo_server)

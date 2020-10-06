@@ -381,15 +381,16 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseInterface.hpp"
-#include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseBrokerIface.hpp"
-
-#include <boost/algorithm/string.hpp>
+#include "stribohIdlAstModuleNode.hpp"
+#include "stribohIdlAstModuleBodyNode.hpp"
 
 namespace striboh {
     namespace base {
 
         using std::string;
+        using ::striboh::idl::ast::ModuleNode;
+        using ::striboh::idl::ast::ModuleListNode;
 
         const std::atomic<EBrokerState>&
         Broker::serve() {
@@ -457,20 +458,20 @@ namespace striboh {
         Broker::addServant(Interface& pInterface) {
             Uuid_t myUuid = generateUuid();
             auto myPair = mInstances.try_emplace(myUuid,pInterface);
-            std::vector<NameTreeNode>* myChildNodes = &mRoot.getChildNodes();
+            auto myChildNodes = mRoot.getModules();
             for(string mDir : myPair.first->second.getPath()) {
-                auto myBegin = myChildNodes->begin();
-                auto myEnd = myChildNodes->end();
-                auto myFound = find_if(myBegin,myEnd,[mDir] (const NameTreeNode& pDirNode) -> bool {
-                    if(mDir == pDirNode.getName())
+                auto myBegin = myChildNodes.begin();
+                auto myEnd = myChildNodes.end();
+                auto myFound = find_if(myBegin,myEnd,[&myDir=std::as_const(mDir)] (const auto& pDirNode) -> bool {
+                    if(myDir == pDirNode.getIdentifierStr())
                         return true;
                     return false;
                 });
                 if(myFound==myEnd) {
-                    auto& myNewNode(myChildNodes->emplace_back(NameTreeNode(mDir)));
-                    myChildNodes = &myNewNode.getChildNodes();
+                    auto& myNewNode(myChildNodes.emplace_back(ModuleNode(mDir)));
+                    myChildNodes = myNewNode.getModuleBody().getModules();
                 } else {
-                    myChildNodes = &myFound->getChildNodes();
+                    myChildNodes = myFound->getModuleBody().getModules();
                 }
             }
             return myUuid;
@@ -479,36 +480,63 @@ namespace striboh {
         bool
         Broker::resolveSubNodes
         (
-            std::vector<std::string>::iterator& pSegmentPtr,
-            const std::vector<std::string>::iterator pSegmentEnd,
+            PathIterator& pSegmentPtr,
+            const PathIterator& pSegmentEnd,
             TResolveResult& pRetVal,
-            const NameTreeNode* pCurrentNode
-        ) const
+            const ModuleListNode& pModuleListNode
+        )
+        const
         {
-            if (pCurrentNode->getName() == *pSegmentPtr) {
+            if (pSegmentPtr == pSegmentEnd) {
+                return false;
+            }
+            /*if (pModuleListNode->getName() == *pSegmentPtr) {
+                // if this is the last
+                ++pSegmentPtr;
                 if (pSegmentPtr == pSegmentEnd) {
-                    for (const auto &mySubNodeRef : pCurrentNode->getChildNodes()) {
+                    for (const auto &mySubNodeRef : pModuleListNode->getChildNodes()) {
                         std::get<1>(pRetVal).emplace_back(mySubNodeRef.getName());
                     }
-                    std::get<0>(pRetVal) = EResolveResult::OK;
-                    return true;
+                    std::get<0>(pRetVal)=EResolveResult::OK;
                 } else {
-                    for (const auto &mySubNodeRef : pCurrentNode->getChildNodes()) {
-                        if( resolveSubNodes(++pSegmentPtr, pSegmentEnd, pRetVal, &mySubNodeRef) )
+                    for (const auto &mySubNodeRef : pModuleListNode->getChildNodes()) {
+                        if (resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal, &mySubNodeRef)) {
                             return true;
+                        }
                     }
                 }
-            }
+            }*/
             return false;
         }
 
-        TResolveResult Broker::resolve(const std::string_view &pPath) const {
+        static const char *const K_SEPARATOR = "/";
+
+        TResolveResult Broker::resolve(const std::string &pPath) const {
             TResolveResult myRetVal{EResolveResult::NOT_FOUND,std::vector<PathSegment>()};
-            std::vector<std::string> myPathSegments;
-            boost::split(myPathSegments,pPath,boost::is_any_of("/"));
-            const NameTreeNode* myCurrentNode = &mRoot;
-            auto myPathBegin=myPathSegments.begin();
-            resolveSubNodes(myPathBegin, myPathSegments.end(),myRetVal, myCurrentNode);
+            Path myPathSegments;
+            if(pPath == K_SEPARATOR) {
+                myPathSegments.get().emplace("");
+            } else {
+                myPathSegments=split( pPath, K_SEPARATOR);
+            }
+            auto myCurrentNode = mRoot.getModules();
+            auto myPathBegin=myPathSegments.get().begin();
+            resolveSubNodes(myPathBegin, myPathSegments.get().end(),myRetVal, myCurrentNode);
+            return myRetVal;
+        }
+
+        Path Broker::split(const string &pPathStr, const char *const pSeparator) {
+            Path myRetVal; std::string_view myPathView(pPathStr);
+            while(!myPathView.empty()) {
+                auto mySegIdx = myPathView.find(pSeparator);
+                if((mySegIdx>1) && (myPathView.size()<mySegIdx)){
+                    myRetVal.get()
+                        .emplace(
+                            string(myPathView.substr(0,mySegIdx))
+                        );
+                }
+                myPathView=myPathView.substr(mySegIdx);
+            }
             return myRetVal;
         }
 

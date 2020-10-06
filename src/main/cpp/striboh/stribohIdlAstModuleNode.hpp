@@ -29,6 +29,8 @@ namespace striboh {
 
                 ModuleNode(const IdentifierNode& pIdent);
 
+                ModuleNode(const std::string& pIdent);
+
                 const std::string& getIdentifierStr() const;
 
                 const ModuleBodyNode& getModuleBody() const;

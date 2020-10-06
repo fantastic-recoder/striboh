@@ -391,7 +391,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseParameters.hpp>
 #include <striboh/stribohBaseSignature.hpp>
-#include "stribohBaseBrokerIface.hpp"
+#include <striboh/stribohBaseBrokerIface.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
 
 using namespace striboh::base;
 using namespace std::chrono_literals;
@@ -409,8 +410,10 @@ using boost::process::std_in;
 using boost::process::std_out;
 using boost::process::std_err;
 
+static striboh::base::LogBoostImpl theLog;
+
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
-    Broker aBroker;
+    Broker aBroker(theLog);
     aBroker.serve();
     aBroker.shutdown();
 }
@@ -423,6 +426,13 @@ TEST(stribohBaseTests, testAddAndGetValues) {
     myList.unpack();
     ASSERT_EQ(myVal0,myList.get<std::string>(0));
     ASSERT_EQ(42,myList.get<int>(1));
+}
+
+TEST(stribohBaseTests, testSplit) {
+    string myPathStr0("");
+    Path myPath0 = Broker::split(myPathStr0,"/");
+    ASSERT_TRUE( myPath0.get().empty() )
+    << "empty string should produce empty path.";
 }
 
 TEST(stribohBaseTests, testUuidGeneration) {
@@ -438,7 +448,7 @@ TEST(stribohBaseTests, testUuidGeneration) {
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
-    Broker aBroker;
+    Broker aBroker(theLog);
     aBroker.serve();
 
     Interface myInterface{
@@ -463,7 +473,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
 }
 
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
-    Broker aBroker;
+    Broker aBroker(theLog);
     child myServer("./striboh_test_echo_server", std_out > stdout, std_err > stderr, std_in < stdin );
     BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
     auto myStatus=myServer.wait_for(15s);

@@ -384,15 +384,20 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <thread>
 #include <future>
 #include <boost/uuid/uuid.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
 
 #include "stribohBaseParameters.hpp"
 #include "stribohBaseBrokerIface.hpp"
-#include "stribohBaseNameTreeNode.hpp"
+#include "stribohIdlAstRootNode.hpp"
+#include "stribohIdlAstImportListNode.hpp"
 
 namespace striboh {
     namespace base {
 
         class Interface;
+
 
         class Broker : public BrokerIface {
         public:
@@ -417,8 +422,11 @@ namespace striboh {
             addServant(Interface& pMethodSignature) override;
 
             TResolveResult
-            resolve(const std::string_view& pPath ) const override;
+            resolve(const std::string& pPath ) const override;
 
+            static Path split(const std::string &pPathStr, const char *const pSeparator) ;
+
+            //Path
         private:
 
             void
@@ -426,13 +434,14 @@ namespace striboh {
 
             std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
             Instances_t mInstances;
-            NameTreeNode mRoot;
+            ::striboh::idl::ast::RootNode mRoot;
             std::future<void> mReceiver;
 
-            bool resolveSubNodes(std::vector<std::string>::iterator &pSegmentPtr,
-                                 const std::vector<std::string>::iterator pSegmentEnd,
+            bool resolveSubNodes(PathIterator &pSegmentPtr,
+                                 const PathIterator& pSegmentEnd,
                                  TResolveResult &pRetVal,
-                                 const NameTreeNode * pCurrentNode) const;
+                                 const ::striboh::idl::ast::ModuleListNode& pModuleListNode) const;
+
         };
 
     }
