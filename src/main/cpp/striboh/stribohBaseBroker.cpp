@@ -483,29 +483,41 @@ namespace striboh {
             const std::vector<std::string>::iterator pSegmentEnd,
             TResolveResult& pRetVal,
             const NameTreeNode* pCurrentNode
-        ) const
+        )
+        const
         {
+            if (pSegmentPtr == pSegmentEnd) {
+                return false;
+            }
             if (pCurrentNode->getName() == *pSegmentPtr) {
+                // if this is the last
+                ++pSegmentPtr;
                 if (pSegmentPtr == pSegmentEnd) {
                     for (const auto &mySubNodeRef : pCurrentNode->getChildNodes()) {
                         std::get<1>(pRetVal).emplace_back(mySubNodeRef.getName());
                     }
-                    std::get<0>(pRetVal) = EResolveResult::OK;
-                    return true;
+                    std::get<0>(pRetVal)=EResolveResult::OK;
                 } else {
                     for (const auto &mySubNodeRef : pCurrentNode->getChildNodes()) {
-                        if( resolveSubNodes(++pSegmentPtr, pSegmentEnd, pRetVal, &mySubNodeRef) )
+                        if (resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal, &mySubNodeRef)) {
                             return true;
+                        }
                     }
                 }
             }
             return false;
         }
 
+        static const char *const K_SEPARATOR = "/";
+
         TResolveResult Broker::resolve(const std::string_view &pPath) const {
             TResolveResult myRetVal{EResolveResult::NOT_FOUND,std::vector<PathSegment>()};
             std::vector<std::string> myPathSegments;
-            boost::split(myPathSegments,pPath,boost::is_any_of("/"));
+            if(pPath == K_SEPARATOR) {
+                myPathSegments.emplace_back("");
+            } else {
+                boost::split(myPathSegments, pPath, boost::is_any_of(K_SEPARATOR));
+            }
             const NameTreeNode* myCurrentNode = &mRoot;
             auto myPathBegin=myPathSegments.begin();
             resolveSubNodes(myPathBegin, myPathSegments.end(),myRetVal, myCurrentNode);
