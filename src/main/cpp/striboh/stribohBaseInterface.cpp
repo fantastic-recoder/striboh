@@ -382,8 +382,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
-        Interface::Interface( std::initializer_list<std::string> pPath, std::initializer_list<Method> pMethodList ):
+        Interface::Interface
+        (
+                std::initializer_list<std::string> pPath,
+                InterfaceName pName,
+                std::initializer_list<Method> pMethodList
+        )
+        :
         mPath{pPath},
+        mName{pName},
         mMethods{pMethodList}
         {
             BOOST_LOG_TRIVIAL(debug) << "We have " << mMethods.size() << ".";

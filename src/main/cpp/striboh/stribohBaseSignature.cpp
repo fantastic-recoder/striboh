@@ -7,8 +7,5 @@
 namespace striboh {
     namespace base {
 
-        Signature::Signature(const InterfaceName &, const Method &, const ParameterList &) {
-
-        }
     }
 }

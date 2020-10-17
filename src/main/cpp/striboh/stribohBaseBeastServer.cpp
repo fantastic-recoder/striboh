@@ -513,11 +513,11 @@ namespace striboh {
             auto myResolved = pBroker.resolve(std::string(pRequest.target()));
 
             std::string theResponse;
-            if (std::get<0>(myResolved) == EResolveResult::NOT_FOUND) {
+            if (myResolved.mResult == EResolveResult::NOT_FOUND) {
                 return pSend(not_found(pRequest.target()));
             }
             // found
-            if (std::get<0>(myResolved) == EResolveResult::OK) {
+            if (myResolved.mResult == EResolveResult::OK) {
                 static std::string_view theResponse00(R"res(
                 { "Message" : "Hello from striboh.", "modules" : [
                 )res");
@@ -527,7 +527,7 @@ namespace striboh {
                 std::ostringstream myOstream;
                 myOstream << theResponse00;
                 bool start = true;
-                for (auto mySegment: std::get<1>(myResolved)) {
+                for (auto mySegment: myResolved.mModules) {
                     if (start) {
                         start = false;
                     } else {

@@ -429,10 +429,35 @@ TEST(stribohBaseTests, testAddAndGetValues) {
 }
 
 TEST(stribohBaseTests, testSplit) {
-    string myPathStr0("");
-    Path myPath0 = Broker::split(myPathStr0,"/");
-    ASSERT_TRUE( myPath0.get().empty() )
-    << "empty string should produce empty path.";
+    {
+        string myPathStr0("");
+        Path myPath0 = Broker::split(myPathStr0, "/");
+        ASSERT_TRUE(myPath0.get().empty())
+                                    << "empty string should produce empty path.";
+    }
+    {
+        string myPathStr0("/aa/bbb/ccc");
+        Path myPath0 = Broker::split(myPathStr0, "/");
+        ASSERT_EQ(myPath0.get().size(),3);
+        ASSERT_EQ(myPath0.get()[0].get(),"aa");
+        ASSERT_EQ(myPath0.get()[1].get(),"bbb");
+        ASSERT_EQ(myPath0.get()[2].get(),"ccc");
+    }
+    {
+        string myPathStr0("/aa/bbb/ccc/");
+        Path myPath0 = Broker::split(myPathStr0, "/");
+        ASSERT_EQ(myPath0.get().size(),3);
+        ASSERT_EQ(myPath0.get()[0].get(),"aa");
+        ASSERT_EQ(myPath0.get()[1].get(),"bbb");
+        ASSERT_EQ(myPath0.get()[2].get(),"ccc");
+    }
+    {
+        string myPathStr0("aa/bbb/");
+        Path myPath0 = Broker::split(myPathStr0, "/");
+        ASSERT_EQ(myPath0.get().size(),2);
+        ASSERT_EQ(myPath0.get()[0].get(),"aa");
+        ASSERT_EQ(myPath0.get()[1].get(),"bbb");
+    }
 }
 
 TEST(stribohBaseTests, testUuidGeneration) {
@@ -447,12 +472,57 @@ TEST(stribohBaseTests, testUuidGeneration) {
     EXPECT_EQ(myUuid0,myUuid2) << "UUID not written and read correctly!";
 }
 
+TEST(stribohBaseTests, testResolve) {
+    Broker aBroker(theLog);
+
+    Interface myInterface{
+        {"m0","m1"},InterfaceName("Hello"),
+        {
+            Method{"echo",
+                ParameterList{
+                        {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                },
+                [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
+                    pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                }
+            }
+        }
+    };
+    Broker::Uuid_t myUuid = aBroker.addServant(myInterface);
+    {
+        ResolveResult myResolved0 = aBroker.resolve("/not-existent");
+        EXPECT_EQ(EResolveResult::NOT_FOUND, myResolved0.mResult);
+    }
+    {
+        ResolveResult myResolved0 = aBroker.resolve("/");
+        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
+        ASSERT_EQ(1, myResolved0.mModules.size());
+        auto myModulesIt = myResolved0.mModules.begin();
+        EXPECT_EQ(string("m0"), myModulesIt->get());
+    }
+    {
+        ResolveResult myResolved0 = aBroker.resolve("/m0");
+        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
+        ASSERT_EQ(1, myResolved0.mModules.size());
+        auto myModulesIt = myResolved0.mModules.begin();
+        EXPECT_EQ(string("m1"), myModulesIt->get());
+    }
+    {
+        ResolveResult myResolved0 = aBroker.resolve("/m0/m1");
+        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
+        EXPECT_EQ(0, myResolved0.mModules.size());
+        ASSERT_EQ(1, myResolved0.mInterfaces.size());
+        auto myInterfaceIt = myResolved0.mInterfaces.begin();
+        EXPECT_EQ(string("Hello"), myInterfaceIt->get());
+    }
+}
+
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     Broker aBroker(theLog);
     aBroker.serve();
 
     Interface myInterface{
-            {"m0", "Hello"},
+            {"m0"}, InterfaceName{"Hello"},
             {
                     Method{"echo",
                            ParameterList{

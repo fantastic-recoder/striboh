@@ -21,15 +21,9 @@ namespace striboh {
             K_INT    = 12
         };
 
-        class InterfaceName;
-
         class Method;
         class ParameterList;
 
-        class Signature {
-        public:
-            Signature(const InterfaceName& , const Method&, const ParameterList& );
-        };
     }
 }
 

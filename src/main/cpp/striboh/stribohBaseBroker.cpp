@@ -391,6 +391,9 @@ namespace striboh {
         using std::string;
         using ::striboh::idl::ast::ModuleNode;
         using ::striboh::idl::ast::ModuleListNode;
+        using ::striboh::idl::ast::InterfaceNode;
+        using ::striboh::idl::ast::IdentifierNode;
+        using ::striboh::idl::ast::ModuleBodyNode;
 
         const std::atomic<EBrokerState>&
         Broker::serve() {
@@ -458,70 +461,89 @@ namespace striboh {
         Broker::addServant(Interface& pInterface) {
             Uuid_t myUuid = generateUuid();
             auto myPair = mInstances.try_emplace(myUuid,pInterface);
-            auto myChildNodes = mRoot.getModules();
-            for(string mDir : myPair.first->second.getPath()) {
-                auto myBegin = myChildNodes.begin();
-                auto myEnd = myChildNodes.end();
-                auto myFound = find_if(myBegin,myEnd,[&myDir=std::as_const(mDir)] (const auto& pDirNode) -> bool {
-                    if(myDir == pDirNode.getIdentifierStr())
-                        return true;
-                    return false;
-                });
-                if(myFound==myEnd) {
-                    auto& myNewNode(myChildNodes.emplace_back(ModuleNode(mDir)));
-                    myChildNodes = myNewNode.getModuleBody().getModules();
-                } else {
-                    myChildNodes = myFound->getModuleBody().getModules();
-                }
+            ModuleListNode* myChildModules = &mRoot.getModules();
+            ModuleBodyNode *myModuleBodyNode= nullptr;
+            for(string myModuleName : myPair.first->second.getPath()) {
+                myModuleBodyNode=addServantModule(myChildModules, myModuleName);
+                myChildModules= &myModuleBodyNode->getModules();
             }
+            myModuleBodyNode->getInterfaces().emplace_back(InterfaceNode(IdentifierNode(pInterface.getName().get())));
             return myUuid;
+        }
+
+        idl::ast::ModuleBodyNode *const Broker::addServantModule(ModuleListNode* const myChildNodes, string &mDir) const {
+            auto myBegin = myChildNodes->begin();
+            auto myEnd = myChildNodes->end();
+            auto myFound = find_if(myBegin,myEnd,[&myDir=std::as_const(mDir)] (const auto& pDirNode) -> bool {
+                if(myDir == pDirNode.getIdentifierStr())
+                    return true;
+                return false;
+            });
+            if(myFound==myEnd) {
+                myChildNodes->emplace_back(ModuleNode(mDir));
+                ModuleNode& myNewNode = myChildNodes->back();
+                return &myNewNode.getModuleBody();
+            }
+            return &myFound->getModuleBody();
         }
 
         bool
         Broker::resolveSubNodes
         (
-            PathIterator& pSegmentPtr,
-            const PathIterator& pSegmentEnd,
-            TResolveResult& pRetVal,
-            const ModuleListNode& pModuleListNode
+                PathIterator& pSegmentPtr,
+                const PathIterator pSegmentEnd,
+                ResolveResult& pRetVal,
+                const ModuleListNode& pModuleListNode
         )
         const
         {
             if (pSegmentPtr == pSegmentEnd) {
                 return false;
             }
-            /*if (pModuleListNode->getName() == *pSegmentPtr) {
-                // if this is the last
-                ++pSegmentPtr;
-                if (pSegmentPtr == pSegmentEnd) {
-                    for (const auto &mySubNodeRef : pModuleListNode->getChildNodes()) {
-                        std::get<1>(pRetVal).emplace_back(mySubNodeRef.getName());
-                    }
-                    std::get<0>(pRetVal)=EResolveResult::OK;
-                } else {
-                    for (const auto &mySubNodeRef : pModuleListNode->getChildNodes()) {
-                        if (resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal, &mySubNodeRef)) {
-                            return true;
+            for (const ModuleNode &myCurrentModule : pModuleListNode) {
+                if (myCurrentModule.getValueStr() == pSegmentPtr->get()) {
+                    // if this is the last
+                    ++pSegmentPtr;
+                    if (pSegmentPtr == pSegmentEnd) {
+                        addSubmodulesToResult(pRetVal, myCurrentModule.getModuleBody());
+                        return false;
+                    } else {
+                        for (const auto &mySubNodeRef : pModuleListNode) {
+                            if (resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal,
+                                                mySubNodeRef.getModuleBody().getModules())) {
+                                return true;
+                            }
                         }
                     }
                 }
-            }*/
+            }
             return false;
         }
 
-        static const char *const K_SEPARATOR = "/";
-
-        TResolveResult Broker::resolve(const std::string &pPath) const {
-            TResolveResult myRetVal{EResolveResult::NOT_FOUND,std::vector<PathSegment>()};
-            Path myPathSegments;
-            if(pPath == K_SEPARATOR) {
-                myPathSegments.get().emplace("");
-            } else {
-                myPathSegments=split( pPath, K_SEPARATOR);
+        void Broker::addSubmodulesToResult(ResolveResult &pRetVal, const ModuleListNode &pModules) const {
+            pRetVal.mResult=EResolveResult::OK;
+            for (const auto &mySubNodeRef : pModules) {
+                pRetVal.mModules.emplace(PathSegment(mySubNodeRef.getValueStr()));
             }
-            auto myCurrentNode = mRoot.getModules();
-            auto myPathBegin=myPathSegments.get().begin();
-            resolveSubNodes(myPathBegin, myPathSegments.get().end(),myRetVal, myCurrentNode);
+        }
+        void Broker::addSubmodulesToResult(ResolveResult &pRetVal, const ModuleBodyNode &pModule) const {
+            addSubmodulesToResult(pRetVal,pModule.getModules());
+            for( const auto& myInterface : pModule.getInterfaces()) {
+                pRetVal.mInterfaces.emplace(InterfaceName(myInterface.getName()));
+            }
+        }
+
+        ResolveResult Broker::resolve(const std::string &pPath) const {
+            ResolveResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
+            Path myPathToResolve;
+            if(pPath == K_SEPARATOR) {
+                addSubmodulesToResult(myRetVal,mRoot.getModules());
+            } else {
+                myPathToResolve = split(pPath, K_SEPARATOR);
+                auto myCurrentNode = mRoot.getModules();
+                auto myPathBegin = myPathToResolve.get().begin();
+                resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, myCurrentNode);
+            }
             return myRetVal;
         }
 
@@ -529,16 +551,22 @@ namespace striboh {
             Path myRetVal; std::string_view myPathView(pPathStr);
             while(!myPathView.empty()) {
                 auto mySegIdx = myPathView.find(pSeparator);
-                if((mySegIdx>1) && (myPathView.size()<mySegIdx)){
-                    myRetVal.get()
-                        .emplace(
-                            string(myPathView.substr(0,mySegIdx))
-                        );
+                if(mySegIdx == string::npos) {
+                    myRetVal.get().emplace_back(string(myPathView));
+                    break;
+                } else {
+                    if (mySegIdx > 1) {
+                        myRetVal.get()
+                            .emplace_back(string(myPathView.substr(0, mySegIdx)));
+                    }
                 }
-                myPathView=myPathView.substr(mySegIdx);
+                if(mySegIdx<myPathView.size()-1) {
+                    myPathView = myPathView.substr(++mySegIdx);
+                } else break;
             }
             return myRetVal;
         }
+
 
     }// namespace base
 }// namespace striboh

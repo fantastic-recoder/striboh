@@ -396,6 +396,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh {
     namespace base {
 
+        using ::striboh::idl::ast::RootNode;
+        using ::striboh::idl::ast::ModuleListNode;
+        using ::striboh::idl::ast::ModuleBodyNode;
+
         class Interface;
 
 
@@ -421,27 +425,39 @@ namespace striboh {
             const Uuid_t
             addServant(Interface& pMethodSignature) override;
 
-            TResolveResult
+            ResolveResult
             resolve(const std::string& pPath ) const override;
 
             static Path split(const std::string &pPathStr, const char *const pSeparator) ;
 
-            //Path
+            static constexpr const char *const K_SEPARATOR = "/";
+
         private:
 
             void
             dispatch();
 
-            std::atomic<EBrokerState> mOperationalState = EBrokerState::K_NOMINAL;
-            Instances_t mInstances;
-            ::striboh::idl::ast::RootNode mRoot;
-            std::future<void> mReceiver;
-
             bool resolveSubNodes(PathIterator &pSegmentPtr,
-                                 const PathIterator& pSegmentEnd,
-                                 TResolveResult &pRetVal,
+                                 const PathIterator pSegmentEnd,
+                                 ResolveResult &pRetVal,
                                  const ::striboh::idl::ast::ModuleListNode& pModuleListNode) const;
 
+            std::atomic<EBrokerState>
+                    mOperationalState = EBrokerState::K_NOMINAL;
+
+            Instances_t
+                    mInstances;
+
+            RootNode
+                    mRoot;
+
+            std::future<void>
+                    mReceiver;
+
+            void addSubmodulesToResult(ResolveResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
+            void addSubmodulesToResult(ResolveResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
+
+            idl::ast::ModuleBodyNode *const addServantModule(ModuleListNode* const myChildNodes, std::string &mDir) const;
         };
 
     }

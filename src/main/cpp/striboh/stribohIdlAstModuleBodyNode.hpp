@@ -66,6 +66,9 @@ namespace striboh {
                 const InterfaceListNode& getInterfaces() const {
                     return getSubNode2();
                 }
+                InterfaceListNode& getInterfaces() {
+                    return getSubNode2();
+                }
             };
 
         }

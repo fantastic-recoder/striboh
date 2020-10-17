@@ -396,7 +396,7 @@ int main( const int argc, const char* argv[]) {
     myServer.run();
 
     Interface myInterface{
-        {"m0", "m1", "Hello"},
+        {"m0", "m1"} , InterfaceName{"Hello"},
         {
              Method{"echo",
                 ParameterList{

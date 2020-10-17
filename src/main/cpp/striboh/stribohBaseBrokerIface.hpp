@@ -390,6 +390,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseServerIface.hpp"
+#include "stribohBaseInterface.hpp"
 
 namespace striboh {
     namespace base {
@@ -412,18 +413,22 @@ namespace striboh {
 
         class Interface;
 
-        using PathSegment
-           = fluent::NamedType<std::string,struct PathSegmentTag>;
-        using Path
-           = fluent::NamedType<std::set<PathSegment>,struct PathTag>;
-        using PathIterator
-           = Path::UnderlyingType::iterator;
+        using PathSegment   = fluent::NamedType<std::string,struct PathSegmentTag>;
+        using Path          = fluent::NamedType<std::vector<PathSegment>,struct PathTag>;
+        using PathIterator  = Path::UnderlyingType::iterator;
 
         inline auto operator < (const PathSegment& p0, const PathSegment& p1) {
             return p0.get() < p1.get();
         }
 
-        typedef std::tuple<EResolveResult,std::vector<PathSegment>> TResolveResult;
+        typedef std::set<PathSegment> PathSegments;
+        typedef std::set<InterfaceName> Interfaces;
+
+        struct ResolveResult {
+            EResolveResult mResult;
+            PathSegments   mModules;
+            Interfaces mInterfaces;
+        };
 
         struct BrokerIface {
             typedef boost::uuids::uuid Uuid_t;
@@ -457,7 +462,7 @@ namespace striboh {
             virtual const Uuid_t
             addServant(Interface& pMethodSignature) = 0;
 
-            virtual TResolveResult
+            virtual ResolveResult
             resolve(const std::string& pPath ) const = 0;
         private:
             LogIface& mLogIface;

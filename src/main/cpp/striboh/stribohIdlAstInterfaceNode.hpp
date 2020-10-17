@@ -53,6 +53,8 @@ namespace striboh {
                     return getValue();
                 }
 
+                const std::string &getName() const;
+
             private:
                 std::vector<MethodNode> mMethods;
             };
