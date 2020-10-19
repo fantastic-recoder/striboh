@@ -424,14 +424,17 @@ namespace striboh {
         typedef std::set<PathSegment> PathSegments;
         typedef std::set<InterfaceName> Interfaces;
 
-        struct ResolveResult {
+        struct ResolvedResult {
             EResolveResult mResult;
             PathSegments   mModules;
             Interfaces mInterfaces;
         };
 
+        using Uuid_t = boost::uuids::uuid;
+
+        using ResolvedService = std::pair<bool,Uuid_t>;
+
         struct BrokerIface {
-            typedef boost::uuids::uuid Uuid_t;
 
             BrokerIface( LogIface& pLogIface ):
             mLogIface(pLogIface){}
@@ -444,7 +447,7 @@ namespace striboh {
                 return mLogIface;
             }
 
-            static boost::uuids::uuid
+            static Uuid_t
             generateUuid();
 
             virtual void
@@ -462,8 +465,12 @@ namespace striboh {
             virtual const Uuid_t
             addServant(Interface& pMethodSignature) = 0;
 
-            virtual ResolveResult
+            virtual ResolvedResult
             resolve(const std::string& pPath ) const = 0;
+
+            virtual ResolvedService
+            resolveService(const std::string& pPath ) const = 0;
+
         private:
             LogIface& mLogIface;
         };

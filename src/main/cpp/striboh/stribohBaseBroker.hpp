@@ -392,6 +392,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportListNode.hpp"
+#include "stribohIdlAstModuleNode.hpp"
 
 namespace striboh {
     namespace base {
@@ -399,6 +400,7 @@ namespace striboh {
         using ::striboh::idl::ast::RootNode;
         using ::striboh::idl::ast::ModuleListNode;
         using ::striboh::idl::ast::ModuleBodyNode;
+        using ::striboh::idl::ast::ModuleNode;
 
         class Interface;
 
@@ -425,8 +427,11 @@ namespace striboh {
             const Uuid_t
             addServant(Interface& pMethodSignature) override;
 
-            ResolveResult
+            ResolvedResult
             resolve(const std::string& pPath ) const override;
+
+            ResolvedService
+            resolveService(const std::string& pPath ) const override;
 
             static Path split(const std::string &pPathStr, const char *const pSeparator) ;
 
@@ -437,10 +442,10 @@ namespace striboh {
             void
             dispatch();
 
-            bool resolveSubNodes(PathIterator &pSegmentPtr,
-                                 const PathIterator pSegmentEnd,
-                                 ResolveResult &pRetVal,
-                                 const ::striboh::idl::ast::ModuleListNode& pModuleListNode) const;
+            const ModuleNode * resolveSubNodes(PathIterator &pSegmentPtr,
+                                               const PathIterator pSegmentEnd,
+                                               ResolvedResult &pRetVal,
+                                               const ::striboh::idl::ast::ModuleListNode& pModuleListNode) const;
 
             std::atomic<EBrokerState>
                     mOperationalState = EBrokerState::K_NOMINAL;
@@ -454,10 +459,17 @@ namespace striboh {
             std::future<void>
                     mReceiver;
 
-            void addSubmodulesToResult(ResolveResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
-            void addSubmodulesToResult(ResolveResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
+            void
+            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
 
-            idl::ast::ModuleBodyNode *const addServantModule(ModuleListNode* const myChildNodes, std::string &mDir) const;
+            void
+            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
+
+            idl::ast::ModuleBodyNode *const
+            addServantModule(ModuleListNode* const myChildNodes, std::string &mDir) const;
+
+            static ResolvedService
+            resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
         };
 
     }

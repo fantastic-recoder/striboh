@@ -383,7 +383,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
-        BrokerIface::Uuid_t
+        Uuid_t
         BrokerIface::generateUuid() {
             static boost::uuids::random_generator theGenerator;
             boost::uuids::uuid myUuid = theGenerator();

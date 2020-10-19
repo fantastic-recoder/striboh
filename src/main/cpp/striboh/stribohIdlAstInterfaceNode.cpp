@@ -384,23 +384,21 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
+            InterfaceNode::InterfaceNode()
+                    : BaseValueNode<std::string>(K_INTERFACE_NODE), mUuid{0} {}
+
             InterfaceNode::InterfaceNode(const IdentifierNode& pIdent)
-                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()) {
+                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()), mUuid{0} {
                 BOOST_LOG_TRIVIAL(trace) << "Creating interface \"" << pIdent.getValue() << "\".";
             }
 
-            InterfaceNode::InterfaceNode(const InterfaceNode& pOther)
-                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pOther.getValue()), mMethods(pOther.mMethods) {
-            }
-
-            InterfaceNode::InterfaceNode(InterfaceNode&& pOther)
-                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pOther.getValue()), mMethods(pOther.mMethods) {
+            InterfaceNode::InterfaceNode(const IdentifierNode& pIdent, const boost::uuids::uuid& pUuid)
+                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()), mUuid(pUuid) {
             }
 
             const std::string &InterfaceNode::getName() const {
                 return this->getValue();
             }
-
 
             InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const IdentifierNode& pNode) {
                 pInterfaceNode.setValue(pNode.getValue());
@@ -414,7 +412,6 @@ namespace striboh {
                                          << "\".";
                 return pInterfaceNode;
             }
-
 
         }
     }

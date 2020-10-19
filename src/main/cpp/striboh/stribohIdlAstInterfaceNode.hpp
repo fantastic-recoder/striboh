@@ -6,6 +6,7 @@
 #define STRIBOH_STRIBOHIDLASTINTERFACENODE_HPP
 
 #include <string>
+#include <boost/uuid/uuid.hpp>
 #include "stribohIdlAstBaseNode.hpp"
 #include "stribohIdlAstIdentifierNode.hpp"
 #include "stribohIdlAstMethodNode.hpp"
@@ -17,24 +18,25 @@ namespace striboh {
             constexpr const char *const K_INTERFACE_NODE = "InterfaceNode";
 
             struct InterfaceNode : public BaseValueNode<std::string> {
-                InterfaceNode()
-                        : BaseValueNode<std::string>(K_INTERFACE_NODE) {}
+            private:
+                std::vector<MethodNode> mMethods;
+                boost::uuids::uuid      mUuid;
+            public:
+                InterfaceNode();
 
-                InterfaceNode(const InterfaceNode& pOther);
+                InterfaceNode(const InterfaceNode& pOther)  = default;
 
-                InterfaceNode(InterfaceNode&& pOther);
+                InterfaceNode(InterfaceNode&& pOther)  = default;
 
                 InterfaceNode(const IdentifierNode& pIdent);
 
-                InterfaceNode& operator=(InterfaceNode&& pOther) {
-                    setValue(pOther.getValue());
-                    return *this;
-                }
+                InterfaceNode(const IdentifierNode& pIdent, const boost::uuids::uuid& pUuid);
 
-                InterfaceNode& operator=(const InterfaceNode& pOther) {
-                    setValue(pOther.getValue());
-                    return *this;
-                }
+                InterfaceNode(const IdentifierNode& pIdent, boost::uuids::uuid&& pUuid);
+
+                InterfaceNode& operator=(InterfaceNode&& pOther) = default;
+
+                InterfaceNode& operator=(const InterfaceNode& pOther) = default;
 
                 const std::string getIdentifierStr() const {
                     return getValue();
@@ -55,8 +57,13 @@ namespace striboh {
 
                 const std::string &getName() const;
 
-            private:
-                std::vector<MethodNode> mMethods;
+                const boost::uuids::uuid &getUuid() const {
+                    return mUuid;
+                }
+
+                void setUuid(const boost::uuids::uuid &pUuid) {
+                    mUuid = pUuid;
+                }
             };
 
             InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const IdentifierNode& pIdentifier);

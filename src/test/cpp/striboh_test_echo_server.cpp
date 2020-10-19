@@ -416,7 +416,7 @@ int main( const int argc, const char* argv[]) {
         }
     };
     BOOST_LOG_TRIVIAL(debug)  << "Adding echo servant..." ;
-    Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
+    Uuid_t  myUuid = aBroker.addServant(myInterface);
     BOOST_LOG_TRIVIAL(debug)  << "Echo servant added." ;
     sleep(30);
     myServer.shutdown();

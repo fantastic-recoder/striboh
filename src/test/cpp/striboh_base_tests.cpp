@@ -461,13 +461,13 @@ TEST(stribohBaseTests, testSplit) {
 }
 
 TEST(stribohBaseTests, testUuidGeneration) {
-    Broker::Uuid_t myUuid0=Broker::generateUuid();
-    Broker::Uuid_t myUuid1=Broker::generateUuid();
+    Uuid_t myUuid0=Broker::generateUuid();
+    Uuid_t myUuid1=Broker::generateUuid();
     EXPECT_NE(myUuid0,myUuid1);
     std::stringstream aStream;
     aStream << myUuid0 << endl;
     BOOST_LOG_TRIVIAL(debug) << "UUID:" << myUuid0 << " : " << aStream.str();
-    Broker::Uuid_t myUuid2;
+    Uuid_t myUuid2;
     aStream >> myUuid2;
     EXPECT_EQ(myUuid0,myUuid2) << "UUID not written and read correctly!";
 }
@@ -488,32 +488,38 @@ TEST(stribohBaseTests, testResolve) {
             }
         }
     };
-    Broker::Uuid_t myUuid = aBroker.addServant(myInterface);
+    Uuid_t myUuid = aBroker.addServant(myInterface);
     {
-        ResolveResult myResolved0 = aBroker.resolve("/not-existent");
+        ResolvedResult myResolved0 = aBroker.resolve("/not-existent");
         EXPECT_EQ(EResolveResult::NOT_FOUND, myResolved0.mResult);
     }
     {
-        ResolveResult myResolved0 = aBroker.resolve("/");
+        ResolvedResult myResolved0 = aBroker.resolve("/");
         ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
         ASSERT_EQ(1, myResolved0.mModules.size());
         auto myModulesIt = myResolved0.mModules.begin();
         EXPECT_EQ(string("m0"), myModulesIt->get());
     }
     {
-        ResolveResult myResolved0 = aBroker.resolve("/m0");
+        ResolvedResult myResolved0 = aBroker.resolve("/m0");
         ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
         ASSERT_EQ(1, myResolved0.mModules.size());
         auto myModulesIt = myResolved0.mModules.begin();
         EXPECT_EQ(string("m1"), myModulesIt->get());
     }
     {
-        ResolveResult myResolved0 = aBroker.resolve("/m0/m1");
+        ResolvedResult myResolved0 = aBroker.resolve("/m0/m1");
         ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
         EXPECT_EQ(0, myResolved0.mModules.size());
         ASSERT_EQ(1, myResolved0.mInterfaces.size());
         auto myInterfaceIt = myResolved0.mInterfaces.begin();
         EXPECT_EQ(string("Hello"), myInterfaceIt->get());
+    }
+    {
+
+        ResolvedService  myResolved = aBroker.resolveService("/m0/m1/Hello");
+        EXPECT_EQ(true,std::get<bool>(myResolved));
+        EXPECT_EQ(myUuid,std::get<Uuid_t >(myResolved));
     }
 }
 
@@ -534,7 +540,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
                     }
             }
     };
-    Broker::Uuid_t  myUuid = aBroker.addServant(myInterface);
+    Uuid_t  myUuid = aBroker.addServant(myInterface);
     ParameterValues myReply = aBroker.invoke(myUuid, "echo", ParameterValues{std::string("Peter!")});
     myReply.unpack();
     ASSERT_TRUE(myReply.size()==1) << "Parameter list is empty, should have 1 element!";

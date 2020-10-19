@@ -457,7 +457,7 @@ namespace striboh {
             return myRetVal;
         }
 
-        const Broker::Uuid_t
+        const Uuid_t
         Broker::addServant(Interface& pInterface) {
             Uuid_t myUuid = generateUuid();
             auto myPair = mInstances.try_emplace(myUuid,pInterface);
@@ -467,7 +467,7 @@ namespace striboh {
                 myModuleBodyNode=addServantModule(myChildModules, myModuleName);
                 myChildModules= &myModuleBodyNode->getModules();
             }
-            myModuleBodyNode->getInterfaces().emplace_back(InterfaceNode(IdentifierNode(pInterface.getName().get())));
+            myModuleBodyNode->getInterfaces().emplace_back(InterfaceNode(IdentifierNode(pInterface.getName().get()),myUuid));
             return myUuid;
         }
 
@@ -487,18 +487,18 @@ namespace striboh {
             return &myFound->getModuleBody();
         }
 
-        bool
+        const ModuleNode *
         Broker::resolveSubNodes
         (
                 PathIterator& pSegmentPtr,
                 const PathIterator pSegmentEnd,
-                ResolveResult& pRetVal,
+                ResolvedResult& pRetVal,
                 const ModuleListNode& pModuleListNode
         )
         const
         {
             if (pSegmentPtr == pSegmentEnd) {
-                return false;
+                return nullptr;
             }
             for (const ModuleNode &myCurrentModule : pModuleListNode) {
                 if (myCurrentModule.getValueStr() == pSegmentPtr->get()) {
@@ -506,43 +506,48 @@ namespace striboh {
                     ++pSegmentPtr;
                     if (pSegmentPtr == pSegmentEnd) {
                         addSubmodulesToResult(pRetVal, myCurrentModule.getModuleBody());
-                        return false;
+                        return &myCurrentModule;
                     } else {
                         for (const auto &mySubNodeRef : pModuleListNode) {
-                            if (resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal,
-                                                mySubNodeRef.getModuleBody().getModules())) {
-                                return true;
+                            auto myModule = resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal,
+                                                            mySubNodeRef.getModuleBody().getModules());
+                            if (myModule) {
+                                return myModule;
                             }
                         }
                     }
                 }
             }
-            return false;
+            return nullptr;
         }
 
-        void Broker::addSubmodulesToResult(ResolveResult &pRetVal, const ModuleListNode &pModules) const {
+        void
+        Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleListNode &pModules) const {
             pRetVal.mResult=EResolveResult::OK;
             for (const auto &mySubNodeRef : pModules) {
                 pRetVal.mModules.emplace(PathSegment(mySubNodeRef.getValueStr()));
             }
         }
-        void Broker::addSubmodulesToResult(ResolveResult &pRetVal, const ModuleBodyNode &pModule) const {
+
+        void
+        Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleBodyNode &pModule) const {
             addSubmodulesToResult(pRetVal,pModule.getModules());
             for( const auto& myInterface : pModule.getInterfaces()) {
                 pRetVal.mInterfaces.emplace(InterfaceName(myInterface.getName()));
             }
         }
 
-        ResolveResult Broker::resolve(const std::string &pPath) const {
-            ResolveResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
+        ResolvedResult
+        Broker::resolve(const std::string &pPath) const {
+            ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
             Path myPathToResolve;
             if(pPath == K_SEPARATOR) {
                 addSubmodulesToResult(myRetVal,mRoot.getModules());
             } else {
                 myPathToResolve = split(pPath, K_SEPARATOR);
-                auto myCurrentNode = mRoot.getModules();
+                auto mySubmodules = mRoot.getModules();
                 auto myPathBegin = myPathToResolve.get().begin();
-                resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, myCurrentNode);
+                resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
             }
             return myRetVal;
         }
@@ -565,6 +570,38 @@ namespace striboh {
                 } else break;
             }
             return myRetVal;
+        }
+
+        static const constexpr Uuid_t theNullUuid{0};
+        static const constexpr ResolvedService theNullService{false, theNullUuid};
+
+        ResolvedService
+        Broker::resolveService(const string &pPath) const {
+            ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
+            Path myPathToResolve = split(pPath, K_SEPARATOR);
+            if(myPathToResolve.get().empty()) {
+                return theNullService;
+            }
+            PathSegment myInterfaceName{myPathToResolve.get().back()};
+            myPathToResolve.get().pop_back();
+            auto mySubmodules = mRoot.getModules();
+            auto myPathBegin = myPathToResolve.get().begin();
+            auto myModulePtr = resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
+            if(myModulePtr== nullptr) {
+                return theNullService;
+            }
+            return resolveService(myInterfaceName,*myModulePtr);
+        }
+
+        ResolvedService
+        Broker::resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) {
+            for(auto& myInterface: pNode.getModuleBody().getInterfaces()) {
+                if(myInterface.getName()==pInterfaceName.get()) {
+                    ResolvedService myFoundService(true, myInterface.getUuid());
+                    return myFoundService;
+                }
+            }
+            return theNullService;
         }
 
 
