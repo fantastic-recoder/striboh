@@ -379,6 +379,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <thread>
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseBrokerIface.hpp"
@@ -394,6 +399,8 @@ namespace striboh {
         using ::striboh::idl::ast::InterfaceNode;
         using ::striboh::idl::ast::IdentifierNode;
         using ::striboh::idl::ast::ModuleBodyNode;
+
+        namespace pt = boost::property_tree;
 
         const std::atomic<EBrokerState>&
         Broker::serve() {
@@ -602,6 +609,17 @@ namespace striboh {
                 }
             }
             return theNullService;
+        }
+
+        std::string Broker::resolveServiceToStr(const string &pPath) const {
+            ResolvedService mySvc = resolveService(pPath);
+            pt::ptree myPt;
+            myPt.put(K_SVC_PATH, pPath);
+            myPt.put(K_SVC_RESULT, mySvc.first);
+            myPt.put(K_SVC_UUID, mySvc.second);
+            std::ostringstream myOstream;
+            pt::write_json(myOstream,myPt);
+            return myOstream.str();
         }
 
 

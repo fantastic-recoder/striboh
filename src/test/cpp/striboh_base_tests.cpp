@@ -385,6 +385,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <boost/log/trivial.hpp>
 #include <boost/process.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <striboh/stribohBaseMessage.hpp>
 #include <striboh/stribohBaseInterface.hpp>
@@ -472,22 +476,31 @@ TEST(stribohBaseTests, testUuidGeneration) {
     EXPECT_EQ(myUuid0,myUuid2) << "UUID not written and read correctly!";
 }
 
-TEST(stribohBaseTests, testResolve) {
+Interface createTestInterface() {
+    return  Interface{
+            {"m0","m1"},InterfaceName("Hello"),
+            {
+                    Method{"echo",
+                           ParameterList{
+                                   {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                           },
+                           [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
+                               pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                           }
+                    }
+            }
+    };
+
+}
+
+static const std::string theM0M1Path("/m0/m1/Hello");
+
+TEST(stribohBaseTests, testResolve)
+{
     Broker aBroker(theLog);
 
-    Interface myInterface{
-        {"m0","m1"},InterfaceName("Hello"),
-        {
-            Method{"echo",
-                ParameterList{
-                        {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
-                },
-                [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
-                    pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
-                }
-            }
-        }
-    };
+    Interface myInterface(createTestInterface());
+
     Uuid_t myUuid = aBroker.addServant(myInterface);
     {
         ResolvedResult myResolved0 = aBroker.resolve("/not-existent");
@@ -517,10 +530,25 @@ TEST(stribohBaseTests, testResolve) {
     }
     {
 
-        ResolvedService  myResolved = aBroker.resolveService("/m0/m1/Hello");
+        ResolvedService  myResolved = aBroker.resolveService(theM0M1Path);
         EXPECT_EQ(true,std::get<bool>(myResolved));
         EXPECT_EQ(myUuid,std::get<Uuid_t >(myResolved));
     }
+}
+
+TEST(stribohBaseTests, testResolveServiceToStr) {
+    Interface myInterface(createTestInterface());
+    Broker aBroker(theLog);
+    Uuid_t myUuid = aBroker.addServant(myInterface);
+    string  myResolved = aBroker.resolveServiceToStr(theM0M1Path);
+    EXPECT_FALSE(myResolved.empty());
+    BOOST_LOG_TRIVIAL(debug) << myResolved;
+    std::istringstream myIstream(myResolved);
+    boost::property_tree::ptree myPt;
+    boost::property_tree::read_json(myIstream,myPt);
+    EXPECT_EQ(theM0M1Path,myPt.get<std::string>(K_SVC_PATH));
+    EXPECT_EQ(true,myPt.get<bool>(K_SVC_RESULT));
+    EXPECT_EQ(myUuid,myPt.get<Uuid_t>(K_SVC_UUID));
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {

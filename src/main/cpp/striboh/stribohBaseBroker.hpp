@@ -433,6 +433,9 @@ namespace striboh {
             ResolvedService
             resolveService(const std::string& pPath ) const override;
 
+            virtual std::string
+            resolveServiceToStr(const std::string& pPath ) const override;
+
             static Path split(const std::string &pPathStr, const char *const pSeparator) ;
 
             static constexpr const char *const K_SEPARATOR = "/";

@@ -471,6 +471,9 @@ namespace striboh {
             virtual ResolvedService
             resolveService(const std::string& pPath ) const = 0;
 
+            virtual std::string
+            resolveServiceToStr(const std::string& pPath ) const = 0;
+
         private:
             LogIface& mLogIface;
         };

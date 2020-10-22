@@ -404,7 +404,7 @@ namespace striboh {
             typedef std::vector<Method> Methods_t;
             typedef std::vector<std::string> Path_t;
 
-            Interface
+            explicit Interface
             (
                     std::initializer_list<std::string> pPath,
                     InterfaceName pName,
@@ -431,6 +431,13 @@ namespace striboh {
             Path_t    mPath;
             InterfaceName mName;
         };
+
+        static const  constexpr char *const K_SVC_PATH = "svc.path";
+
+        static const constexpr char *const K_SVC_RESULT = "svc.result";
+
+        static const constexpr char *const K_SVC_UUID = "svc.uuid";
+
     }
 }
 
