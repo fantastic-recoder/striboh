@@ -387,10 +387,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/process.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include <striboh/stribohBaseMessage.hpp>
 #include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseParameters.hpp>
@@ -434,7 +432,7 @@ TEST(stribohBaseTests, testAddAndGetValues) {
 
 TEST(stribohBaseTests, testSplit) {
     {
-        string myPathStr0("");
+        string myPathStr0;
         Path myPath0 = Broker::split(myPathStr0, "/");
         ASSERT_TRUE(myPath0.get().empty())
                                     << "empty string should produce empty path.";
@@ -493,7 +491,7 @@ Interface createTestInterface() {
 
 }
 
-static const std::string theM0M1Path("/m0/m1/Hello");
+static const std::string_view theM0M1Path("/m0/m1/Hello");
 
 TEST(stribohBaseTests, testResolve)
 {

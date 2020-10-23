@@ -545,7 +545,7 @@ namespace striboh {
         }
 
         ResolvedResult
-        Broker::resolve(const std::string &pPath) const {
+        Broker::resolve(std::string_view pPath) const {
             ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
             Path myPathToResolve;
             if(pPath == K_SEPARATOR) {
@@ -559,7 +559,7 @@ namespace striboh {
             return myRetVal;
         }
 
-        Path Broker::split(const string &pPathStr, const char *const pSeparator) {
+        Path Broker::split(std::string_view pPathStr, std::string_view pSeparator) {
             Path myRetVal; std::string_view myPathView(pPathStr);
             while(!myPathView.empty()) {
                 auto mySegIdx = myPathView.find(pSeparator);
@@ -583,7 +583,7 @@ namespace striboh {
         static const constexpr ResolvedService theNullService{false, theNullUuid};
 
         ResolvedService
-        Broker::resolveService(const string &pPath) const {
+        Broker::resolveService(std::string_view pPath) const {
             ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
             Path myPathToResolve = split(pPath, K_SEPARATOR);
             if(myPathToResolve.get().empty()) {
@@ -611,7 +611,7 @@ namespace striboh {
             return theNullService;
         }
 
-        std::string Broker::resolveServiceToStr(const string &pPath) const {
+        std::string Broker::resolveServiceToStr(std::string_view pPath) const {
             ResolvedService mySvc = resolveService(pPath);
             pt::ptree myPt;
             myPt.put(K_SVC_PATH, pPath);

@@ -428,15 +428,15 @@ namespace striboh {
             addServant(Interface& pMethodSignature) override;
 
             ResolvedResult
-            resolve(const std::string& pPath ) const override;
+            resolve(std::string_view pPath ) const override;
 
             ResolvedService
-            resolveService(const std::string& pPath ) const override;
+            resolveService(std::string_view pPath ) const override;
 
             virtual std::string
-            resolveServiceToStr(const std::string& pPath ) const override;
+            resolveServiceToStr(std::string_view pPath ) const override;
 
-            static Path split(const std::string &pPathStr, const char *const pSeparator) ;
+            static Path split(std::string_view pPathStr, std::string_view pSeparator) ;
 
             static constexpr const char *const K_SEPARATOR = "/";
 

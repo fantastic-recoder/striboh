@@ -377,8 +377,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEBROKERIFACE_HPP
-#define STRIBOH_STRIBOHBASEBROKERIFACE_HPP
+#ifndef STRIBOH_BASE_BROKER_IFACE_HPP
+#define STRIBOH_BASE_BROKER_IFACE_HPP
 
 #include <array>
 #include <atomic>
@@ -466,13 +466,13 @@ namespace striboh {
             addServant(Interface& pMethodSignature) = 0;
 
             virtual ResolvedResult
-            resolve(const std::string& pPath ) const = 0;
+            resolve(std::string_view pPath ) const = 0;
 
             virtual ResolvedService
-            resolveService(const std::string& pPath ) const = 0;
+            resolveService(std::string_view pPath ) const = 0;
 
             virtual std::string
-            resolveServiceToStr(const std::string& pPath ) const = 0;
+            resolveServiceToStr(std::string_view pPath ) const = 0;
 
         private:
             LogIface& mLogIface;
@@ -480,4 +480,4 @@ namespace striboh {
     }
 }
 
-#endif //STRIBOH_STRIBOHBASEBROKERIFACE_HPP
+#endif //STRIBOH_BASE_BROKER_IFACE_HPP
