@@ -460,7 +460,7 @@ namespace striboh {
             shutdown() = 0;
 
             virtual ParameterValues
-            invoke(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) = 0;
+            invokeMethod(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) = 0;
 
             virtual const Uuid_t
             addServant(Interface& pMethodSignature) = 0;

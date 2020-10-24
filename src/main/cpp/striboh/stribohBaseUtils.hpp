@@ -376,106 +376,28 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_ORB_HPP
-#define STRIBOH_BASE_ORB_HPP
+#ifndef STRIBOH_BASE_UTILS_HPP
+#define STRIBOH_BASE_UTILS_HPP
 
-#include <array>
-#include <atomic>
-#include <thread>
-#include <future>
-#include <boost/uuid/uuid.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/foreach.hpp>
-
-#include "stribohBaseParameters.hpp"
-#include "stribohBaseBrokerIface.hpp"
-#include "stribohIdlAstRootNode.hpp"
-#include "stribohIdlAstImportListNode.hpp"
-#include "stribohIdlAstModuleNode.hpp"
+#include <string>
+#include <vector>
+#include <map>
 
 namespace striboh {
     namespace base {
 
-        using ::striboh::idl::ast::RootNode;
-        using ::striboh::idl::ast::ModuleListNode;
-        using ::striboh::idl::ast::ModuleBodyNode;
-        using ::striboh::idl::ast::ModuleNode;
+        using Parameters_t = std::map<std::string,std::vector<std::string>>;
 
-        class Interface;
-
-
-        class Broker : public BrokerIface {
-        public:
-            typedef std::map<Uuid_t ,Interface> Instances_t;
-
-            Broker( LogIface& pLogIface ):
-            BrokerIface(pLogIface){}
-
-            void
-            initialize() override;
-
-            const std::atomic<EBrokerState>&
-            serve() override;
-
-            const std::atomic<EBrokerState>&
-            shutdown() override;
-
-            ParameterValues
-            invokeMethod(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) override;
-
-            const Uuid_t
-            addServant(Interface& pMethodSignature) override;
-
-            ResolvedResult
-            resolve(std::string_view pPath ) const override;
-
-            ResolvedService
-            resolveService(std::string_view pPath ) const override;
-
-            virtual std::string
-            resolveServiceToStr(std::string_view pPath ) const override;
-
-            static Path split(std::string_view pPathStr, std::string_view pSeparator) ;
-
-            static constexpr const char *const K_SEPARATOR = "/";
-
-        private:
-
-            void
-            dispatch();
-
-            const ModuleNode * resolveSubNodes(PathIterator &pSegmentPtr,
-                                               const PathIterator pSegmentEnd,
-                                               ResolvedResult &pRetVal,
-                                               const ::striboh::idl::ast::ModuleListNode& pModuleListNode) const;
-
-            std::atomic<EBrokerState>
-                    mOperationalState = EBrokerState::K_NOMINAL;
-
-            Instances_t
-                    mInstances;
-
-            RootNode
-                    mRoot;
-
-            std::future<void>
-                    mReceiver;
-
-            void
-            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
-
-            void
-            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
-
-            idl::ast::ModuleBodyNode *const
-            addServantModule(ModuleListNode* const myChildNodes, std::string &mDir) const;
-
-            static ResolvedService
-            resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
-        };
+        /**
+         * Parse URL parameters in form /seg1/seg2?par1=val1&par2=val2&par1=val3
+         *
+         * @param pUrl the URL to parse
+         * @return parameter value pairs
+         */
+        Parameters_t
+        parseUrlParameters(std::string_view pUrl);
 
     }
 }
 
-#endif //STRIBOH_BASE_ORB_HPP
+#endif //STRIBOH_BASE_UTILS_HPP

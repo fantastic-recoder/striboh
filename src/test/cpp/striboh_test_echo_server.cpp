@@ -376,7 +376,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <boost/log/trivial.hpp>
+#include <boost/program_options.hpp>
 
 #include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseBroker.hpp>
@@ -384,12 +384,36 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseLogBoostImpl.hpp>
 
 using std::endl;
+using std::cout;
 using namespace striboh::base;
 using namespace std::chrono_literals;
+namespace po = boost::program_options;
 
 int main( const int argc, const char* argv[]) {
-    BOOST_LOG_TRIVIAL(info)  << "Server " << argv[0] << " starting." ;
     LogBoostImpl myLog;
+    myLog.info("Server {} starting.", argv[0]);
+    // Declare the supported options.
+    int aSleepTimeInSeconds = 30;
+    po::options_description desc("Allowed options");
+    desc.add_options()
+            ("help", "produce help message")
+            ("time,t", po::value<int>(), "Set sleep (serve) time in seconds.")
+            ;
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+        cout << desc << "\n";
+        return 1;
+    }
+
+    if (vm.count("time")) {
+        aSleepTimeInSeconds=vm["time"].as<int>();
+    }
+    myLog.info( "Sleep time set to: {} seconds.", aSleepTimeInSeconds );
+
     Broker aBroker(myLog);
     BeastServer myServer(3,aBroker,myLog);
     aBroker.serve();
@@ -415,10 +439,10 @@ int main( const int argc, const char* argv[]) {
 
         }
     };
-    BOOST_LOG_TRIVIAL(debug)  << "Adding echo servant..." ;
+    myLog.debug("Adding echo servant...") ;
     Uuid_t  myUuid = aBroker.addServant(myInterface);
-    BOOST_LOG_TRIVIAL(debug)  << "Echo servant added." ;
-    sleep(30);
+    myLog.debug( "Echo servant added." );
+    sleep(aSleepTimeInSeconds);
     myServer.shutdown();
     aBroker.shutdown();
     return 2;

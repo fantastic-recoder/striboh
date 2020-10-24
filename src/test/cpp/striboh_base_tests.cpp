@@ -395,11 +395,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseSignature.hpp>
 #include <striboh/stribohBaseBrokerIface.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
+#include <striboh/stribohBaseUtils.hpp>
 
 using namespace striboh::base;
 using namespace std::chrono_literals;
 using std::endl;
 using std::string;
+using std::string_view;
 using std::count;
 using striboh::base::InterfaceName;
 using striboh::base::Method;
@@ -413,6 +415,37 @@ using boost::process::std_out;
 using boost::process::std_err;
 
 static striboh::base::LogBoostImpl theLog;
+
+TEST(stribohBaseTests, testParseUrlParameters) {
+    {
+        string_view myUrl("");
+        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
+        EXPECT_TRUE(myUrlParameters.empty());
+    }
+    {
+        string_view myUrl("/m0/m1/Hello?resolve");
+        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
+        EXPECT_EQ(1,myUrlParameters.size());
+        EXPECT_TRUE(myUrlParameters["resolve"].empty());
+    }
+    {
+        string_view myUrl("/m0/m1/Hello?p0=val0");
+        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
+        ASSERT_EQ(1,myUrlParameters.size());
+        ASSERT_EQ(1, myUrlParameters["p0"].size());
+        EXPECT_EQ("val0", myUrlParameters["p0"][0]);
+    }
+    {
+        string_view myUrl("/m0/m1/Hello?p0=val0&p1=val1&p0=val1");
+        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
+        ASSERT_EQ(2,myUrlParameters.size());
+        ASSERT_EQ(2, myUrlParameters["p0"].size());
+        ASSERT_EQ(1, myUrlParameters["p1"].size());
+        EXPECT_EQ("val1", myUrlParameters["p1"][0]);
+        EXPECT_EQ("val0", myUrlParameters["p0"][0]);
+        EXPECT_EQ("val1", myUrlParameters["p0"][1]);
+    }
+}
 
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
     Broker aBroker(theLog);
@@ -567,7 +600,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             }
     };
     Uuid_t  myUuid = aBroker.addServant(myInterface);
-    ParameterValues myReply = aBroker.invoke(myUuid, "echo", ParameterValues{std::string("Peter!")});
+    ParameterValues myReply = aBroker.invokeMethod(myUuid, "echo", ParameterValues{std::string("Peter!")});
     myReply.unpack();
     ASSERT_TRUE(myReply.size()==1) << "Parameter list is empty, should have 1 element!";
     EXPECT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));

@@ -448,7 +448,7 @@ namespace striboh {
         }
 
         ParameterValues
-        Broker::invoke(const Uuid_t& pInstanceId, const string& pMethodName, ParameterValues pValues) {
+        Broker::invokeMethod(const Uuid_t& pInstanceId, const string& pMethodName, ParameterValues pValues) {
             ParameterValues myRetVal;
             auto myInterfaceIt=mInstances.find(pInstanceId);
             if(myInterfaceIt != mInstances.end()) {
@@ -560,20 +560,20 @@ namespace striboh {
         }
 
         Path Broker::split(std::string_view pPathStr, std::string_view pSeparator) {
-            Path myRetVal; std::string_view myPathView(pPathStr);
-            while(!myPathView.empty()) {
-                auto mySegIdx = myPathView.find(pSeparator);
+            Path myRetVal;
+            while(!pPathStr.empty()) {
+                auto mySegIdx = pPathStr.find(pSeparator);
                 if(mySegIdx == string::npos) {
-                    myRetVal.get().emplace_back(string(myPathView));
+                    myRetVal.get().emplace_back(string(pPathStr));
                     break;
                 } else {
                     if (mySegIdx > 1) {
                         myRetVal.get()
-                            .emplace_back(string(myPathView.substr(0, mySegIdx)));
+                            .emplace_back(string(pPathStr.substr(0, mySegIdx)));
                     }
                 }
-                if(mySegIdx<myPathView.size()-1) {
-                    myPathView = myPathView.substr(++mySegIdx);
+                if(mySegIdx<pPathStr.size()-1) {
+                    pPathStr = pPathStr.substr(++mySegIdx);
                 } else break;
             }
             return myRetVal;

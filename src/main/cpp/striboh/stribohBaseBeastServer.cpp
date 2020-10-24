@@ -397,6 +397,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
 #include "stribohBaseBrokerIface.hpp"
+#include "stribohBaseUtils.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -406,6 +407,8 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 using std::tuple;
 using std::vector;
 using std::string;
+using std::pair;
+using std::string_view;
 
 namespace striboh {
     namespace base {
@@ -510,6 +513,9 @@ namespace striboh {
                 pRequest.target().find("..") != beast::string_view::npos)
                 return pSend(bad_request("Illegal request-target"));
 
+            string myUrl(pRequest.target());
+            auto myParams = parseUrlParameters(myUrl);
+
             auto myResolved = pBroker.resolve(std::string(pRequest.target()));
 
             std::string theResponse;
@@ -566,7 +572,6 @@ namespace striboh {
             res.keep_alive(pRequest.keep_alive());
             return pSend(std::move(res));
         }
-
 
         /**
          * Report a failure
