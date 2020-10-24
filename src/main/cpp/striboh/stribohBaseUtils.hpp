@@ -388,6 +388,8 @@ namespace striboh {
 
         using Parameters_t = std::map<std::string,std::vector<std::string>>;
 
+        static constexpr const char *const K_BASE_URL = "base_url";
+
         /**
          * Parse URL parameters in form /seg1/seg2?par1=val1&par2=val2&par1=val3
          *
@@ -396,7 +398,6 @@ namespace striboh {
          */
         Parameters_t
         parseUrlParameters(std::string_view pUrl);
-
     }
 }
 

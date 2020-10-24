@@ -400,13 +400,22 @@ namespace striboh {
             std::cmatch myMatch;
             if (std::regex_match (pUrl.begin(),pUrl.end(),myMatch,myParamsRegExp0)) {
                 myRetVal[myMatch[2]]=vector<string>();
+                myRetVal[K_BASE_URL].push_back(myMatch[1]);
             } else {
                 string myUrl(pUrl); std::smatch mySMatch;
                 while(std::regex_search( myUrl, mySMatch, myParamsRegExp1)) {
+                    if(myRetVal[K_BASE_URL].empty()) {
+                        string myUrl = mySMatch.prefix();
+                        myUrl.pop_back();
+                        myRetVal[K_BASE_URL].push_back(myUrl);
+                    }
                     if(mySMatch.size()==3) {
                         myRetVal[mySMatch[1]].push_back(mySMatch[2]);
                     }
                     myUrl = mySMatch.suffix();
+                }
+                if(myRetVal.size()==0) {
+                    myRetVal[K_BASE_URL].push_back(string(pUrl));
                 }
             }
             return myRetVal;

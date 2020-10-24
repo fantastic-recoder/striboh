@@ -516,33 +516,36 @@ namespace striboh {
             string myUrl(pRequest.target());
             auto myParams = parseUrlParameters(myUrl);
 
-            auto myResolved = pBroker.resolve(std::string(pRequest.target()));
-
             std::string theResponse;
-            if (myResolved.mResult == EResolveResult::NOT_FOUND) {
-                return pSend(not_found(pRequest.target()));
-            }
-            // found
-            if (myResolved.mResult == EResolveResult::OK) {
-                static std::string_view theResponse00(R"res(
-                { "Message" : "Hello from striboh.", "modules" : [
-                )res");
-                static std::string_view theResponse10(R"res(
-                ]}
-                )res");
-                std::ostringstream myOstream;
-                myOstream << theResponse00;
-                bool start = true;
-                for (auto mySegment: myResolved.mModules) {
-                    if (start) {
-                        start = false;
-                    } else {
-                        myOstream << ", ";
-                    }
-                    myOstream << "\"" << mySegment.get() << "\"";
+            if(myParams.find("svc")!=myParams.end()) {
+                theResponse = pBroker.resolveServiceToStr(myParams[K_BASE_URL][0]);
+            } else {
+                auto myResolved = pBroker.resolve(std::string(pRequest.target()));
+                if (myResolved.mResult == EResolveResult::NOT_FOUND) {
+                    return pSend(not_found(pRequest.target()));
                 }
-                myOstream << theResponse10 << std::endl;
-                theResponse = myOstream.str();
+                // found
+                if (myResolved.mResult == EResolveResult::OK) {
+                    static std::string_view theResponse00(R"res(
+                    { "Message" : "Hello from striboh.", "modules" : [
+                    )res");
+                    static std::string_view theResponse10(R"res(
+                    ]}
+                    )res");
+                    std::ostringstream myOstream;
+                    myOstream << theResponse00;
+                    bool start = true;
+                    for (auto mySegment: myResolved.mModules) {
+                        if (start) {
+                            start = false;
+                        } else {
+                            myOstream << ", ";
+                        }
+                        myOstream << "\"" << mySegment.get() << "\"";
+                    }
+                    myOstream << theResponse10 << std::endl;
+                    theResponse = myOstream.str();
+                }
             }
             if(theResponse.empty()) {
                 // on root send hello

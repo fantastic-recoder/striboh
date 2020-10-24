@@ -420,30 +420,34 @@ TEST(stribohBaseTests, testParseUrlParameters) {
     {
         string_view myUrl("");
         Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        EXPECT_TRUE(myUrlParameters.empty());
+        EXPECT_EQ(1,myUrlParameters.size());
+        EXPECT_EQ("",myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?resolve");
         Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        EXPECT_EQ(1,myUrlParameters.size());
+        EXPECT_EQ(2,myUrlParameters.size());
         EXPECT_TRUE(myUrlParameters["resolve"].empty());
+        EXPECT_EQ("/m0/m1/Hello",myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?p0=val0");
         Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        ASSERT_EQ(1,myUrlParameters.size());
+        ASSERT_EQ(2,myUrlParameters.size());
         ASSERT_EQ(1, myUrlParameters["p0"].size());
         EXPECT_EQ("val0", myUrlParameters["p0"][0]);
+        EXPECT_EQ("/m0/m1/Hello",myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?p0=val0&p1=val1&p0=val1");
         Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        ASSERT_EQ(2,myUrlParameters.size());
+        ASSERT_EQ(3,myUrlParameters.size());
         ASSERT_EQ(2, myUrlParameters["p0"].size());
         ASSERT_EQ(1, myUrlParameters["p1"].size());
         EXPECT_EQ("val1", myUrlParameters["p1"][0]);
         EXPECT_EQ("val0", myUrlParameters["p0"][0]);
         EXPECT_EQ("val1", myUrlParameters["p0"][1]);
+        EXPECT_EQ("/m0/m1/Hello",myUrlParameters[K_BASE_URL][0]);
     }
 }
 
