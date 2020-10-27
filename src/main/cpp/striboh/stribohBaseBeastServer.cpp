@@ -449,7 +449,9 @@ namespace striboh {
             return "application/text";
         }
 
-        /**
+        string createResolvedModuleReply(const ResolvedResult &pResolved);
+
+/**
          *   This function produces an HTTP response for the given
          *   request. The type of the response object depends on the
          *   contents of the request, so the interface requires the
@@ -525,27 +527,7 @@ namespace striboh {
                     return pSend(not_found(pRequest.target()));
                 }
                 // found
-                if (myResolved.mResult == EResolveResult::OK) {
-                    static std::string_view theResponse00(R"res(
-                    { "Message" : "Hello from striboh.", "modules" : [
-                    )res");
-                    static std::string_view theResponse10(R"res(
-                    ]}
-                    )res");
-                    std::ostringstream myOstream;
-                    myOstream << theResponse00;
-                    bool start = true;
-                    for (auto mySegment: myResolved.mModules) {
-                        if (start) {
-                            start = false;
-                        } else {
-                            myOstream << ", ";
-                        }
-                        myOstream << "\"" << mySegment.get() << "\"";
-                    }
-                    myOstream << theResponse10 << std::endl;
-                    theResponse = myOstream.str();
-                }
+                theResponse = createResolvedModuleReply(myResolved);
             }
             if(theResponse.empty()) {
                 // on root send hello
@@ -574,6 +556,32 @@ namespace striboh {
             res.content_length(theResponse.length());
             res.keep_alive(pRequest.keep_alive());
             return pSend(std::move(res));
+        }
+
+        string createResolvedModuleReply( const ResolvedResult &pResolved) {
+            string myReply;
+            if (pResolved.mResult == EResolveResult::OK) {
+                static std::string_view theResponse00(R"res(
+                { "Message" : "Hello from striboh.", "modules" : [
+                )res");
+                static std::string_view theResponse10(R"res(
+                ]}
+                )res");
+                std::ostringstream myOstream;
+                myOstream << theResponse00;
+                bool start = true;
+                for (auto mySegment: pResolved.mModules) {
+                    if (start) {
+                        start = false;
+                    } else {
+                        myOstream << ", ";
+                    }
+                    myOstream << "\"" << mySegment.get() << "\"";
+                }
+                myOstream << theResponse10 << std::endl;
+                myReply = myOstream.str();
+            }
+            return myReply;
         }
 
         /**
@@ -890,8 +898,8 @@ namespace striboh {
         }
 
         void BeastServer::run() {
-            auto const aAddress = net::ip::make_address("0.0.0.0");
-            auto const aPort = static_cast<unsigned short>(63898);
+            auto const aAddress = net::ip::make_address(K_DEFAULT_HOST);
+            auto const aPort = K_DEFAULT_PORT;
 
             // Create and launch a listening on port aPort
             std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort},getBroker())->run();

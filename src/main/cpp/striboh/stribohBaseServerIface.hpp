@@ -382,6 +382,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
+
+        static constexpr const char *const K_DEFAULT_HOST = "0.0.0.0";
+        static constexpr const unsigned short K_DEFAULT_PORT = 63898;
+
         struct ServerIface {
 
             virtual void run() = 0;

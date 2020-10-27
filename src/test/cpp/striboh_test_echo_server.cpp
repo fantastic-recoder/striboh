@@ -383,6 +383,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseBeastServer.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
 
+#include "striboh_test_echo_server_common.hpp"
+
 using std::endl;
 using std::cout;
 using namespace striboh::base;
@@ -419,28 +421,8 @@ int main( const int argc, const char* argv[]) {
     aBroker.serve();
     myServer.run();
 
-    Interface myInterface{
-        {"m0", "m1"} , InterfaceName{"Hello"},
-        {
-             Method{"echo",
-                ParameterList{
-                        {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
-                },
-                [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
-                    pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
-                }
-             },
-            Method{"shutdown",
-               ParameterList{},
-               [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
-                   pCtx.getBroker().shutdown();
-               }
-            }
-
-        }
-    };
     myLog.debug("Adding echo servant...") ;
-    Uuid_t  myUuid = aBroker.addServant(myInterface);
+    Uuid_t  myUuid = aBroker.addServant(theEchoServerInterface );
     myLog.debug( "Echo servant added." );
     sleep(aSleepTimeInSeconds);
     myServer.shutdown();
