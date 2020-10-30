@@ -377,8 +377,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASESERVERIFACE_HPP
-#define STRIBOH_STRIBOHBASESERVERIFACE_HPP
+#ifndef STRIBOH_BASE_SERVER_IFACE_HPP
+#define STRIBOH_BASE_SERVER_IFACE_HPP
+
+#include <memory>
 
 namespace striboh {
     namespace base {
@@ -386,7 +388,7 @@ namespace striboh {
         static constexpr const char *const K_DEFAULT_HOST = "0.0.0.0";
         static constexpr const unsigned short K_DEFAULT_PORT = 63898;
 
-        struct ServerIface {
+        struct ServerIface : public std::enable_shared_from_this<ServerIface> {
 
             virtual void run() = 0;
 
@@ -396,4 +398,4 @@ namespace striboh {
 }
 
 
-#endif //STRIBOH_STRIBOHBASESERVERIFACE_HPP
+#endif //STRIBOH_BASE_SERVER_IFACE_HPP

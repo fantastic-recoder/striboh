@@ -417,15 +417,13 @@ int main( const int argc, const char* argv[]) {
     myLog.info( "Sleep time set to: {} seconds.", aSleepTimeInSeconds );
 
     Broker aBroker(myLog);
-    BeastServer myServer(3,aBroker,myLog);
+    aBroker.setServer(std::make_shared<BeastServer>(3,aBroker,myLog));
     aBroker.serve();
-    myServer.run();
 
     myLog.debug("Adding echo servant...") ;
     Uuid_t  myUuid = aBroker.addServant(theEchoServerInterface );
-    myLog.debug( "Echo servant added." );
+    myLog.info( "Test echo servant added." );
     sleep(aSleepTimeInSeconds);
-    myServer.shutdown();
     aBroker.shutdown();
     return 2;
 }

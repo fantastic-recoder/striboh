@@ -380,34 +380,173 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #ifndef STRIBOH_BASE_CLIENT_HPP
 #define STRIBOH_BASE_CLIENT_HPP
 
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/io_context.hpp>
+#include <cstdlib>
+#include <functional>
+#include <iostream>
+#include <memory>
 #include <string>
 
 #include "stribohBaseParameters.hpp"
+#include "stribohBaseBrokerIface.hpp"
 
 namespace striboh {
     namespace base {
 
+        namespace beast = ::boost::beast;         // from <boost/beast.hpp>
+        namespace http = beast::http;           // from <boost/beast/http.hpp>
+        namespace net = ::boost::asio;            // from <boost/asio.hpp>
+        using tcp = ::boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+        namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
         class LogIface;
 
-        class Proxy {
-            bool mConnected=false;
+        class HostConnection;
 
+        class Proxy : public boost::enable_shared_from_this<Proxy> {
+            bool mConnected = false;
+            bool mResolved = false;
+            bool mUpgraded = false;
+            net::io_context mIoContext;
+            LogIface &mLog;
+            tcp::resolver mResolver;
+            websocket::stream<beast::tcp_stream> mWebSocketStream;
+            beast::flat_buffer buffer_; // (Must persist between reads)
+            http::request<http::empty_body> mRequest;
+            http::response<http::string_body> mResponse;
+            const HostConnection &mClient;
+            std::string mBaseUrl;
+            ParameterValues mRetVal;
+            ParameterValues mParameterValues;
+            Uuid_t mUuid;
+            std::string mWebSocketUrl;
+            std::string mMethodName;
         public:
+
+            /**
+             * Objects are constructed with a strand to
+             * ensure that handlers do not execute concurrently.
+             */
+            explicit
+            Proxy( const HostConnection &pClient,
+                  std::string_view pPath,
+                  LogIface &pLog) :
+                    mClient(pClient), //< striboh context
+                    mBaseUrl(std::move(pPath)), //< base url
+                    mLog(pLog), //< log
+                    mResolver(net::make_strand(mIoContext)), //
+                    mWebSocketStream(net::make_strand(mIoContext)) //
+            {}
+
             bool
-            isConnected() {
+            isConnected() const {
                 return mConnected;
             }
 
+            bool
+            isResolved() const {
+                return mResolved;
+            }
+
+            std::future<ParameterValues>
+            invokeMethod(
+                    std::string_view pMethodName,
+                    ParameterValues pValues);
+
+        private:
+            /**
+             * Start the asynchronous operation
+             */
             ParameterValues
-            invokeMethod(std::string_view pMethodName, ParameterValues pValues);
+            run(
+                    std::string_view pMethodName,
+                    ParameterValues pValues);
+
+            void
+            onResolve(
+                    beast::error_code ec,
+                    tcp::resolver::results_type results);
+
+            void
+            onConnect(
+                    beast::error_code ec,
+                    tcp::resolver::results_type::endpoint_type);
+
+            void
+            onResolveRequestSend(
+                    beast::error_code ec,
+                    std::size_t bytes_transferred);
+
+            void
+            onResolveRequestRead(
+                    beast::error_code ec,
+                    std::size_t bytes_transferred);
+
+            // Report a failure
+            void
+            fail(beast::error_code ec, char const *what);
+
+            /// Send the HTTP request to the remote host.
+            void sendResolveRequest();
+
+            void shutdown(beast::error_code &ec);
+
+            void sendUpgradeRequest();
+
+            void onHandshake(beast::error_code ec);
+
+            void onWriteWebSocket(beast::error_code ec,
+                                  std::size_t bytes_transferred);
+
+            void onReadWebSocket(beast::error_code ec,
+                                  std::size_t bytes_transferred);
+
+            void onCloseWebSocket(beast::error_code ec);
+
+            void writeWebSocketMessage(std::string_view pMsg);
+
+            void readWebSocketMessage();
         };
 
-        class Client {
-        public:
-            Client(std::string_view pHost, unsigned short pPort, LogIface& pLog);
+        class HostConnection {
+            LogIface &mLog;
+            std::string mHost;
+            unsigned short mPort;
+            std::string mPortStr;
+            boost::shared_ptr<Proxy> mProxyPtr;
+        private:
+            int mVersion = 11;
 
-            Proxy
+        public:
+            HostConnection(std::string_view pHost, unsigned short pPort, LogIface &pLog);
+
+            boost::shared_ptr<Proxy>
             connectInstance(std::string_view pPath);
+
+            LogIface &getLog() const {
+                return mLog;
+            }
+
+            unsigned short getPort() const {
+                return mPort;
+            }
+
+            int getVersion() const {
+                return mVersion;
+            }
+
+            const std::string &getHost() const {
+                return mHost;
+            }
+
+            const std::string &getPortStr() const {
+                return mPortStr;
+            }
+
         };
 
     }

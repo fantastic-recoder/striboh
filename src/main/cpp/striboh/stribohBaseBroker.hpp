@@ -422,7 +422,7 @@ namespace striboh {
             shutdown() override;
 
             ParameterValues
-            invokeMethod(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) override;
+            invokeMethod(const Uuid_t& pInstanceId, std::string_view pMethodName, ParameterValues pValues) override;
 
             const Uuid_t
             addServant(Interface& pMethodSignature) override;
@@ -439,6 +439,9 @@ namespace striboh {
             static Path split(std::string_view pPathStr, std::string_view pSeparator) ;
 
             static constexpr const char *const K_SEPARATOR = "/";
+
+            static ResolvedService
+            resolveServiceFromStr(const std::string& pJson);
 
         private:
 
@@ -462,6 +465,9 @@ namespace striboh {
             std::future<void>
                     mReceiver;
 
+            std::shared_ptr<ServerIface>
+                   mServer;
+
             void
             addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
 
@@ -473,6 +479,7 @@ namespace striboh {
 
             static ResolvedService
             resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
+
         };
 
     }

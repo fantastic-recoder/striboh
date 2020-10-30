@@ -390,6 +390,10 @@ namespace striboh {
             return myUuid;
         }
 
+        void BrokerIface::setServer(std::shared_ptr<ServerIface>&& pServerIface) {
+            mServerIface=std::move(pServerIface);
+        }
+
         std::string toString(const EBrokerState& pOrbState) {
             switch(pOrbState) {
                 case EBrokerState::K_STARTED:

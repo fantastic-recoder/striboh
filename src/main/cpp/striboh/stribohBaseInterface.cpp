@@ -397,7 +397,7 @@ namespace striboh {
         }
 
         Interface::Methods_t::iterator
-        Interface::findMethod(const std::string &pMethodName) {
+        Interface::findMethod(std::string_view pMethodName) {
             return std::find_if(mMethods.begin(),mMethods.end(), [pMethodName]( const Method& pMethod)->bool {
                 if(pMethod.getName().compare(pMethodName)==0) {
                     return true;

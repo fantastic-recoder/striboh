@@ -460,7 +460,7 @@ namespace striboh {
             shutdown() = 0;
 
             virtual ParameterValues
-            invokeMethod(const Uuid_t& pInstanceId, const std::string& pMethodName, ParameterValues pValues) = 0;
+            invokeMethod(const Uuid_t& pInstanceId, std::string_view pMethodName, ParameterValues pValues) = 0;
 
             virtual const Uuid_t
             addServant(Interface& pMethodSignature) = 0;
@@ -474,8 +474,16 @@ namespace striboh {
             virtual std::string
             resolveServiceToStr(std::string_view pPath ) const = 0;
 
+            void setServer(std::shared_ptr<ServerIface>&& pServerIface);
+
+            const std::shared_ptr<ServerIface> &getServer() const {
+                return mServerIface;
+            }
+
         private:
             LogIface& mLogIface;
+            std::shared_ptr<ServerIface> mServerIface;
+        public:
         };
     }
 }

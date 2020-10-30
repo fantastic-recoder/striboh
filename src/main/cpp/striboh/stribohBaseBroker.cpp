@@ -394,6 +394,7 @@ namespace striboh {
     namespace base {
 
         using std::string;
+        using std::string_view;
         using ::striboh::idl::ast::ModuleNode;
         using ::striboh::idl::ast::ModuleListNode;
         using ::striboh::idl::ast::InterfaceNode;
@@ -408,10 +409,18 @@ namespace striboh {
                 getLog().warn( "ORB is not ready." );
             } else {
                 mOperationalState = EBrokerState::K_STARTING;
-                mReceiver = std::async([this] () ->void { std::launch::async, this->dispatch(); });
+                mReceiver = std::async( std::launch::async,[this] () ->void { std::launch::async, this->dispatch(); });
+                if(getServer()) {
+                    getLog().debug("We have a server attached, going to runt it.");
+                    getServer()->run();
+                    getLog().debug("Server is running.");
+                }
+                int myCntr=0;
                 do {
-                    getLog().debug("Waiting for main servant. state = {}", toString(mOperationalState));
-                    std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(10000));
+                    if(++myCntr%100==0) {
+                        getLog().debug("Waiting for main servant. state = {}", toString(mOperationalState));
+                    }
+                    mReceiver.wait_for(std::chrono::duration<int, std::milli>(100));
                 } while (mOperationalState != EBrokerState::K_STARTED);
             }
             return mOperationalState;
@@ -422,7 +431,7 @@ namespace striboh {
             do{
                 mOperationalState = EBrokerState::K_STARTED;
                 getLog().debug("Going to sleep. state = {}", toString(mOperationalState));
-                std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(1000));
+                std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(20*1000));
             } while (mOperationalState == EBrokerState::K_STARTED);
             getLog().info( "Shutdown completed. state = {}", toString( mOperationalState));
             return;
@@ -434,6 +443,11 @@ namespace striboh {
                 mOperationalState = EBrokerState::K_SHUTTING_DOWN;
                 getLog().info( "Going to shutdown. state = {}", toString(mOperationalState));
                 mReceiver.wait();
+                if(getServer()) {
+                    getLog().debug("We have a server attached, going to shutdown it.");
+                    getServer()->shutdown();
+                    getLog().debug("Server shut down.");
+                }
                 mOperationalState = EBrokerState::K_NOMINAL;
             } else {
                 getLog().warn( "ORB is not started." );
@@ -448,7 +462,7 @@ namespace striboh {
         }
 
         ParameterValues
-        Broker::invokeMethod(const Uuid_t& pInstanceId, const string& pMethodName, ParameterValues pValues) {
+        Broker::invokeMethod(const Uuid_t& pInstanceId, string_view pMethodName, ParameterValues pValues) {
             ParameterValues myRetVal;
             auto myInterfaceIt=mInstances.find(pInstanceId);
             if(myInterfaceIt != mInstances.end()) {
@@ -611,7 +625,8 @@ namespace striboh {
             return theNullService;
         }
 
-        std::string Broker::resolveServiceToStr(std::string_view pPath) const {
+        std::string
+        Broker::resolveServiceToStr(std::string_view pPath) const {
             ResolvedService mySvc = resolveService(pPath);
             pt::ptree myPt;
             myPt.put(K_SVC_PATH, pPath);
@@ -622,6 +637,13 @@ namespace striboh {
             return myOstream.str();
         }
 
-
+        ResolvedService
+        Broker::resolveServiceFromStr(const std::string& pJson) {
+            pt::ptree myPt;
+            std::istringstream myIstream(pJson);
+            pt::read_json(myIstream,myPt);
+            ResolvedService mySvc{myPt.get<bool>(K_SVC_RESULT),myPt.get<Uuid_t>(K_SVC_UUID)};
+            return mySvc;
+        }
     }// namespace base
 }// namespace striboh

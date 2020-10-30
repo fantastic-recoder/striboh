@@ -411,7 +411,7 @@ namespace striboh {
                     std::initializer_list<Method>
             );
 
-            Methods_t::iterator findMethod( const std::string &pMethodName );
+            Methods_t::iterator findMethod( std::string_view pMethodName );
 
             Methods_t::iterator end();
 
