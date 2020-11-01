@@ -400,7 +400,7 @@ namespace striboh {
         {}
 
         boost::shared_ptr<Proxy>
-        HostConnection::connectInstance(std::string_view pPath) {
+        HostConnection::createProxyFor(std::string_view pPath) {
             mProxyPtr=boost::make_shared<Proxy>(*this, pPath, mLog);
             return mProxyPtr;
         }

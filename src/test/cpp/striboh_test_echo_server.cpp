@@ -376,6 +376,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+
+#include <thread>
 #include <boost/program_options.hpp>
 
 #include <striboh/stribohBaseInterface.hpp>
@@ -395,7 +397,7 @@ int main( const int argc, const char* argv[]) {
     LogBoostImpl myLog;
     myLog.info("Server {} starting.", argv[0]);
     // Declare the supported options.
-    int aSleepTimeInSeconds = 30;
+    int myTotalWorkTimeInSeconds = 45;
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
@@ -412,9 +414,9 @@ int main( const int argc, const char* argv[]) {
     }
 
     if (vm.count("time")) {
-        aSleepTimeInSeconds=vm["time"].as<int>();
+        myTotalWorkTimeInSeconds=vm["time"].as<int>();
     }
-    myLog.info( "Sleep time set to: {} seconds.", aSleepTimeInSeconds );
+    myLog.info("Sleep time set to: {} seconds.", myTotalWorkTimeInSeconds );
 
     Broker aBroker(myLog);
     aBroker.setServer(std::make_shared<BeastServer>(3,aBroker,myLog));
@@ -423,7 +425,22 @@ int main( const int argc, const char* argv[]) {
     myLog.debug("Adding echo servant...") ;
     Uuid_t  myUuid = aBroker.addServant(theEchoServerInterface );
     myLog.info( "Test echo servant added." );
-    sleep(aSleepTimeInSeconds);
-    aBroker.shutdown();
-    return 2;
+    int mySecondsCounter=0;
+    int myStep=10;
+    do {
+        std::this_thread::sleep_for(std::chrono::seconds(myStep));
+        myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
+                    toString(aBroker.getState()),
+                    mySecondsCounter+=myStep,
+                    myTotalWorkTimeInSeconds,
+                    myStep);
+    } while ((mySecondsCounter < myTotalWorkTimeInSeconds) &&
+             (aBroker.getState()!= EServerState::K_NOMINAL));
+    if(aBroker.getState()!= EServerState::K_NOMINAL) {
+        aBroker.shutdown();
+        myLog.error("Test echo servant timed out.");
+        return 2;
+    }
+    myLog.info("Test echo servant finished.");
+    return 0;
 }

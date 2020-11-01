@@ -415,16 +415,16 @@ namespace striboh {
             void
             initialize() override;
 
-            const std::atomic<EBrokerState>&
+            const std::atomic<EServerState>&
             serve() override;
 
-            const std::atomic<EBrokerState>&
+            std::future<void>
             shutdown() override;
 
             ParameterValues
             invokeMethod(const Uuid_t& pInstanceId, std::string_view pMethodName, ParameterValues pValues) override;
 
-            const Uuid_t
+            Uuid_t
             addServant(Interface& pMethodSignature) override;
 
             ResolvedResult
@@ -453,9 +453,6 @@ namespace striboh {
                                                ResolvedResult &pRetVal,
                                                const ::striboh::idl::ast::ModuleListNode& pModuleListNode) const;
 
-            std::atomic<EBrokerState>
-                    mOperationalState = EBrokerState::K_NOMINAL;
-
             Instances_t
                     mInstances;
 
@@ -464,9 +461,6 @@ namespace striboh {
 
             std::future<void>
                     mReceiver;
-
-            std::shared_ptr<ServerIface>
-                   mServer;
 
             void
             addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
@@ -480,6 +474,7 @@ namespace striboh {
             static ResolvedService
             resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
 
+            void doShutdown();
         };
 
     }

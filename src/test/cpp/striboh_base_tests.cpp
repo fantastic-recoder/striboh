@@ -388,6 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/filesystem.hpp>
 
 #include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseMethod.hpp>
@@ -618,23 +619,17 @@ static constexpr const char *const theTestEchoServerBinary = "./striboh_test_ech
 
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer)
 {
-/*
-    child myServer(theTestEchoServerBinary, std_out > stdout, std_err > stderr, std_in < stdin );
+    child myServer(theTestEchoServerBinary, std_out > "out.txt" );
     BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
-    EXPECT_TRUE(myServer.valid()) << "Failed to start " << theTestEchoServerBinary <<  ".";
-*/
+    ASSERT_TRUE(myServer.valid()) << "Failed to start " << theTestEchoServerBinary << ".";
+    std::this_thread::sleep_for(std::chrono::seconds(5s));
     HostConnection aClient(striboh::base::K_DEFAULT_HOST,
                            striboh::base::K_DEFAULT_PORT, theLog);
-    auto myProxy = aClient.connectInstance("/m0/m1/Hello");
-    EXPECT_TRUE(myProxy->isConnected());
+    auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
+    //EXPECT_TRUE(myProxy->isConnected());
     std::future<ParameterValues> myResult = myProxy->invokeMethod("shutdown",{});
     myResult.get();
-    /*
-    auto myStatus=myServer.wait_for(30s);
-    EXPECT_TRUE(myStatus) << "Server did not shutdown!";
-    if(!myServer)
-        myServer.terminate();
-    myServer.wait_for(15s);
-    EXPECT_EQ(0,myServer.exit_code());*/
+    myServer.wait_for(30s);
+    EXPECT_EQ(0,myServer.exit_code());
     return;
 }

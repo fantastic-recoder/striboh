@@ -384,6 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseBrokerIface.hpp"
+#include "stribohBaseEServerState.hpp"
 
 namespace striboh {
     namespace base {
@@ -402,6 +403,11 @@ namespace striboh {
             void shutdown() override;
 
             BrokerIface& getBroker() { return mBroker; }
+
+            const auto& getState() const { return mStatus; }
+
+            void setState( EServerState pState ) { mStatus=pState; }
+
         private:
 
             LogIface& mLog;
@@ -416,6 +422,8 @@ namespace striboh {
             boost::asio::io_context mIoc;
 
             BrokerIface& mBroker;
+
+            std::atomic<EServerState> mStatus = EServerState::K_NOMINAL;
         };
     } // base
 } // striboh

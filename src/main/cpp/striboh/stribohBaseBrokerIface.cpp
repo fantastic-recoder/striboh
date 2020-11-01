@@ -394,18 +394,18 @@ namespace striboh {
             mServerIface=std::move(pServerIface);
         }
 
-        std::string toString(const EBrokerState& pOrbState) {
+        std::string toString(const EServerState& pOrbState) {
             switch(pOrbState) {
-                case EBrokerState::K_STARTED:
+                case EServerState::K_STARTED:
                     return "started";
                     break;
-                case EBrokerState::K_STARTING:
+                case EServerState::K_STARTING:
                     return "starting";
                     break;
-                case EBrokerState::K_NOMINAL:
+                case EServerState::K_NOMINAL:
                     return "nominal";
                     break;
-                case EBrokerState::K_SHUTTING_DOWN:
+                case EServerState::K_SHUTTING_DOWN:
                     return "shutting-down";
                     break;
                 default:
@@ -414,7 +414,7 @@ namespace striboh {
             return "unknown";
         }
 
-        std::ostream& operator << (std::ostream& pOstream, const EBrokerState& pOrbState) {
+        std::ostream& operator << (std::ostream& pOstream, const EServerState& pOrbState) {
             pOstream << toString(pOrbState);
             return pOstream;
         }

@@ -771,7 +771,7 @@ namespace striboh {
                 std::copy(pMsg.begin(),pMsg.end(),
                           boost::asio::buffer_cast<unsigned char*>(myMutable));
                 mBroker.getLog().debug("Sending: {}",pMsg);
-                BOOST_LOG_TRIVIAL(debug) << "Buffer: '"
+                BOOST_LOG_TRIVIAL(debug) << "Sending: buffer: '"
                 << beast::make_printable(mWriteBuffer.data()) <<"'."<< std::endl;
                 mWebSocketStream->async_write(
                         net::buffer(pMsg),
@@ -915,8 +915,12 @@ namespace striboh {
 
         void
         BeastServer::shutdown() {
+            if(getState()==EServerState::K_NOMINAL||getState()==EServerState::K_SHUTTING_DOWN) {
+                mLog.warn("BeastServer: already shutting down.");
+                return;
+            }
             mLog.info("BeastServer: Commencing shutdown...");
-            mIoc.reset();
+            setState(EServerState::K_SHUTTING_DOWN);
             int myCnt=0;
             for(auto& aTask: mAcceptTasks) {
                 mLog.debug("BeastServer: Waiting for task {}/{}.",++myCnt,mAcceptTasks.size());
@@ -924,6 +928,11 @@ namespace striboh {
                 mLog.debug("BeastServer: Task {} down.",myCnt,mAcceptTasks.size());
             }
             mLog.info("BeastServer: ... shutdown completed.");
+            setState(EServerState::K_NOMINAL);
+            if(getBroker().getState()!=EServerState::K_NOMINAL
+               && (getBroker().getState()==EServerState::K_SHUTTING_DOWN)) {
+                getBroker().shutdown();
+            }
         }
 
         BeastServer::BeastServer(int pNum, BrokerIface& pBroker,  LogIface& pLog)
@@ -934,19 +943,37 @@ namespace striboh {
         {
         }
 
+        inline std::string toString(const std::thread::id& pThreadId) {
+            std::stringstream ss;
+            ss << pThreadId;
+            return ss.str();
+        }
+
+
         void BeastServer::run() {
             mLog.debug("BeastServer::run() -->");
             auto const aAddress = net::ip::make_address(K_DEFAULT_HOST);
             auto const aPort = K_DEFAULT_PORT;
-
+            auto myIocRun = [this]()->void{
+                this->mLog.debug("BeastServer::run() Thread {} started.",
+                                 toString(std::this_thread::get_id()));
+                while ( this->getState()==EServerState::K_STARTED ||
+                        this->getState()==EServerState::K_STARTING) {
+                    mIoc.run_for(10s);
+                }
+                this->mLog.debug("BeastServer::run() Thread {} finished.",
+                                 toString(std::this_thread::get_id()));
+            };
             // Create and launch a listening on port aPort
             std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort},getBroker())->run();
 
             // Run the I/O service on the requested number of threads
             mAcceptTasks.reserve(mThreadNum - 1);
-            //for (auto i = mThreadNum - 1; i > 0; --i)
-            //    mAcceptTasks.emplace_back(std::async(std::launch::async, [this]()->void{mIoc.run(); } ));
-            mAcceptTasks.emplace_back(std::async(std::launch::async, [this]()->void{mIoc.run(); } ));
+            setState(EServerState::K_STARTING);
+            for (auto i = mThreadNum - 1; i > 0; --i)
+                mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun ));
+            mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun ));
+            setState(EServerState::K_STARTED);
             mLog.debug("BeastServer::run() <--");
             return;
         }

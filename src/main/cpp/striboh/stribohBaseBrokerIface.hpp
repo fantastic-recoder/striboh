@@ -383,6 +383,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <array>
 #include <atomic>
 #include <string>
+#include <future>
 #include <boost/uuid/uuid.hpp>
 #include <NamedType/named_type.hpp>
 
@@ -391,25 +392,19 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseInterface.hpp"
+#include "stribohBaseEServerState.hpp"
 
 namespace striboh {
     namespace base {
-
-        enum class EBrokerState {
-            K_NOMINAL,
-            K_STARTING,
-            K_STARTED,
-            K_SHUTTING_DOWN
-        };
 
         enum class EResolveResult {
             NOT_FOUND,
             OK
         };
 
-        std::ostream& operator << (std::ostream& , const EBrokerState& );
+        std::ostream& operator << (std::ostream& , const EServerState& );
 
-        std::string toString(const EBrokerState& );
+        std::string toString(const EServerState& );
 
         class Interface;
 
@@ -453,16 +448,16 @@ namespace striboh {
             virtual void
             initialize() = 0;
 
-            virtual const std::atomic<EBrokerState>&
+            virtual const std::atomic<EServerState>&
             serve() = 0;
 
-            virtual const std::atomic<EBrokerState>&
+            virtual std::future<void>
             shutdown() = 0;
 
             virtual ParameterValues
             invokeMethod(const Uuid_t& pInstanceId, std::string_view pMethodName, ParameterValues pValues) = 0;
 
-            virtual const Uuid_t
+            virtual Uuid_t
             addServant(Interface& pMethodSignature) = 0;
 
             virtual ResolvedResult
@@ -474,16 +469,25 @@ namespace striboh {
             virtual std::string
             resolveServiceToStr(std::string_view pPath ) const = 0;
 
+            const std::shared_ptr<ServerIface>&
+            getServer() const { return mServerIface; }
+
             void setServer(std::shared_ptr<ServerIface>&& pServerIface);
 
-            const std::shared_ptr<ServerIface> &getServer() const {
-                return mServerIface;
+            const std::atomic<EServerState>&
+            getState() const { return mOperationalState; }
+
+        protected:
+            void setState(EServerState pState) {
+                mOperationalState = pState;
             }
 
         private:
+            std::atomic<EServerState>
+                    mOperationalState = EServerState::K_NOMINAL;
+
             LogIface& mLogIface;
             std::shared_ptr<ServerIface> mServerIface;
-        public:
         };
     }
 }

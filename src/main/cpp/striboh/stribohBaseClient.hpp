@@ -525,7 +525,7 @@ namespace striboh {
             HostConnection(std::string_view pHost, unsigned short pPort, LogIface &pLog);
 
             boost::shared_ptr<Proxy>
-            connectInstance(std::string_view pPath);
+            createProxyFor(std::string_view pPath);
 
             LogIface &getLog() const {
                 return mLog;
