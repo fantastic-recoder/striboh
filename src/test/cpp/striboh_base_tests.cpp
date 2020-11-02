@@ -615,21 +615,40 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     aBroker.shutdown();
 }
 
+TEST(stribohBaseTests, testSerailization) {
+    ParameterValues myInputValues;
+    myInputValues.add(string("Echo string.")).add(42);
+    EXPECT_EQ(0,myInputValues.size());
+    EXPECT_FALSE(myInputValues.unpacked());
+    ParameterValues myOutputValues;
+    EXPECT_FALSE(myOutputValues.unpacked());
+    myOutputValues.setBuffer(myInputValues.getBuffer());
+    myOutputValues.unpack();
+    EXPECT_TRUE(myOutputValues.unpacked());
+    EXPECT_EQ(2,myOutputValues.size());
+    EXPECT_EQ("Echo string.",myOutputValues.get<string>(0));
+    EXPECT_EQ(42,myOutputValues.get<int>(1));
+}
+
 static constexpr const char *const theTestEchoServerBinary = "./striboh_test_echo_server";
 
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer)
 {
+
     child myServer(theTestEchoServerBinary, std_out > "out.txt" );
     BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
     ASSERT_TRUE(myServer.valid()) << "Failed to start " << theTestEchoServerBinary << ".";
     std::this_thread::sleep_for(std::chrono::seconds(5s));
+
     HostConnection aClient(striboh::base::K_DEFAULT_HOST,
                            striboh::base::K_DEFAULT_PORT, theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
-    //EXPECT_TRUE(myProxy->isConnected());
+    EXPECT_TRUE(myProxy->isConnected());
     std::future<ParameterValues> myResult = myProxy->invokeMethod("shutdown",{});
     myResult.get();
+
     myServer.wait_for(30s);
     EXPECT_EQ(0,myServer.exit_code());
+
     return;
 }

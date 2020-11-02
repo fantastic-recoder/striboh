@@ -435,9 +435,11 @@ namespace striboh {
             add(const ParameterValues& pValues) {
                 return *this;
             }
-
             ParameterValues&
             add(const std::string& pVal);
+
+            ParameterValues&
+            add(std::string_view&& pVal);
 
             ParameterValues&
             add(const int pVal);
@@ -459,6 +461,16 @@ namespace striboh {
             bool
             unpacked() const {
                 return mIsUnpacked;
+            }
+
+            const Buffer& getBuffer() const { return mPackedBuffer; }
+
+            ParameterValues& setBuffer( const Buffer& pBuffer ) {
+                mValues.clear();
+                mPackedBuffer.resize(pBuffer.size());
+                std::copy(pBuffer.begin(),pBuffer.end(),mPackedBuffer.begin());
+                mIsUnpacked=true;
+                return *this;
             }
 
         private:

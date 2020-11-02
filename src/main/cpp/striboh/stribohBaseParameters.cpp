@@ -395,6 +395,12 @@ namespace striboh {
             return *this;
         }
 
+        ParameterValues &ParameterValues::add(std::string_view&& pVal) {
+            msgpack::pack(mPackedBuffer, std::move(pVal));
+            mLastOffset = mPackedBuffer.size();
+            return *this;
+        }
+
         ParameterValues &
         ParameterValues::add(const int pVal) {
             msgpack::pack(mPackedBuffer, pVal);

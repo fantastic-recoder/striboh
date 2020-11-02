@@ -466,9 +466,8 @@ namespace striboh {
         bool
         handleHttpRequest
                 (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, BrokerIface &pBroker,
-                 std::shared_ptr<websocket::stream<beast::tcp_stream>>& pWebSocketPtr,
-                 std::shared_ptr<beast::tcp_stream>& pTcpSocketPtr)
-        {
+                 std::shared_ptr<websocket::stream<beast::tcp_stream>> &pWebSocketPtr,
+                 std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr) {
             // Returns a bad request response
             auto const bad_request =
                     [&pRequest](beast::string_view why) {
@@ -520,12 +519,12 @@ namespace striboh {
             auto myParams = parseUrlParameters(myUrl);
 
             std::string theResponse;
-            if(myParams.find("svc")!=myParams.end()) {
+            if (myParams.find("svc") != myParams.end()) {
                 theResponse = pBroker.resolveServiceToStr(myParams[K_BASE_URL][0]);
-            } else if(myParams.find("upgrade")!=myParams.end() &&
-                      boost::beast::websocket::is_upgrade(pRequest)) {
-                    pWebSocketPtr
-                            .reset(new websocket::stream<beast::tcp_stream>{std::move(*pTcpSocketPtr)});
+            } else if (myParams.find("upgrade") != myParams.end() &&
+                       boost::beast::websocket::is_upgrade(pRequest)) {
+                pWebSocketPtr
+                        .reset(new websocket::stream<beast::tcp_stream>{std::move(*pTcpSocketPtr)});
                 pWebSocketPtr->set_option(
                         websocket::stream_base::timeout::suggested(
                                 beast::role_type::server));
@@ -547,7 +546,7 @@ namespace striboh {
                 // found
                 theResponse = createResolvedModuleReply(myResolved);
             }
-            if(theResponse.empty()) {
+            if (theResponse.empty()) {
                 // on root send hello
                 static std::string_view theResponse20(R"res(
                 { "Message" : "Hello from striboh." }
@@ -570,13 +569,13 @@ namespace striboh {
                     std::make_tuple(http::status::ok, pRequest.version())};
             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
             res.set(http::field::content_type, theAppJson);
-            res.set(http::field::content_encoding,"UTF-8");
+            res.set(http::field::content_encoding, "UTF-8");
             res.content_length(theResponse.length());
             res.keep_alive(pRequest.keep_alive());
             return pSend(std::move(res));
         }
 
-        string createResolvedModuleReply( const ResolvedResult &pResolved) {
+        string createResolvedModuleReply(const ResolvedResult &pResolved) {
             string myReply;
             if (pResolved.mResult == EResolveResult::OK) {
                 static std::string_view theResponse00(R"res(
@@ -655,13 +654,13 @@ namespace striboh {
             std::shared_ptr<websocket::stream<beast::tcp_stream>> mWebSocketStream;
             http::request<http::string_body> mRequest;
             HttpSendLambda mLambda;
-            BrokerIface& mBroker;
+            BrokerIface &mBroker;
             std::shared_ptr<void> mRes;
 
         public:
             // Take ownership of the socket
             explicit
-            WebSession(tcp::socket &&pSocket, BrokerIface& pBroker)
+            WebSession(tcp::socket &&pSocket, BrokerIface &pBroker)
                     : mLambda(*this), mBroker(pBroker),
                       mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))) {
             }
@@ -705,8 +704,8 @@ namespace striboh {
                 if (ec)
                     return fail(ec, "read");
                 // Send the response
-                if(handleHttpRequest(std::move(mRequest), mLambda, mBroker,
-                                  mWebSocketStream, mTcpStream)) {
+                if (handleHttpRequest(std::move(mRequest), mLambda, mBroker,
+                                      mWebSocketStream, mTcpStream)) {
                     mBroker.getLog().debug("Upgraded!");
                     doWsRead();
                 }
@@ -750,16 +749,17 @@ namespace striboh {
                     return;
                 if (ec)
                     fail(ec, "read");
-                string_view myReadStr((const char*)mReadBuffer.data().data(), bytes_transferred);
-                mBroker.getLog().debug("Read {} bytes: {}.",bytes_transferred,
+                string_view myReadStr((const char *) mReadBuffer.data().data(), bytes_transferred);
+                mBroker.getLog().debug("Read {} bytes: {}.", bytes_transferred,
                                        myReadStr);
                 const size_t theUuidSize = 36;
-                string_view myUuidStr=myReadStr.substr(0,theUuidSize);
-                string_view myMethodStr=myReadStr.substr(theUuidSize+1,bytes_transferred);
+                string_view myUuidStr = myReadStr.substr(0, theUuidSize);
+                string_view myMethodStr = myReadStr.substr(theUuidSize + 1, bytes_transferred);
                 mBroker.getLog().debug("Calling instance \"{}\" method \"{}\".",
-                                       myUuidStr,myMethodStr);
-                Uuid_t myUuid=boost::lexical_cast<Uuid_t>(myUuidStr);
-                ParameterValues myReply = mBroker.invokeMethod(myUuid, myMethodStr, ParameterValues{std::string("Peter!")});
+                                       myUuidStr, myMethodStr);
+                Uuid_t myUuid = boost::lexical_cast<Uuid_t>(myUuidStr);
+                ParameterValues myReply = mBroker.invokeMethod(myUuid, myMethodStr,
+                                                               ParameterValues{std::string("Peter!")});
                 static string_view myCloseMsg("close");
                 doWriteWebSocket(myCloseMsg);
             }
@@ -768,16 +768,18 @@ namespace striboh {
                 mWriteBuffer.clear();
                 mWriteBuffer.reserve(pMsg.size());
                 auto myMutable{mWriteBuffer.prepare(pMsg.size())};
-                std::copy(pMsg.begin(),pMsg.end(),
-                          boost::asio::buffer_cast<unsigned char*>(myMutable));
-                mBroker.getLog().debug("Sending: {}",pMsg);
-                BOOST_LOG_TRIVIAL(debug) << "Sending: buffer: '"
-                << beast::make_printable(mWriteBuffer.data()) <<"'."<< std::endl;
-                mWebSocketStream->async_write(
-                        net::buffer(pMsg),
-                        beast::bind_front_handler(
-                                &WebSession::onWsWrite,
-                                shared_from_this()));
+                std::copy(pMsg.begin(), pMsg.end(),
+                          boost::asio::buffer_cast<unsigned char *>(myMutable));
+                mWriteBuffer.commit(myMutable.size());
+                doWriteBufferToWebSocket();
+            }
+
+            void doWriteBufferToWebSocket() {
+                mBroker.getLog().debug("Sending: {}",
+                                       string_view(static_cast<const char *>(mWriteBuffer.cdata().data()),
+                                                   mWriteBuffer.cdata().size()));
+                mWebSocketStream->async_write(mWriteBuffer.cdata(),
+                                              beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));
             }
 
             void
@@ -793,15 +795,13 @@ namespace striboh {
             onHttpWrite(
                     bool close,
                     beast::error_code ec,
-                    std::size_t bytes_transferred)
-            {
+                    std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
 
-                if(ec)
+                if (ec)
                     return fail(ec, "write");
 
-                if(close)
-                {
+                if (close) {
                     // This means we should close the connection, usually because
                     // the response indicated the "Connection: close" semantic.
                     return doCloseHttpStream();
@@ -836,19 +836,16 @@ namespace striboh {
         class Listener : public std::enable_shared_from_this<Listener> {
             net::io_context &mIoc;
             tcp::acceptor mAcceptor;
-            BrokerIface& mBroker;
+            BrokerIface &mBroker;
 
         public:
             Listener
-            (
-                net::io_context &ioc,
-                tcp::endpoint endpoint,
-                BrokerIface& pBroker
-            )
-            : mIoc(ioc)
-            , mAcceptor(net::make_strand(ioc))
-            , mBroker(pBroker)
-            {
+                    (
+                            net::io_context &ioc,
+                            tcp::endpoint endpoint,
+                            BrokerIface &pBroker
+                    )
+                    : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker) {
                 beast::error_code ec;
 
                 // Open the acceptor
@@ -905,7 +902,7 @@ namespace striboh {
                     fail(ec, "accept");
                 } else {
                     // Create the session and run it
-                    std::make_shared<WebSession>(std::move(socket),mBroker)->run();
+                    std::make_shared<WebSession>(std::move(socket), mBroker)->run();
                 }
 
                 // Accept another connection
@@ -915,35 +912,31 @@ namespace striboh {
 
         void
         BeastServer::shutdown() {
-            if(getState()==EServerState::K_NOMINAL||getState()==EServerState::K_SHUTTING_DOWN) {
+            if (getState() == EServerState::K_NOMINAL || getState() == EServerState::K_SHUTTING_DOWN) {
                 mLog.warn("BeastServer: already shutting down.");
                 return;
             }
             mLog.info("BeastServer: Commencing shutdown...");
             setState(EServerState::K_SHUTTING_DOWN);
-            int myCnt=0;
-            for(auto& aTask: mAcceptTasks) {
-                mLog.debug("BeastServer: Waiting for task {}/{}.",++myCnt,mAcceptTasks.size());
+            int myCnt = 0;
+            for (auto &aTask: mAcceptTasks) {
+                mLog.debug("BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
                 aTask.wait_for(std::chrono::duration(10s));
-                mLog.debug("BeastServer: Task {} down.",myCnt,mAcceptTasks.size());
+                mLog.debug("BeastServer: Task {} down.", myCnt, mAcceptTasks.size());
             }
             mLog.info("BeastServer: ... shutdown completed.");
             setState(EServerState::K_NOMINAL);
-            if(getBroker().getState()!=EServerState::K_NOMINAL
-               && (getBroker().getState()==EServerState::K_SHUTTING_DOWN)) {
+            if (getBroker().getState() != EServerState::K_NOMINAL
+                && (getBroker().getState() == EServerState::K_SHUTTING_DOWN)) {
                 getBroker().shutdown();
             }
         }
 
-        BeastServer::BeastServer(int pNum, BrokerIface& pBroker,  LogIface& pLog)
-        : mThreadNum(std::max<int>(1, pNum))
-        , mBroker(pBroker)
-        , mIoc(mThreadNum)
-        , mLog(pLog)
-        {
+        BeastServer::BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog)
+                : mThreadNum(std::max<int>(1, pNum)), mBroker(pBroker), mIoc(mThreadNum), mLog(pLog) {
         }
 
-        inline std::string toString(const std::thread::id& pThreadId) {
+        inline std::string toString(const std::thread::id &pThreadId) {
             std::stringstream ss;
             ss << pThreadId;
             return ss.str();
@@ -954,25 +947,25 @@ namespace striboh {
             mLog.debug("BeastServer::run() -->");
             auto const aAddress = net::ip::make_address(K_DEFAULT_HOST);
             auto const aPort = K_DEFAULT_PORT;
-            auto myIocRun = [this]()->void{
+            auto myIocRun = [this]() -> void {
                 this->mLog.debug("BeastServer::run() Thread {} started.",
                                  toString(std::this_thread::get_id()));
-                while ( this->getState()==EServerState::K_STARTED ||
-                        this->getState()==EServerState::K_STARTING) {
+                while (this->getState() == EServerState::K_STARTED ||
+                       this->getState() == EServerState::K_STARTING) {
                     mIoc.run_for(10s);
                 }
                 this->mLog.debug("BeastServer::run() Thread {} finished.",
                                  toString(std::this_thread::get_id()));
             };
             // Create and launch a listening on port aPort
-            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort},getBroker())->run();
+            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker())->run();
 
             // Run the I/O service on the requested number of threads
             mAcceptTasks.reserve(mThreadNum - 1);
             setState(EServerState::K_STARTING);
             for (auto i = mThreadNum - 1; i > 0; --i)
-                mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun ));
-            mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun ));
+                mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
+            mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
             setState(EServerState::K_STARTED);
             mLog.debug("BeastServer::run() <--");
             return;
