@@ -377,118 +377,171 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEPARAMETERS_HPP
-#define STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#ifndef STRIBOH_BASE_PARAMETERS_HPP
+#define STRIBOH_BASE_PARAMETERS_HPP
 
 #include <string>
 #include <vector>
 #include <variant>
 #include <algorithm>
+#include <cstddef>
 
 #include <msgpack.hpp>
 #include <variant>
 
 #include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
+#include "stribohBaseMethodName.hpp"
 
-namespace striboh {
-    namespace base {
 
-        class ParameterDesc {
-            const EDir mDir;
-            const ETypes mType;
-            const std::string_view mName;
-        public:
-            ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName):mDir(pDir),mType(pType),mName(pName)
-            {}
-        };
+namespace striboh::base {
 
-        class ParameterList {
-        public:
-            explicit ParameterList(){}
-            explicit ParameterList(std::vector<ParameterDesc>);
-        };
+    class ParameterDesc {
+        const EDir mDir;
+        const ETypes mType;
+        const std::string_view mName;
+    public:
+        ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName) : mDir(pDir), mType(pType),
+                                                                                           mName(pName) {}
+    };
 
-        class ParameterValues {
-        public:
-            typedef std::variant<int,std::string> Parameter_t;
-            typedef std::vector<Parameter_t> ParameterList_t;
+    class ParameterList {
+    public:
+        explicit ParameterList() = default;
 
-            ParameterValues() = default;
+        explicit ParameterList(std::vector<ParameterDesc>);
+    };
 
-            template<typename ParVal0, typename... ParVal_t>
-            explicit
-            ParameterValues(ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0, pValues...);
-            }
+    enum class EInvocationType : std::int32_t {
+        K_METHOD = 1,
+        K_RETURN = 2,
+        K_ERROR = 4,
+        K_UNKNOWN = 0 //< parse error
+    };
 
-            template<typename ParVal0, typename... ParVal_t>
-            ParameterValues&
-            add(const ParVal0 pVal0, ParVal_t... pValues) {
-                add(pVal0);
-                add(pValues...);
-                mPackedCount++;
-                return *this;
-            }
-
-            ParameterValues&
-            add(const ParameterValues& pValues) {
-                return *this;
-            }
-            ParameterValues&
-            add(const std::string& pVal);
-
-            ParameterValues&
-            add(std::string_view&& pVal);
-
-            ParameterValues&
-            add(const int pVal);
-
-            void
-            unpack();
-
-            template<typename T>
-            T
-            get(size_t pIdx) const {
-                return std::get<T>(mValues[pIdx]);
-            }
-
-            size_t
-            size() const {
-                return mValues.size();
-            }
-
-            bool
-            unpacked() const {
-                return mIsUnpacked;
-            }
-
-            const Buffer& getBuffer() const { return mPackedBuffer; }
-
-            ParameterValues& setBuffer( const Buffer& pBuffer ) {
-                mValues.clear();
-                mPackedBuffer.resize(pBuffer.size());
-                std::copy(pBuffer.begin(),pBuffer.end(),mPackedBuffer.begin());
-                mIsUnpacked=true;
-                return *this;
-            }
-
-        private:
-            bool mIsUnpacked = false;
-            size_t mPackedCount = 0L;
-            size_t mLastOffset = 0L;
-            ParameterList_t mValues;
-            Buffer mPackedBuffer;
-
-            void
-            unpackString(msgpack::object &pObjectHandle);
-
-            void
-            unpackInt(msgpack::object &pObjectHandle);
-
-        };
-
+    inline const EInvocationType &operator<<=(EInvocationType &pType, int pTypeVale) {
+        pType = EInvocationType{pTypeVale};
+        return pType;
     }
+
+
+    class InvocationMessage {
+    public:
+        typedef std::variant<int, std::string> Parameter_t;
+        typedef std::vector<Parameter_t> ParameterList_t;
+
+    private:
+        MethodName mMethod;
+        EInvocationType mType;
+
+    private:
+        bool mIsUnpacked = false;
+        size_t mPackedCount = 0L;
+        size_t mLastOffset = 0L;
+        ParameterList_t mValues;
+        Buffer mPackedBuffer;
+
+    public:
+        void
+        unpackString(msgpack::object &pObjectHandle);
+
+        void
+        unpackInt(msgpack::object &pObjectHandle);
+
+
+        InvocationMessage() = delete;
+
+        explicit
+        InvocationMessage(EInvocationType pType):
+                mType{pType},
+                mMethod{std::move("n/a")}
+        {
+            add(mType);
+            add(mMethod.get());
+        }
+
+        explicit
+        InvocationMessage(MethodName &&pMethodName):
+                mType{EInvocationType::K_METHOD},
+                mMethod{std::move(pMethodName)}
+        {
+            add(mType);
+            add(mMethod.get());
+        }
+
+        template<typename ParVal0, typename... ParVal_t>
+        InvocationMessage &
+        add(ParVal0 pVal0, ParVal_t... pValues) {
+            add(pVal0);
+            add(pValues...);
+            mPackedCount++;
+            return *this;
+        }
+
+        InvocationMessage &
+        add(const std::string &pVal);
+
+        InvocationMessage &
+        add(const MethodName &pVal) {
+            return add(pVal.get());
+        }
+
+        InvocationMessage &
+        add(std::string_view &&pVal);
+
+        InvocationMessage &
+        add(const char* const pVal);
+
+        InvocationMessage &
+        add(int pVal);
+
+        InvocationMessage &
+        add(EInvocationType pVal) {
+            return add(int(pVal));
+        }
+
+        void
+        unpack();
+
+        template<typename T>
+        T
+        get(size_t pIdx) const {
+            return std::get<T>(mValues[pIdx]);
+        }
+
+        size_t
+        size() const {
+            return mValues.size();
+        }
+
+        bool
+        unpacked() const {
+            return mIsUnpacked;
+        }
+
+        const Buffer &getBuffer() const { return mPackedBuffer; }
+
+        InvocationMessage &setBuffer(const Buffer &pBuffer) {
+            mValues.clear();
+            mPackedBuffer.resize(pBuffer.size());
+            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
+            mIsUnpacked = true;
+            return *this;
+        }
+
+        EInvocationType getType() const {
+            return mType;
+        }
+
+        void setType(EInvocationType pType) {
+            mType = pType;
+        }
+
+        void unpackHeader(const size_t myBufLength, size_t &aOff);
+
+        const std::string& getMethodName() { return mMethod.get(); }
+    };
+
 }
 
-#endif //STRIBOH_STRIBOHBASEPARAMETERS_HPP
+#endif //STRIBOH_BASE_PARAMETERS_HPP

@@ -404,27 +404,69 @@ namespace striboh {
         using tcp = ::boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
         namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
         class LogIface;
+        using WebSocket = websocket::stream<beast::tcp_stream>;
 
         class HostConnection;
 
-        class Proxy : public boost::enable_shared_from_this<Proxy> {
-            bool mConnected = false;
-            bool mResolved = false;
-            bool mUpgraded = false;
+        enum class EConnectionStatus {
+            K_CONNECTED,
+            K_RESOLVED,
+            K_UPGRADED
+        };
+
+        class ObjectProxy;
+
+        class InvocationContext : public std::enable_shared_from_this<InvocationContext> {
+            ObjectProxy& mObjectProxy;
+            net::io_context& mIoContext;
+            LogIface &mLog;
+            InvocationMessage mValues;
+            std::future<InvocationMessage> mReturnValues;
+            beast::flat_buffer buffer_; // (Must persist between reads)
+        public:
+            InvocationContext(
+                    ObjectProxy& pObjectProxy,
+                    net::io_context& pIoContext,
+                    const InvocationMessage& pValues,
+                    LogIface &pLog );
+
+            InvocationMessage getReturnValue() { return mReturnValues.get(); }
+
+            /**
+             * Start the asynchronous operation
+             */
+            void startInvocation();
+
+            void onWriteWebSocket(beast::error_code ec,
+                                  std::size_t bytes_transferred);
+
+            void onReadWebSocket(beast::error_code ec,
+                                 std::size_t bytes_transferred);
+
+            void onCloseWebSocket(beast::error_code ec);
+
+            void writeWebSocketMessage(std::string_view pMsg);
+
+            void readWebSocketMessage();
+
+            void fail(beast::error_code ec, char const* what);
+
+        };
+
+        class ObjectProxy : public std::enable_shared_from_this<ObjectProxy> {
+        private:
+            std::atomic<EConnectionStatus> mConnectionStatus;
             net::io_context mIoContext;
             LogIface &mLog;
             tcp::resolver mResolver;
-            websocket::stream<beast::tcp_stream> mWebSocketStream;
-            beast::flat_buffer buffer_; // (Must persist between reads)
+            WebSocket mWebSocket;
             http::request<http::empty_body> mRequest;
             http::response<http::string_body> mResponse;
             const HostConnection &mClient;
             std::string mBaseUrl;
-            ParameterValues mRetVal;
-            ParameterValues mParameterValues;
             Uuid_t mUuid;
             std::string mWebSocketUrl;
-            std::string mMethodName;
+            beast::flat_buffer buffer_; // (Must persist between reads)
         public:
 
             /**
@@ -432,42 +474,44 @@ namespace striboh {
              * ensure that handlers do not execute concurrently.
              */
             explicit
-            Proxy( const HostConnection &pClient,
-                  std::string_view pPath,
-                  LogIface &pLog) :
+            ObjectProxy(const HostConnection &pClient,
+                        std::string_view pPath,
+                        LogIface &pLog) :
                     mClient(pClient), //< striboh context
                     mBaseUrl(std::move(pPath)), //< base url
                     mLog(pLog), //< log
                     mResolver(net::make_strand(mIoContext)), //
-                    mWebSocketStream(net::make_strand(mIoContext)) //
+                    mWebSocket(net::make_strand(mIoContext)) //
             {}
+
+            const WebSocket &getWebSocket() const {
+                return mWebSocket;
+            }
+
+            WebSocket &getWebSocket() {
+                return mWebSocket;
+            }
+
+            EConnectionStatus getConnectionStatus() const {
+                return mConnectionStatus;
+            }
+
+            std::atomic<EConnectionStatus>& getConnectionStatus() {
+                return mConnectionStatus;
+            }
 
             bool
             isConnected() const {
-                return mConnected;
+                return mConnectionStatus==EConnectionStatus::K_CONNECTED;
             }
 
-            bool
-            isResolved() const {
-                return mResolved;
-            }
-
-            std::future<ParameterValues>
-            invokeMethod(
-                    std::string_view pMethodName,
-                    ParameterValues pValues);
+            std::shared_ptr<InvocationContext>
+            invokeMethod(InvocationMessage pValues);
 
         private:
-            /**
-             * Start the asynchronous operation
-             */
-            ParameterValues
-            run(
-                    std::string_view pMethodName,
-                    ParameterValues pValues);
 
             void
-            onResolve(
+            doConnect(
                     beast::error_code ec,
                     tcp::resolver::results_type results);
 
@@ -486,12 +530,11 @@ namespace striboh {
                     beast::error_code ec,
                     std::size_t bytes_transferred);
 
-            // Report a failure
-            void
-            fail(beast::error_code ec, char const *what);
+            /// Report a failure
+            void fail(beast::error_code ec, char const *what);
 
             /// Send the HTTP request to the remote host.
-            void sendResolveRequest();
+            void doSendResolveRequest();
 
             void shutdown(beast::error_code &ec);
 
@@ -499,17 +542,7 @@ namespace striboh {
 
             void onHandshake(beast::error_code ec);
 
-            void onWriteWebSocket(beast::error_code ec,
-                                  std::size_t bytes_transferred);
-
-            void onReadWebSocket(beast::error_code ec,
-                                  std::size_t bytes_transferred);
-
-            void onCloseWebSocket(beast::error_code ec);
-
-            void writeWebSocketMessage(std::string_view pMsg);
-
-            void readWebSocketMessage();
+            void doResolve();
         };
 
         class HostConnection {
@@ -517,14 +550,14 @@ namespace striboh {
             std::string mHost;
             unsigned short mPort;
             std::string mPortStr;
-            boost::shared_ptr<Proxy> mProxyPtr;
+            boost::shared_ptr<ObjectProxy> mProxyPtr;
         private:
             int mVersion = 11;
 
         public:
             HostConnection(std::string_view pHost, unsigned short pPort, LogIface &pLog);
 
-            boost::shared_ptr<Proxy>
+            boost::shared_ptr<ObjectProxy>
             createProxyFor(std::string_view pPath);
 
             LogIface &getLog() const {

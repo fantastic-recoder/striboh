@@ -376,107 +376,20 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_ORB_HPP
-#define STRIBOH_BASE_ORB_HPP
+#ifndef STRIBOH_BASE_METHOD_NAME_HPP
+#define STRIBOH_BASE_METHOD_NAME_HPP
 
-#include <array>
-#include <atomic>
-#include <thread>
-#include <future>
-#include <boost/uuid/uuid.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/foreach.hpp>
-
-#include "stribohBaseParameters.hpp"
-#include "stribohBaseBrokerIface.hpp"
-#include "stribohIdlAstRootNode.hpp"
-#include "stribohIdlAstImportListNode.hpp"
-#include "stribohIdlAstModuleNode.hpp"
+#include <string>
+#include <NamedType/named_type.hpp>
 
 namespace striboh::base {
 
-        using ::striboh::idl::ast::RootNode;
-        using ::striboh::idl::ast::ModuleListNode;
-        using ::striboh::idl::ast::ModuleBodyNode;
-        using ::striboh::idl::ast::ModuleNode;
+    struct MethodName: public fluent::NamedType<std::string,struct MethodNameTag> {
+        explicit MethodName(std::string_view pName) {
+            get()=pName;
+        }
+    };
 
-        class Interface;
+} // namespace striboh::base
 
-
-        class Broker : public BrokerIface {
-        public:
-            typedef std::map<Uuid_t ,Interface> Instances_t;
-
-            explicit Broker( LogIface& pLogIface ):
-            BrokerIface(pLogIface){}
-
-            void
-            initialize() override;
-
-            const std::atomic<EServerState>&
-            serve() override;
-
-            std::future<void>
-            shutdown() override;
-
-            InvocationMessage
-            invokeMethod(const Uuid_t& pInstanceId, InvocationMessage pInvocation) override;
-
-            Uuid_t
-            addServant(Interface& pMethodSignature) override;
-
-            ResolvedResult
-            resolve(std::string_view pPath ) const override;
-
-            ResolvedService
-            resolveService(std::string_view pPath ) const override;
-
-            std::string
-            resolveServiceToStr(std::string_view pPath ) const override;
-
-            static Path split(std::string_view pPathStr, std::string_view pSeparator) ;
-
-            static constexpr const char *const K_SEPARATOR = "/";
-
-            static ResolvedService
-            resolveServiceFromStr(const std::string& pJson);
-
-            virtual ~Broker();
-        private:
-
-            void
-            dispatch();
-
-            const ModuleNode * resolveSubNodes(PathIterator &pSegmentPtr,
-                                               PathIterator pSegmentEnd,
-                                               ResolvedResult &pRetVal,
-                                               const ModuleListNode& pModuleListNode) const;
-
-            Instances_t
-                    mInstances;
-
-            RootNode
-                    mRoot;
-
-            std::future<void>
-                    mReceiver;
-
-            void
-            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
-
-            void
-            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
-
-            idl::ast::ModuleBodyNode *const
-            addServantModule(ModuleListNode* myChildNodes, std::string &mDir) const;
-
-            static ResolvedService
-            resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
-
-            void doShutdown();
-        };
-
-    }
-
-#endif //STRIBOH_BASE_ORB_HPP
+#endif //STRIBOH_BASE_METHOD_NAME_HPP

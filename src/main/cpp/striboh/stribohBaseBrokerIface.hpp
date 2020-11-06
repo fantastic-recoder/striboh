@@ -454,8 +454,8 @@ namespace striboh {
             virtual std::future<void>
             shutdown() = 0;
 
-            virtual ParameterValues
-            invokeMethod(const Uuid_t& pInstanceId, std::string_view pMethodName, ParameterValues pValues) = 0;
+            virtual InvocationMessage
+            invokeMethod(const Uuid_t& pInstanceId, InvocationMessage pInvocation) = 0;
 
             virtual Uuid_t
             addServant(Interface& pMethodSignature) = 0;

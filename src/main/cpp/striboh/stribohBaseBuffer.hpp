@@ -384,7 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
-        class Buffer: public std::vector<char> {
+        class Buffer: public std::string {
         public:
             size_t write(const char*, std::size_t);
         };

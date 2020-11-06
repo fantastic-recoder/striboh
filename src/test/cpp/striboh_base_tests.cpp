@@ -410,7 +410,7 @@ using std::count;
 using striboh::base::InterfaceName;
 using striboh::base::Method;
 using striboh::base::ParameterList;
-using striboh::base::ParameterValues;
+using striboh::base::InvocationMessage;
 using striboh::base::ETypes;
 using boost::process::child;
 using boost::process::system;
@@ -423,35 +423,35 @@ static striboh::base::LogBoostImpl theLog;
 TEST(stribohBaseTests, testParseUrlParameters) {
     {
         string_view myUrl("");
-        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        EXPECT_EQ(1,myUrlParameters.size());
-        EXPECT_EQ("",myUrlParameters[K_BASE_URL][0]);
+        Parameters_t myUrlParameters = parseUrlParameters(myUrl);
+        EXPECT_EQ(1, myUrlParameters.size());
+        EXPECT_EQ("", myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?resolve");
-        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        EXPECT_EQ(2,myUrlParameters.size());
+        Parameters_t myUrlParameters = parseUrlParameters(myUrl);
+        EXPECT_EQ(2, myUrlParameters.size());
         EXPECT_TRUE(myUrlParameters["resolve"].empty());
-        EXPECT_EQ("/m0/m1/Hello",myUrlParameters[K_BASE_URL][0]);
+        EXPECT_EQ("/m0/m1/Hello", myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?p0=val0");
-        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        ASSERT_EQ(2,myUrlParameters.size());
+        Parameters_t myUrlParameters = parseUrlParameters(myUrl);
+        ASSERT_EQ(2, myUrlParameters.size());
         ASSERT_EQ(1, myUrlParameters["p0"].size());
         EXPECT_EQ("val0", myUrlParameters["p0"][0]);
-        EXPECT_EQ("/m0/m1/Hello",myUrlParameters[K_BASE_URL][0]);
+        EXPECT_EQ("/m0/m1/Hello", myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?p0=val0&p1=val1&p0=val1");
-        Parameters_t myUrlParameters=parseUrlParameters(myUrl);
-        ASSERT_EQ(3,myUrlParameters.size());
+        Parameters_t myUrlParameters = parseUrlParameters(myUrl);
+        ASSERT_EQ(3, myUrlParameters.size());
         ASSERT_EQ(2, myUrlParameters["p0"].size());
         ASSERT_EQ(1, myUrlParameters["p1"].size());
         EXPECT_EQ("val1", myUrlParameters["p1"][0]);
         EXPECT_EQ("val0", myUrlParameters["p0"][0]);
         EXPECT_EQ("val1", myUrlParameters["p0"][1]);
-        EXPECT_EQ("/m0/m1/Hello",myUrlParameters[K_BASE_URL][0]);
+        EXPECT_EQ("/m0/m1/Hello", myUrlParameters[K_BASE_URL][0]);
     }
 }
 
@@ -462,13 +462,13 @@ TEST(stribohBaseTests, testStribohBrokerShutdown) {
 }
 
 TEST(stribohBaseTests, testAddAndGetValues) {
-    ParameterValues myList;
+    InvocationMessage myList(MethodName("testMethod"));
     const std::string myVal0("Test 0.");
     myList.add(myVal0);
     myList.add(42);
     myList.unpack();
-    ASSERT_EQ(myVal0,myList.get<std::string>(0));
-    ASSERT_EQ(42,myList.get<int>(1));
+    ASSERT_EQ(myVal0, myList.get<std::string>(0));
+    ASSERT_EQ(42, myList.get<int>(1));
 }
 
 TEST(stribohBaseTests, testSplit) {
@@ -481,50 +481,52 @@ TEST(stribohBaseTests, testSplit) {
     {
         string myPathStr0("/aa/bbb/ccc");
         Path myPath0 = Broker::split(myPathStr0, "/");
-        ASSERT_EQ(myPath0.get().size(),3);
-        ASSERT_EQ(myPath0.get()[0].get(),"aa");
-        ASSERT_EQ(myPath0.get()[1].get(),"bbb");
-        ASSERT_EQ(myPath0.get()[2].get(),"ccc");
+        ASSERT_EQ(myPath0.get().size(), 3);
+        ASSERT_EQ(myPath0.get()[0].get(), "aa");
+        ASSERT_EQ(myPath0.get()[1].get(), "bbb");
+        ASSERT_EQ(myPath0.get()[2].get(), "ccc");
     }
     {
         string myPathStr0("/aa/bbb/ccc/");
         Path myPath0 = Broker::split(myPathStr0, "/");
-        ASSERT_EQ(myPath0.get().size(),3);
-        ASSERT_EQ(myPath0.get()[0].get(),"aa");
-        ASSERT_EQ(myPath0.get()[1].get(),"bbb");
-        ASSERT_EQ(myPath0.get()[2].get(),"ccc");
+        ASSERT_EQ(myPath0.get().size(), 3);
+        ASSERT_EQ(myPath0.get()[0].get(), "aa");
+        ASSERT_EQ(myPath0.get()[1].get(), "bbb");
+        ASSERT_EQ(myPath0.get()[2].get(), "ccc");
     }
     {
         string myPathStr0("aa/bbb/");
         Path myPath0 = Broker::split(myPathStr0, "/");
-        ASSERT_EQ(myPath0.get().size(),2);
-        ASSERT_EQ(myPath0.get()[0].get(),"aa");
-        ASSERT_EQ(myPath0.get()[1].get(),"bbb");
+        ASSERT_EQ(myPath0.get().size(), 2);
+        ASSERT_EQ(myPath0.get()[0].get(), "aa");
+        ASSERT_EQ(myPath0.get()[1].get(), "bbb");
     }
 }
 
 TEST(stribohBaseTests, testUuidGeneration) {
-    Uuid_t myUuid0=Broker::generateUuid();
-    Uuid_t myUuid1=Broker::generateUuid();
-    EXPECT_NE(myUuid0,myUuid1);
+    Uuid_t myUuid0 = Broker::generateUuid();
+    Uuid_t myUuid1 = Broker::generateUuid();
+    EXPECT_NE(myUuid0, myUuid1);
     std::stringstream aStream;
     aStream << myUuid0 << endl;
     BOOST_LOG_TRIVIAL(debug) << "UUID:" << myUuid0 << " : " << aStream.str();
     Uuid_t myUuid2;
     aStream >> myUuid2;
-    EXPECT_EQ(myUuid0,myUuid2) << "UUID not written and read correctly!";
+    EXPECT_EQ(myUuid0, myUuid2) << "UUID not written and read correctly!";
 }
 
 Interface createTestInterface() {
-    return  Interface{
-            {"m0","m1"},InterfaceName("Hello"),
+    return Interface{
+            {"m0", "m1"}, InterfaceName("Hello"),
             {
                     Method{"echo",
                            ParameterList{
                                    {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
-                               pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                           [](const InvocationMessage &pIncoming, Context pCtx) -> InvocationMessage {
+                               InvocationMessage myReturn(EInvocationType::K_RETURN);
+                               myReturn.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                               return myReturn;
                            }
                     }
             }
@@ -534,8 +536,7 @@ Interface createTestInterface() {
 
 static const std::string_view theM0M1Path("/m0/m1/Hello");
 
-TEST(stribohBaseTests, testResolve)
-{
+TEST(stribohBaseTests, testResolve) {
     Broker aBroker(theLog);
 
     Interface myInterface(createTestInterface());
@@ -568,10 +569,9 @@ TEST(stribohBaseTests, testResolve)
         EXPECT_EQ(string("Hello"), myInterfaceIt->get());
     }
     {
-
-        ResolvedService  myResolved = aBroker.resolveService(theM0M1Path);
-        EXPECT_EQ(true,std::get<bool>(myResolved));
-        EXPECT_EQ(myUuid,std::get<Uuid_t >(myResolved));
+        ResolvedService myResolved = aBroker.resolveService(theM0M1Path);
+        EXPECT_EQ(true, std::get<bool>(myResolved));
+        EXPECT_EQ(myUuid, std::get<Uuid_t>(myResolved));
     }
 }
 
@@ -579,15 +579,15 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     Interface myInterface(createTestInterface());
     Broker aBroker(theLog);
     Uuid_t myUuid = aBroker.addServant(myInterface);
-    string  myResolved = aBroker.resolveServiceToStr(theM0M1Path);
+    string myResolved = aBroker.resolveServiceToStr(theM0M1Path);
     EXPECT_FALSE(myResolved.empty());
     BOOST_LOG_TRIVIAL(debug) << myResolved;
     std::istringstream myIstream(myResolved);
     boost::property_tree::ptree myPt;
-    boost::property_tree::read_json(myIstream,myPt);
-    EXPECT_EQ(theM0M1Path,myPt.get<std::string>(K_SVC_PATH));
-    EXPECT_EQ(true,myPt.get<bool>(K_SVC_RESULT));
-    EXPECT_EQ(myUuid,myPt.get<Uuid_t>(K_SVC_UUID));
+    boost::property_tree::read_json(myIstream, myPt);
+    EXPECT_EQ(theM0M1Path, myPt.get<std::string>(K_SVC_PATH));
+    EXPECT_EQ(true, myPt.get<bool>(K_SVC_RESULT));
+    EXPECT_EQ(myUuid, myPt.get<Uuid_t>(K_SVC_UUID));
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
@@ -601,54 +601,69 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
                            ParameterList{
                                    {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
-                               pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                           [](const InvocationMessage &pIncoming, Context pCtx) -> InvocationMessage {
+                               return InvocationMessage(EInvocationType::K_RETURN)
+                                       .add("Server greats " + pIncoming.get<std::string>(0));
                            }
                     }
             }
     };
-    Uuid_t  myUuid = aBroker.addServant(myInterface);
-    ParameterValues myReply = aBroker.invokeMethod(myUuid, "echo", ParameterValues{std::string("Peter!")});
+    Uuid_t myUuid = aBroker.addServant(myInterface);
+    InvocationMessage myReply = aBroker.invokeMethod(
+            myUuid,
+            InvocationMessage{MethodName("echo")}
+                    .add("Peter!"));
     myReply.unpack();
-    ASSERT_TRUE(myReply.size()==1) << "Parameter list is empty, should have 1 element!";
-    EXPECT_EQ(std::string("Server greats Peter!"),myReply.get<std::string>(0));
+    ASSERT_TRUE(myReply.size() == 1) << "Parameter list is empty, should have 1 element!";
+    EXPECT_EQ(std::string("Server greats Peter!"), myReply.get<std::string>(0));
     aBroker.shutdown();
 }
 
 TEST(stribohBaseTests, testSerailization) {
-    ParameterValues myInputValues;
+    InvocationMessage myInputValues(MethodName("testMethod"));
     myInputValues.add(string("Echo string.")).add(42);
-    EXPECT_EQ(0,myInputValues.size());
+    EXPECT_EQ(0, myInputValues.size());
     EXPECT_FALSE(myInputValues.unpacked());
-    ParameterValues myOutputValues;
+    InvocationMessage myOutputValues(MethodName("testMethod"));
     EXPECT_FALSE(myOutputValues.unpacked());
     myOutputValues.setBuffer(myInputValues.getBuffer());
     myOutputValues.unpack();
     EXPECT_TRUE(myOutputValues.unpacked());
-    EXPECT_EQ(2,myOutputValues.size());
-    EXPECT_EQ("Echo string.",myOutputValues.get<string>(0));
-    EXPECT_EQ(42,myOutputValues.get<int>(1));
+    EXPECT_EQ(2, myOutputValues.size());
+    EXPECT_EQ("Echo string.", myOutputValues.get<string>(0));
+    EXPECT_EQ(42, myOutputValues.get<int>(1));
 }
 
 static constexpr const char *const theTestEchoServerBinary = "./striboh_test_echo_server";
 
-TEST(stribohBaseTests, testSimpleRemoteMessageTransfer)
-{
-
-    child myServer(theTestEchoServerBinary, std_out > "out.txt" );
-    BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
-    ASSERT_TRUE(myServer.valid()) << "Failed to start " << theTestEchoServerBinary << ".";
-    std::this_thread::sleep_for(std::chrono::seconds(5s));
+TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
+    std::shared_ptr<child> myServerChildProcess;
+    const char* const myNoServerVariable=std::getenv("NO_SRV");
+    if (myNoServerVariable==nullptr || (myNoServerVariable!=nullptr && string_view(myNoServerVariable).compare("yes"))) {
+        myServerChildProcess = std::make_shared<child>(theTestEchoServerBinary, std_out > "out.txt");
+        BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
+        ASSERT_TRUE(myServerChildProcess->valid()) << "Failed to start " << theTestEchoServerBinary << ".";
+        std::this_thread::sleep_for(std::chrono::seconds(5s));
+    }
 
     HostConnection aClient(striboh::base::K_DEFAULT_HOST,
                            striboh::base::K_DEFAULT_PORT, theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
     EXPECT_TRUE(myProxy->isConnected());
-    std::future<ParameterValues> myResult = myProxy->invokeMethod("shutdown",{});
-    myResult.get();
+    auto myResult0 = myProxy
+            ->invokeMethod(InvocationMessage(MethodName("echo")).add("Paul"));
+    InvocationMessage myReply{myResult0->getReturnValue()};
+    myReply.unpack();
+    ASSERT_TRUE(myReply.size() == 1) << "Parameter list is empty, should have 1 element!";
+    EXPECT_EQ(std::string("Server greats Peter!"), myReply.get<std::string>(0));
 
-    myServer.wait_for(30s);
-    EXPECT_EQ(0,myServer.exit_code());
+    auto myResult1 = myProxy
+            ->invokeMethod(InvocationMessage(MethodName("shutdown")));
+    myResult1->getReturnValue();
 
+    if(myServerChildProcess) {
+        myServerChildProcess->wait_for(30s);
+        EXPECT_EQ(0, myServerChildProcess->exit_code());
+    }
     return;
 }

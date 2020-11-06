@@ -388,30 +388,31 @@ namespace striboh {
 
         }
 
-        ParameterValues&
-        ParameterValues::add(const std::string& pVal) {
+        InvocationMessage&
+        InvocationMessage::add(const std::string& pVal) {
             msgpack::pack(mPackedBuffer, pVal);
             mLastOffset = mPackedBuffer.size();
             return *this;
         }
 
-        ParameterValues &ParameterValues::add(std::string_view&& pVal) {
+        InvocationMessage &InvocationMessage::add(std::string_view&& pVal) {
             msgpack::pack(mPackedBuffer, std::move(pVal));
             mLastOffset = mPackedBuffer.size();
             return *this;
         }
 
-        ParameterValues &
-        ParameterValues::add(const int pVal) {
+        InvocationMessage &
+        InvocationMessage::add(const int pVal) {
             msgpack::pack(mPackedBuffer, pVal);
             mLastOffset = mPackedBuffer.size();
             return *this;
         }
 
-        void ParameterValues::unpack() {
+        void InvocationMessage::unpack() {
             // now starts streaming deserialization.
             const std::size_t myBufLength=mPackedBuffer.size();
             std::size_t aOff = 0;
+            unpackHeader(myBufLength, aOff);
             msgpack::object_handle myObjHandle;
             while (aOff != myBufLength) {
                 msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
@@ -426,16 +427,35 @@ namespace striboh {
         }
 
         void
-        ParameterValues::unpackString(msgpack::object& pObj ) {
+        InvocationMessage::unpackHeader(const size_t myBufLength, size_t &aOff) {
+            msgpack::object_handle myObjHandle;
+            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+            auto myHeaderObj = myObjHandle.get();
+            int myTypeVal;
+            myHeaderObj.convert(myTypeVal);
+            mType <<= myTypeVal;
+            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+            myHeaderObj = myObjHandle.get();
+            myHeaderObj.convert(mMethod.get());
+        }
+
+        void
+        InvocationMessage::unpackString(msgpack::object& pObj ) {
             std::string myVal;
             pObj.convert(myVal);
             mValues.push_back(myVal);
         }
 
-        void ParameterValues::unpackInt( msgpack::object &pObj ) {
+        void InvocationMessage::unpackInt(msgpack::object &pObj ) {
             int myIntVal;
             pObj.convert(myIntVal);
             mValues.push_back(myIntVal);
+        }
+
+        InvocationMessage &InvocationMessage::add(const char *const pVal) {
+            msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
+            return *this;
         }
 
     }

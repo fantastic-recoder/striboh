@@ -754,12 +754,15 @@ namespace striboh {
                                        myReadStr);
                 const size_t theUuidSize = 36;
                 string_view myUuidStr = myReadStr.substr(0, theUuidSize);
-                string_view myMethodStr = myReadStr.substr(theUuidSize + 1, bytes_transferred);
+                string_view myMethodStr{string(myReadStr.substr(theUuidSize + 1, bytes_transferred))};
                 mBroker.getLog().debug("Calling instance \"{}\" method \"{}\".",
                                        myUuidStr, myMethodStr);
                 Uuid_t myUuid = boost::lexical_cast<Uuid_t>(myUuidStr);
-                ParameterValues myReply = mBroker.invokeMethod(myUuid, myMethodStr,
-                                                               ParameterValues{std::string("Peter!")});
+                InvocationMessage myReply = mBroker.invokeMethod(
+                        myUuid,
+                        InvocationMessage{MethodName(myMethodStr)}
+                                .add(
+                                        std::string("Peter!")));
                 static string_view myCloseMsg("close");
                 doWriteWebSocket(myCloseMsg);
             }

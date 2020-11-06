@@ -24,7 +24,7 @@ namespace striboh {
 
         class Method {
         public:
-            typedef void(*MethodGlue_t)( const ParameterValues&, ParameterValues&, Context ) ;
+            typedef InvocationMessage(*MethodGlue_t)(const InvocationMessage&, Context ) ;
 
             explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation )
             : mName(pName), mImplementation(pImplementation)
@@ -34,9 +34,10 @@ namespace striboh {
                 return mName;
             }
 
-            void invoke(const ParameterValues& pIns, ParameterValues& pOut, Context pCtx) {
+            InvocationMessage invoke(const InvocationMessage& pIns, Context pCtx) {
                 if(mImplementation)
-                    mImplementation(pIns,pOut,pCtx);
+                    return mImplementation(pIns,pCtx);
+                return InvocationMessage(EInvocationType::K_RETURN);
             }
         private:
             const std::string mName;

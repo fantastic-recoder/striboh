@@ -399,9 +399,9 @@ namespace striboh {
         : mHost(pHost), mPort(pPort), mLog(pLog), mPortStr(boost::lexical_cast<std::string>(mPort))
         {}
 
-        boost::shared_ptr<Proxy>
+        boost::shared_ptr<ObjectProxy>
         HostConnection::createProxyFor(std::string_view pPath) {
-            mProxyPtr=boost::make_shared<Proxy>(*this, pPath, mLog);
+            mProxyPtr=boost::make_shared<ObjectProxy>(*this, pPath, mLog);
             return mProxyPtr;
         }
 
@@ -411,75 +411,94 @@ namespace striboh {
          * @param pValues
          * @return
          */
-        std::future<ParameterValues>
-        Proxy::invokeMethod(
-                std::string_view pMethodName,
-                ParameterValues pValues)
+        std::shared_ptr<InvocationContext>
+        ObjectProxy::invokeMethod(InvocationMessage pValues)
         {
-            auto myRetVal = std::async(std::launch::async,[this](std::string_view pMethodName,
-                                            ParameterValues pValues)
-                                             ->ParameterValues{
-                return this->run(pMethodName,pValues);
-            },pMethodName, pValues);
-            return myRetVal;
+            auto myInvocationContext = std::make_shared<InvocationContext>
+                    (*this,mIoContext,pValues,mLog);
+            return myInvocationContext;
         }
 
-        ParameterValues
-        Proxy::run(
-                std::string_view pMethodName,
-                ParameterValues pValues)
+        InvocationContext::InvocationContext(
+            ObjectProxy& pObjectProxy,
+            net::io_context& pIoContext,
+            const InvocationMessage& pValues,
+            LogIface &pLog
+        )
+        : mObjectProxy(pObjectProxy)
+        , mIoContext(pIoContext)
+        , mValues(pValues)
+        , mLog(pLog)
         {
-            mParameterValues=pValues;
-            mMethodName=pMethodName;
-            mLog.debug("Going to resolve {}:{}...",mClient.getHost(),mClient.getPortStr());
-            // Look up the domain name
-            mResolver.async_resolve(
-                    mClient.getHost().c_str(),
-                    mClient.getPortStr().c_str(),
-                    beast::bind_front_handler(
-                            &Proxy::onResolve,
-                        shared_from_this()
-                    )
-                );
-            // Run the I/O service. The call will return when
-            // the get operation is complete.
-            mLog.debug("Going to run io_context.");
-            mIoContext.run();
-            mLog.debug("proxy run finished.");
-            return mRetVal;
         }
 
         void
-        Proxy::onResolve(
+        InvocationContext::startInvocation()
+        {
+            mReturnValues = std::async(
+                std::launch::async,
+                [this]()->InvocationMessage{
+                    InvocationMessage myRetVal(EInvocationType::K_RETURN);
+                    this->writeWebSocketMessage(string_view(mValues.getBuffer()));
+                    return myRetVal;
+                }
+            );
+
+            // Run the I/O service. The call will return when
+            // the get operation is complete.
+            mIoContext.run();
+            mLog.debug("proxy run finished.");
+            return ;
+        }
+
+        void
+        ObjectProxy::doResolve() {
+            mLog.debug("Going to resolve {}:{}...",mClient.getHost(),mClient.getPortStr());
+            // Look up the domain name
+            if(!isConnected()) {
+                mResolver.async_resolve(
+                        mClient.getHost().c_str(),
+                        mClient.getPortStr().c_str(),
+                        beast::bind_front_handler(
+                                &ObjectProxy::doConnect,
+                                shared_from_this()
+                        )
+                );
+                mLog.debug("Going to run io_context 4 connect.");
+                mIoContext.run();
+            }
+        }
+
+        void
+        ObjectProxy::doConnect(
                 beast::error_code ec,
                 tcp::resolver::results_type results)
         {
             if(ec)
                 return fail(ec, "resolve");
-            mResolved = true;
             // Set a timeout on the operation
-            beast::get_lowest_layer(mWebSocketStream).expires_after(std::chrono::seconds(30));
+            beast::get_lowest_layer(mWebSocket).expires_after(std::chrono::seconds(30));
             mLog.debug("Resolved, going to connect ...");
             // Make the connection on the IP address we get from a lookup
-            beast::get_lowest_layer(mWebSocketStream).async_connect(
+            beast::get_lowest_layer(mWebSocket).async_connect(
                     results,
                     beast::bind_front_handler(
-                            &Proxy::onConnect,
+                            &ObjectProxy::onConnect,
                             shared_from_this()));
         }
 
         void
-        Proxy::onConnect(beast::error_code ec, tcp::resolver::results_type::endpoint_type)
+        ObjectProxy::onConnect(beast::error_code ec, tcp::resolver::results_type::endpoint_type)
         {
             if(ec) {
-                return fail(ec, "connect");
+                return fail(ec, "ObjectProxy::onConnect");
             }
-            mConnected=true;
-            sendResolveRequest();
+            mConnectionStatus=EConnectionStatus::K_CONNECTED;
+            doSendResolveRequest();
         }
 
         void
-        Proxy::sendResolveRequest() {
+        ObjectProxy::doSendResolveRequest() {
             // Set up an HTTP GET request message
             mRequest.version(mClient.getVersion() );
             mRequest.method(http::verb::get);
@@ -488,27 +507,27 @@ namespace striboh {
             mRequest.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
             mLog.debug("Connected, going to send \"{}\" request...",mRequest.target().to_string());
             // Set a timeout on the operation
-            beast::get_lowest_layer(mWebSocketStream).expires_after(std::chrono::seconds(30));
-            http::async_write(beast::get_lowest_layer(mWebSocketStream),
+            beast::get_lowest_layer(mWebSocket).expires_after(std::chrono::seconds(30));
+            http::async_write(beast::get_lowest_layer(mWebSocket),
                               mRequest,
                               beast::bind_front_handler(
-                                      &Proxy::onResolveRequestSend,
+                                      &ObjectProxy::onResolveRequestSend,
                                       shared_from_this()));
         }
 
-        void Proxy::sendUpgradeRequest() {
+        void ObjectProxy::sendUpgradeRequest() {
 
             // Turn off the timeout on the tcp_stream, because
             // the websocket stream has its own timeout system.
-            beast::get_lowest_layer(mWebSocketStream).expires_never();
+            beast::get_lowest_layer(mWebSocket).expires_never();
 
             // Set suggested timeout settings for the websocket
-            mWebSocketStream.set_option(
+            mWebSocket.set_option(
                     websocket::stream_base::timeout::suggested(
                             beast::role_type::client));
 
             // Set a decorator to change the User-Agent of the handshake
-            mWebSocketStream.set_option(websocket::stream_base::decorator(
+            mWebSocket.set_option(websocket::stream_base::decorator(
                     [](websocket::request_type& req)
                     {
                         req.set(http::field::user_agent,
@@ -522,9 +541,9 @@ namespace striboh {
             mWebSocketUrl = mClient.getHost() + ':' + mClient.getPortStr();
 
             // Perform the websocket handshake
-            mWebSocketStream.async_handshake(mWebSocketUrl, mBaseUrl + "?upgrade",
-                                             beast::bind_front_handler(
-                                        &Proxy::onHandshake,
+            mWebSocket.async_handshake(mWebSocketUrl, mBaseUrl + "?upgrade",
+                                       beast::bind_front_handler(
+                                        &ObjectProxy::onHandshake,
                                         shared_from_this()));
 
             mLog.debug("sending upgrade request.");
@@ -533,23 +552,23 @@ namespace striboh {
 
 
         void
-        Proxy::onResolveRequestSend(
+        ObjectProxy::onResolveRequestSend(
                 beast::error_code ec,
                 std::size_t bytes_transferred)
         {
             boost::ignore_unused(bytes_transferred);
             if(ec)
-                return fail(ec, "write");
+                return fail(ec, "ObjectProxy::onResolveRequestSend");
             mLog.debug("Write succeeded going to read ...");
             // Receive the HTTP response
-            http::async_read(beast::get_lowest_layer(mWebSocketStream), buffer_, mResponse,
+            http::async_read(beast::get_lowest_layer(mWebSocket), buffer_, mResponse,
                              beast::bind_front_handler(
-                                     &Proxy::onResolveRequestRead,
+                                     &ObjectProxy::onResolveRequestRead,
                                      shared_from_this()));
         }
 
         void
-        Proxy::onResolveRequestRead(
+        ObjectProxy::onResolveRequestRead(
                 beast::error_code ec,
                 std::size_t bytes_transferred) {
             boost::ignore_unused(bytes_transferred);
@@ -561,15 +580,15 @@ namespace striboh {
             ResolvedService mySvc = Broker::resolveServiceFromStr(myResponse);
             mUuid = mySvc.second;
             mLog.debug("Resolved uuid={} from {}.", boost::lexical_cast<string>(mUuid), myResponse);
-            if(!mUpgraded) {
+            if(getConnectionStatus()!=EConnectionStatus::K_UPGRADED) {
                 sendUpgradeRequest();
             }
         }
 
         void
-        Proxy::shutdown(beast::error_code &ec) {// Gracefully close the socket
+        ObjectProxy::shutdown(beast::error_code &ec) {// Gracefully close the socket
             // Gracefully close the socket
-            beast::get_lowest_layer(mWebSocketStream).socket().shutdown(tcp::socket::shutdown_both, ec);
+            beast::get_lowest_layer(mWebSocket).socket().shutdown(tcp::socket::shutdown_both, ec);
 
             // not_connected happens sometimes so don't bother reporting it.
             if(ec && ec != beast::errc::not_connected)
@@ -579,34 +598,38 @@ namespace striboh {
         }
 
         void
-        Proxy::onHandshake(beast::error_code ec)
+        ObjectProxy::onHandshake(beast::error_code ec)
         {
             if(ec)
                 return fail(ec, "handshake");
             mLog.debug("Web socket handshake ok.");
-            string myMsg(boost::lexical_cast<string>(mUuid)+':'+mMethodName);
-            writeWebSocketMessage(myMsg);
         }
 
         void
-        Proxy::writeWebSocketMessage(string_view pMsg) {// Send the message
+        InvocationContext::writeWebSocketMessage(string_view pMsg) {// Send the message
             mLog.debug("Writing {} bytes message \"{}\"  to web socket.",
                        pMsg.size(), pMsg );
-            mWebSocketStream.async_write(
+            mObjectProxy.getWebSocket().async_write(
                     net::buffer(pMsg),
                     beast::bind_front_handler(
-                            &Proxy::onWriteWebSocket,
+                            &InvocationContext::onWriteWebSocket,
                             shared_from_this()));
         }
 
         void
-        Proxy::fail(beast::error_code ec, char const* what)
+        ObjectProxy::fail(beast::error_code ec, char const* what)
         {
-            mLog.error("Proxy error {} : {}.",what,ec.message());
+            mLog.error("ObjectProxy error {} : {}.",what,ec.message());
         }
 
-        void Proxy::onWriteWebSocket(beast::error_code ec,
-                                     std::size_t bytes_transferred) {
+        void
+        InvocationContext::fail(beast::error_code ec, char const* what)
+        {
+            mLog.error("ObjectProxy error {} : {}.",what,ec.message());
+        }
+
+        void InvocationContext::onWriteWebSocket(beast::error_code ec,
+                                           std::size_t bytes_transferred) {
             boost::ignore_unused(bytes_transferred);
             if(ec)
                 return fail(ec, "write");
@@ -614,17 +637,17 @@ namespace striboh {
             readWebSocketMessage();
         }
 
-        void Proxy::readWebSocketMessage() {
+        void InvocationContext::readWebSocketMessage() {
             buffer_.clear();
             mLog.debug("Going to read a message into our buffer.");
-            mWebSocketStream.async_read(
+            mObjectProxy.getWebSocket().async_read(
                     buffer_,
                     beast::bind_front_handler(
-                            &Proxy::onReadWebSocket,
+                            &InvocationContext::onReadWebSocket,
                             shared_from_this()));
         }
 
-        void Proxy::onReadWebSocket(beast::error_code ec, std::size_t bytes_transferred) {
+        void InvocationContext::onReadWebSocket(beast::error_code ec, std::size_t bytes_transferred) {
             boost::ignore_unused(bytes_transferred);
             if(ec)
                 return fail(ec, "read");
@@ -633,9 +656,9 @@ namespace striboh {
             mLog.debug("Read {} bytes:\"{}\".",myMsg.size(),myMsg);
             if(myMsg=="close") {
                 // Close the WebSocket connection
-                mWebSocketStream.async_close(websocket::close_code::normal,
-                                             beast::bind_front_handler(
-                                                     &Proxy::onCloseWebSocket,
+                mObjectProxy.getWebSocket().async_close(websocket::close_code::normal,
+                                       beast::bind_front_handler(
+                                                     &InvocationContext::onCloseWebSocket,
                                                      shared_from_this()));
             } else {
                 readWebSocketMessage();
@@ -643,17 +666,18 @@ namespace striboh {
         }
 
         void
-        Proxy::onCloseWebSocket(beast::error_code ec)
+        InvocationContext::onCloseWebSocket(beast::error_code ec)
         {
             if(ec)
-                return fail(ec, "close");
+                return fail(ec, "InvocationContext::onCloseWebSocket");
             mLog.debug("close() -->");
 
             // If we get here then the connection is closed gracefully
 
             // The make_printable() function helps print a ConstBufferSequence
-            std::cout << beast::make_printable(buffer_.data()) << std::endl;
-            mLog.debug("close() <--");
+            std::ostringstream myOstream;
+            myOstream << beast::make_printable(buffer_.data()) << std::endl;
+            mLog.debug("close() <-- rest buffer:{}",myOstream.str());
         }
     }
 }

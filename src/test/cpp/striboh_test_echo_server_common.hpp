@@ -391,14 +391,16 @@ namespace striboh {
                                ParameterList{
                                        {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
                                },
-                               [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
-                                   pOut.add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                               [](const InvocationMessage &pIncoming, Context pCtx) {
+                                   return InvocationMessage(EInvocationType::K_RETURN)
+                                           .add(std::string("Server greats ") + pIncoming.get<std::string>(0));
                                }
                         },
                         Method{"shutdown",
                                ParameterList{},
-                               [](const ParameterValues &pIncoming, ParameterValues &pOut, Context pCtx) {
+                               [](const InvocationMessage &pIncoming, Context pCtx) {
                                    pCtx.getBroker().shutdown();
+                                   return InvocationMessage(EInvocationType::K_RETURN);
                                }
                         }
 

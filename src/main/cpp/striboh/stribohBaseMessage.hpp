@@ -16,23 +16,8 @@ namespace striboh {
     namespace base {
 
         class Signature;
-        class ParameterValues;
+        class InvocationMessage;
 
-        class Message {
-        public:
-            Message();
-
-            Message(const Message&)=default;
-
-            Message(Message&&)=default;
-
-            Message(const Signature&, const ParameterValues& );
-
-            Message& add(const ParameterValues& pValues);
-
-        private:
-            ParameterValues mValues;
-        };
 
     }
 

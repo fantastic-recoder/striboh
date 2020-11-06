@@ -9,18 +9,6 @@
 
 namespace striboh {
     namespace base {
-        Message::Message( const Signature&, const ParameterValues& ){
-
-        }
-
-        Message::Message() {
-
-        }
-
-        Message &Message::add(const ParameterValues& pValues) {
-            mValues.add(pValues);
-            return *this;
-        }
 
     }
 }
