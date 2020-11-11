@@ -388,6 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleBodyNode.hpp"
+#include "stribohBaseEInvocationType.hpp"
 
 namespace striboh::base {
 

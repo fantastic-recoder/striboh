@@ -379,10 +379,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <boost/log/trivial.hpp>
 
+#include "stribohBaseUuid.hpp"
 #include "stribohBaseParameters.hpp"
+#include "stribohBaseEInvocationType.hpp"
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
 
         ParameterList::ParameterList(std::vector<ParameterDesc>) {
 
@@ -391,6 +392,13 @@ namespace striboh {
         InvocationMessage&
         InvocationMessage::add(const std::string& pVal) {
             msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
+            return *this;
+        }
+
+        InvocationMessage&
+        InvocationMessage::add(const Uuid_t& pVal) {
+            msgpack::pack(mPackedBuffer, pVal.data);
             mLastOffset = mPackedBuffer.size();
             return *this;
         }
@@ -431,6 +439,9 @@ namespace striboh {
             msgpack::object_handle myObjHandle;
             msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
             auto myHeaderObj = myObjHandle.get();
+            myHeaderObj.convert(mInstanceId.data);
+            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+            myHeaderObj = myObjHandle.get();
             int myTypeVal;
             myHeaderObj.convert(myTypeVal);
             mType <<= myTypeVal;
@@ -458,5 +469,8 @@ namespace striboh {
             return *this;
         }
 
+    const Uuid_t &InvocationMessage::getInstnceId() const {
+        return mInstanceId;
     }
+
 }

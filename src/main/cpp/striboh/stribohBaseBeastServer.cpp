@@ -400,6 +400,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBeastServer.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseUtils.hpp"
+#include "stribohBaseEInvocationType.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -702,7 +703,7 @@ namespace striboh {
                 if (ec == http::error::end_of_stream)
                     return doCloseHttpStream();
                 if (ec)
-                    return fail(ec, "read");
+                    return fail(ec, "onHttpRead");
                 // Send the response
                 if (handleHttpRequest(std::move(mRequest), mLambda, mBroker,
                                       mWebSocketStream, mTcpStream)) {
@@ -748,19 +749,15 @@ namespace striboh {
                 if (ec == websocket::error::closed)
                     return;
                 if (ec)
-                    fail(ec, "read");
-                string_view myReadStr((const char *) mReadBuffer.data().data(), bytes_transferred);
-                mBroker.getLog().debug("Read {} bytes: {}.", bytes_transferred,
-                                       myReadStr);
-                const size_t theUuidSize = 36;
-                string_view myUuidStr = myReadStr.substr(0, theUuidSize);
-                string_view myMethodStr{string(myReadStr.substr(theUuidSize + 1, bytes_transferred))};
+                    fail(ec, "onWsRead");;
+                InvocationMessage myMsg(EInvocationType::K_METHOD);;
+                myMsg.setBuffer(string_view((const char *) mReadBuffer.data().data(), bytes_transferred));
+                myMsg.unpack();
                 mBroker.getLog().debug("Calling instance \"{}\" method \"{}\".",
-                                       myUuidStr, myMethodStr);
-                Uuid_t myUuid = boost::lexical_cast<Uuid_t>(myUuidStr);
+                                       toString(myMsg.getInstnceId()), myMsg.getMethodName());
                 InvocationMessage myReply = mBroker.invokeMethod(
-                        myUuid,
-                        InvocationMessage{MethodName(myMethodStr)}
+                        myMsg.getInstnceId(),
+                        InvocationMessage{MethodName(myMsg.getMethodName())}
                                 .add(
                                         std::string("Peter!")));
                 static string_view myCloseMsg("close");

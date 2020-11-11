@@ -376,39 +376,22 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#ifndef STRIBOH_BASE_E_INVOCATION_TYPE_HPP
+#define STRIBOH_BASE_E_INVOCATION_TYPE_HPP
 
-#ifndef STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
-#define STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
+#include <cstdint>
 
-#include "striboh/stribohBaseInterface.hpp"
-#include "striboh/stribohBaseEInvocationType.hpp"
+enum class EInvocationType : int32_t {
+    K_METHOD = 1,
+    K_RETURN = 2,
+    K_ERROR = 4,
+    K_UNKNOWN = 0 //< parse error
+};
 
-namespace striboh {
-    namespace base {
-        Interface theEchoServerInterface{
-                {"m0", "m1"} , InterfaceName{"Hello"},
-                {
-                        Method{"echo",
-                               ParameterList{
-                                       {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
-                               },
-                               [](const InvocationMessage &pIncoming, Context pCtx) {
-                                   return InvocationMessage(EInvocationType::K_RETURN)
-                                           .add(std::string("Server greats ") + pIncoming.get<std::string>(0));
-                               }
-                        },
-                        Method{"shutdown",
-                               ParameterList{},
-                               [](const InvocationMessage &pIncoming, Context pCtx) {
-                                   pCtx.getBroker().shutdown();
-                                   return InvocationMessage(EInvocationType::K_RETURN);
-                               }
-                        }
-
-                }
-        };
-
-    }
+inline const EInvocationType &operator<<=(EInvocationType &pType, int pTypeVale) {
+    pType = EInvocationType{pTypeVale};
+    return pType;
 }
 
-#endif //STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
+
+#endif //STRIBOH_BASE_E_INVOCATION_TYPE_HPP

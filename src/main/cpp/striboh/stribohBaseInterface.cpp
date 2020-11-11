@@ -380,8 +380,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseInterface.hpp"
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
         Interface::Interface
         (
                 std::initializer_list<std::string> pPath,
@@ -393,7 +392,7 @@ namespace striboh {
         mName{pName},
         mMethods{pMethodList}
         {
-            BOOST_LOG_TRIVIAL(debug) << "We have " << mMethods.size() << ".";
+            BOOST_LOG_TRIVIAL(debug) << mName.get() << " service has " << mMethods.size() << " methods.";
         }
 
         Interface::Methods_t::iterator
@@ -417,4 +416,3 @@ namespace striboh {
         }
 
     }
-}

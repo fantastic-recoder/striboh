@@ -389,20 +389,22 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <msgpack.hpp>
 #include <variant>
 
+#include "stribohBaseUuid.hpp"
 #include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
 #include "stribohBaseMethodName.hpp"
+#include "stribohBaseEInvocationType.hpp"
 
 
 namespace striboh::base {
 
     class ParameterDesc {
-        const EDir mDir;
+        const EDirection mDir;
         const ETypes mType;
         const std::string_view mName;
     public:
-        ParameterDesc(const EDir pDir, const ETypes pType, const std::string_view pName) : mDir(pDir), mType(pType),
-                                                                                           mName(pName) {}
+        ParameterDesc(const EDirection pDir, const ETypes pType, const std::string_view pName) : mDir(pDir), mType(pType),
+                                                                                                 mName(pName) {}
     };
 
     class ParameterList {
@@ -412,33 +414,23 @@ namespace striboh::base {
         explicit ParameterList(std::vector<ParameterDesc>);
     };
 
-    enum class EInvocationType : std::int32_t {
-        K_METHOD = 1,
-        K_RETURN = 2,
-        K_ERROR = 4,
-        K_UNKNOWN = 0 //< parse error
-    };
 
-    inline const EInvocationType &operator<<=(EInvocationType &pType, int pTypeVale) {
-        pType = EInvocationType{pTypeVale};
-        return pType;
-    }
-
+    constexpr const size_t K_UUID_SZ = sizeof(Uuid_t);
 
     class InvocationMessage {
     public:
         typedef std::variant<int, std::string> Parameter_t;
         typedef std::vector<Parameter_t> ParameterList_t;
 
+
     private:
         MethodName mMethod;
         EInvocationType mType;
-
-    private:
         bool mIsUnpacked = false;
         size_t mPackedCount = 0L;
         size_t mLastOffset = 0L;
         ParameterList_t mValues;
+        Uuid_t mInstanceId;
         Buffer mPackedBuffer;
 
     public:
@@ -456,6 +448,7 @@ namespace striboh::base {
                 mType{pType},
                 mMethod{std::move("n/a")}
         {
+            add(mInstanceId);
             add(mType);
             add(mMethod.get());
         }
@@ -465,6 +458,7 @@ namespace striboh::base {
                 mType{EInvocationType::K_METHOD},
                 mMethod{std::move(pMethodName)}
         {
+            add(mInstanceId);
             add(mType);
             add(mMethod.get());
         }
@@ -529,6 +523,14 @@ namespace striboh::base {
             return *this;
         }
 
+        InvocationMessage &setBuffer(std::string_view pBuffer) {
+            mValues.clear();
+            mPackedBuffer.resize(pBuffer.size());
+            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
+            mIsUnpacked = true;
+            return *this;
+        }
+
         EInvocationType getType() const {
             return mType;
         }
@@ -540,6 +542,10 @@ namespace striboh::base {
         void unpackHeader(const size_t myBufLength, size_t &aOff);
 
         const std::string& getMethodName() { return mMethod.get(); }
+
+        InvocationMessage &add(const Uuid_t &pVal);
+
+        const Uuid_t &getInstnceId() const;
     };
 
 }

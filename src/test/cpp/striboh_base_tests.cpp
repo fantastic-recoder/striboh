@@ -398,6 +398,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseLogBoostImpl.hpp>
 #include <striboh/stribohBaseUtils.hpp>
 #include <striboh/stribohBaseClient.hpp>
+#include <striboh/stribohBaseEInvocationType.hpp>
 
 #include "striboh_test_echo_server_common.hpp"
 
@@ -521,7 +522,7 @@ Interface createTestInterface() {
             {
                     Method{"echo",
                            ParameterList{
-                                   {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                                   {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const InvocationMessage &pIncoming, Context pCtx) -> InvocationMessage {
                                InvocationMessage myReturn(EInvocationType::K_RETURN);
@@ -599,7 +600,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             {
                     Method{"echo",
                            ParameterList{
-                                   {ParameterDesc{EDir::K_IN, ETypes::K_STRING, "p0"}}
+                                   {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const InvocationMessage &pIncoming, Context pCtx) -> InvocationMessage {
                                return InvocationMessage(EInvocationType::K_RETURN)

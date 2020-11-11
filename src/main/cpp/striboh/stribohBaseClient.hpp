@@ -409,8 +409,11 @@ namespace striboh {
         class HostConnection;
 
         enum class EConnectionStatus {
-            K_CONNECTED,
+            K_INITIAL,
+            K_RESOLVING,
             K_RESOLVED,
+            K_CONNECTING,
+            K_CONNECTED,
             K_UPGRADED
         };
 
@@ -459,6 +462,7 @@ namespace striboh {
             net::io_context mIoContext;
             LogIface &mLog;
             tcp::resolver mResolver;
+            tcp::resolver::results_type mTcpResolverResult;
             WebSocket mWebSocket;
             http::request<http::empty_body> mRequest;
             http::response<http::string_body> mResponse;
@@ -481,7 +485,8 @@ namespace striboh {
                     mBaseUrl(std::move(pPath)), //< base url
                     mLog(pLog), //< log
                     mResolver(net::make_strand(mIoContext)), //
-                    mWebSocket(net::make_strand(mIoContext)) //
+                    mWebSocket(net::make_strand(mIoContext)), //
+                    mConnectionStatus(EConnectionStatus::K_INITIAL)
             {}
 
             const WebSocket &getWebSocket() const {
@@ -501,7 +506,10 @@ namespace striboh {
             }
 
             bool
-            isConnected() const {
+            isConnected() {
+                if(mConnectionStatus==EConnectionStatus::K_INITIAL) {
+                    doTcpResolveAntConnect();
+                }
                 return mConnectionStatus==EConnectionStatus::K_CONNECTED;
             }
 
@@ -511,9 +519,9 @@ namespace striboh {
         private:
 
             void
-            doConnect(
+            onResolve(
                     beast::error_code ec,
-                    tcp::resolver::results_type results);
+                    tcp::resolver::results_type pResults);
 
             void
             onConnect(
@@ -521,12 +529,12 @@ namespace striboh {
                     tcp::resolver::results_type::endpoint_type);
 
             void
-            onResolveRequestSend(
+            onGetInstanceSend(
                     beast::error_code ec,
                     std::size_t bytes_transferred);
 
             void
-            onResolveRequestRead(
+            onGetInstanceResponse(
                     beast::error_code ec,
                     std::size_t bytes_transferred);
 
@@ -534,15 +542,17 @@ namespace striboh {
             void fail(beast::error_code ec, char const *what);
 
             /// Send the HTTP request to the remote host.
-            void doSendResolveRequest();
+            void sendGetInstanceRequest();
 
             void shutdown(beast::error_code &ec);
 
             void sendUpgradeRequest();
 
-            void onHandshake(beast::error_code ec);
+            void onUpgradeHandshake(beast::error_code ec);
 
-            void doResolve();
+            void doTcpResolveAntConnect();
+
+            void doConnect();
         };
 
         class HostConnection {
@@ -550,14 +560,14 @@ namespace striboh {
             std::string mHost;
             unsigned short mPort;
             std::string mPortStr;
-            boost::shared_ptr<ObjectProxy> mProxyPtr;
+            std::shared_ptr<ObjectProxy> mProxyPtr;
         private:
             int mVersion = 11;
 
         public:
             HostConnection(std::string_view pHost, unsigned short pPort, LogIface &pLog);
 
-            boost::shared_ptr<ObjectProxy>
+            std::shared_ptr<ObjectProxy>
             createProxyFor(std::string_view pPath);
 
             LogIface &getLog() const {

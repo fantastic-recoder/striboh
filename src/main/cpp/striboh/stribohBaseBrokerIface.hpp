@@ -384,18 +384,16 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <atomic>
 #include <string>
 #include <future>
-#include <boost/uuid/uuid.hpp>
 #include <NamedType/named_type.hpp>
 
-#include "stribohBaseParameters.hpp"
+#include "stribohBaseUuid.hpp"
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseEServerState.hpp"
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
 
         enum class EResolveResult {
             NOT_FOUND,
@@ -425,7 +423,6 @@ namespace striboh {
             Interfaces mInterfaces;
         };
 
-        using Uuid_t = boost::uuids::uuid;
 
         using ResolvedService = std::pair<bool,Uuid_t>;
 
@@ -490,6 +487,5 @@ namespace striboh {
             std::shared_ptr<ServerIface> mServerIface;
         };
     }
-}
 
 #endif //STRIBOH_BASE_BROKER_IFACE_HPP

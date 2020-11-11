@@ -376,39 +376,24 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#ifndef STRIBOH_BASE_UUID_HPP
+#define STRIBOH_BASE_UUID_HPP
 
-#ifndef STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
-#define STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
+#include <string>
+#include <sstream>
 
-#include "striboh/stribohBaseInterface.hpp"
-#include "striboh/stribohBaseEInvocationType.hpp"
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
-namespace striboh {
-    namespace base {
-        Interface theEchoServerInterface{
-                {"m0", "m1"} , InterfaceName{"Hello"},
-                {
-                        Method{"echo",
-                               ParameterList{
-                                       {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
-                               },
-                               [](const InvocationMessage &pIncoming, Context pCtx) {
-                                   return InvocationMessage(EInvocationType::K_RETURN)
-                                           .add(std::string("Server greats ") + pIncoming.get<std::string>(0));
-                               }
-                        },
-                        Method{"shutdown",
-                               ParameterList{},
-                               [](const InvocationMessage &pIncoming, Context pCtx) {
-                                   pCtx.getBroker().shutdown();
-                                   return InvocationMessage(EInvocationType::K_RETURN);
-                               }
-                        }
+namespace striboh::base {
 
-                }
-        };
+    using Uuid_t = boost::uuids::uuid;
 
+    inline std::string toString(const Uuid_t& pUuid) {
+        std::ostringstream aOstream;
+        aOstream << pUuid;
+        return aOstream.str();
     }
 }
 
-#endif //STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
+#endif //STRIBOH_BASE_UUID_HPP

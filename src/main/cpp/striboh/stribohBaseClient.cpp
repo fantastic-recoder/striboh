@@ -388,6 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseBroker.hpp"
+#include "stribohBaseEInvocationType.hpp"
 
 namespace striboh {
     namespace base {
@@ -399,9 +400,9 @@ namespace striboh {
         : mHost(pHost), mPort(pPort), mLog(pLog), mPortStr(boost::lexical_cast<std::string>(mPort))
         {}
 
-        boost::shared_ptr<ObjectProxy>
+        std::shared_ptr<ObjectProxy>
         HostConnection::createProxyFor(std::string_view pPath) {
-            mProxyPtr=boost::make_shared<ObjectProxy>(*this, pPath, mLog);
+            mProxyPtr=std::make_shared<ObjectProxy>(*this, pPath, mLog);
             return mProxyPtr;
         }
 
@@ -414,8 +415,13 @@ namespace striboh {
         std::shared_ptr<InvocationContext>
         ObjectProxy::invokeMethod(InvocationMessage pValues)
         {
+            if(getConnectionStatus()==EConnectionStatus::K_INITIAL) {
+                doTcpResolveAntConnect();
+                mIoContext.run();
+            }
             auto myInvocationContext = std::make_shared<InvocationContext>
                     (*this,mIoContext,pValues,mLog);
+            myInvocationContext->startInvocation();
             return myInvocationContext;
         }
 
@@ -452,36 +458,45 @@ namespace striboh {
         }
 
         void
-        ObjectProxy::doResolve() {
+        ObjectProxy::doTcpResolveAntConnect() {
+            mConnectionStatus=EConnectionStatus::K_RESOLVING;
             mLog.debug("Going to resolve {}:{}...",mClient.getHost(),mClient.getPortStr());
             // Look up the domain name
-            if(!isConnected()) {
-                mResolver.async_resolve(
-                        mClient.getHost().c_str(),
-                        mClient.getPortStr().c_str(),
-                        beast::bind_front_handler(
-                                &ObjectProxy::doConnect,
-                                shared_from_this()
-                        )
-                );
-                mLog.debug("Going to run io_context 4 connect.");
-                mIoContext.run();
-            }
+            mResolver.async_resolve(
+                    mClient.getHost().c_str(),
+                    mClient.getPortStr().c_str(),
+                    beast::bind_front_handler(
+                            &ObjectProxy::onResolve,
+                            shared_from_this()
+                    )
+            );
+            mLog.debug("Going to run io_context 4 connect.");
+            mIoContext.run();
         }
 
         void
-        ObjectProxy::doConnect(
+        ObjectProxy::onResolve(
                 beast::error_code ec,
-                tcp::resolver::results_type results)
+                tcp::resolver::results_type pResults)
         {
             if(ec)
                 return fail(ec, "resolve");
+            mTcpResolverResult = pResults;
+            mConnectionStatus=EConnectionStatus::K_RESOLVED;
+            mLog.debug("TCP Resolved.");
+            doConnect();
+        }
+
+        void
+        ObjectProxy::doConnect()
+        {
+            mLog.debug("Going to connect ...");
+            mConnectionStatus=EConnectionStatus::K_CONNECTING;
             // Set a timeout on the operation
             beast::get_lowest_layer(mWebSocket).expires_after(std::chrono::seconds(30));
-            mLog.debug("Resolved, going to connect ...");
             // Make the connection on the IP address we get from a lookup
             beast::get_lowest_layer(mWebSocket).async_connect(
-                    results,
+                    mTcpResolverResult,
                     beast::bind_front_handler(
                             &ObjectProxy::onConnect,
                             shared_from_this()));
@@ -494,11 +509,11 @@ namespace striboh {
                 return fail(ec, "ObjectProxy::onConnect");
             }
             mConnectionStatus=EConnectionStatus::K_CONNECTED;
-            doSendResolveRequest();
+            sendGetInstanceRequest();
         }
 
         void
-        ObjectProxy::doSendResolveRequest() {
+        ObjectProxy::sendGetInstanceRequest() {
             // Set up an HTTP GET request message
             mRequest.version(mClient.getVersion() );
             mRequest.method(http::verb::get);
@@ -511,7 +526,7 @@ namespace striboh {
             http::async_write(beast::get_lowest_layer(mWebSocket),
                               mRequest,
                               beast::bind_front_handler(
-                                      &ObjectProxy::onResolveRequestSend,
+                                      &ObjectProxy::onGetInstanceSend,
                                       shared_from_this()));
         }
 
@@ -543,7 +558,7 @@ namespace striboh {
             // Perform the websocket handshake
             mWebSocket.async_handshake(mWebSocketUrl, mBaseUrl + "?upgrade",
                                        beast::bind_front_handler(
-                                        &ObjectProxy::onHandshake,
+                                               &ObjectProxy::onUpgradeHandshake,
                                         shared_from_this()));
 
             mLog.debug("sending upgrade request.");
@@ -552,28 +567,28 @@ namespace striboh {
 
 
         void
-        ObjectProxy::onResolveRequestSend(
+        ObjectProxy::onGetInstanceSend(
                 beast::error_code ec,
                 std::size_t bytes_transferred)
         {
             boost::ignore_unused(bytes_transferred);
             if(ec)
-                return fail(ec, "ObjectProxy::onResolveRequestSend");
+                return fail(ec, "ObjectProxy::onGetInstanceSend");
             mLog.debug("Write succeeded going to read ...");
             // Receive the HTTP response
             http::async_read(beast::get_lowest_layer(mWebSocket), buffer_, mResponse,
                              beast::bind_front_handler(
-                                     &ObjectProxy::onResolveRequestRead,
+                                     &ObjectProxy::onGetInstanceResponse,
                                      shared_from_this()));
         }
 
         void
-        ObjectProxy::onResolveRequestRead(
+        ObjectProxy::onGetInstanceResponse(
                 beast::error_code ec,
                 std::size_t bytes_transferred) {
             boost::ignore_unused(bytes_transferred);
             if (ec)
-                return fail(ec, "read");
+                return fail(ec, "ObjectProxy::onGetInstanceResponse");
             mLog.debug("Read succeeded going to upgrade ...");
             string myResponse(mResponse.body());
             // Write the message to standard out
@@ -598,11 +613,11 @@ namespace striboh {
         }
 
         void
-        ObjectProxy::onHandshake(beast::error_code ec)
+        ObjectProxy::onUpgradeHandshake(beast::error_code ec)
         {
             if(ec)
-                return fail(ec, "handshake");
-            mLog.debug("Web socket handshake ok.");
+                return fail(ec, "ObjectProxy::onUpgradeHandshake");
+            mLog.debug("ObjectProxy::onUpgradeHandshake ok.");
         }
 
         void

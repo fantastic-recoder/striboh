@@ -388,8 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseMethod.hpp"
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
 
         class Broker;
         class Context;
@@ -439,6 +438,5 @@ namespace striboh {
         static const constexpr char *const K_SVC_UUID = "svc.uuid";
 
     }
-}
 
 #endif //STRIBOH_BASE_INTERFACE_HPP
