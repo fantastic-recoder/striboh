@@ -390,6 +390,14 @@ namespace striboh {
             return size();
         }
 
+        size_t OverwriteBuffer::write(const char * pSrc, std::size_t pSize) {
+            if(pSize > mOverwriteBuffer.size()) {
+                mOverwriteBuffer.resize(pSize);
+            }
+            std::copy(pSrc,pSrc+pSize,mOverwriteBuffer.data()+mOffset);
+            mOffset += pSize;
+            return mOffset;
+        }
     }
 }
 

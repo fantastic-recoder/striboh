@@ -376,8 +376,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_STRIBOHBASESIGNATURE_HPP
-#define STRIBOH_STRIBOHBASESIGNATURE_HPP
+#ifndef STRIBOH_BASE_SIGNATURE_HPP
+#define STRIBOH_BASE_SIGNATURE_HPP
 
 namespace striboh::base {
 
@@ -397,4 +397,4 @@ namespace striboh::base {
 }
 
 
-#endif //STRIBOH_STRIBOHBASESIGNATURE_HPP
+#endif //STRIBOH_BASE_SIGNATURE_HPP

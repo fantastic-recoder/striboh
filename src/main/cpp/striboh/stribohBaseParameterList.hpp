@@ -376,25 +376,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-
-#ifndef STRIBOH_BASE_PARAMETERS_HPP
-#define STRIBOH_BASE_PARAMETERS_HPP
+#ifndef STRIBOH_BASE_PARAMETER_LIST_HPP
+#define STRIBOH_BASE_PARAMETER_LIST_HPP
 
 #include <string>
-#include <vector>
-#include <variant>
-#include <algorithm>
-#include <cstddef>
-
-#include <msgpack.hpp>
-#include <variant>
-
-#include "stribohBaseUuid.hpp"
-#include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
-#include "stribohBaseMethodName.hpp"
-#include "stribohBaseEInvocationType.hpp"
-
 
 namespace striboh::base {
 
@@ -403,8 +389,9 @@ namespace striboh::base {
         const ETypes mType;
         const std::string_view mName;
     public:
-        ParameterDesc(const EDirection pDir, const ETypes pType, const std::string_view pName) : mDir(pDir), mType(pType),
-                                                                                                 mName(pName) {}
+        ParameterDesc(const EDirection pDir, const ETypes pType,
+                      const std::string_view pName) : mDir(pDir), mType(pType),
+                                                      mName(pName) {}
     };
 
     class ParameterList {
@@ -414,140 +401,17 @@ namespace striboh::base {
         explicit ParameterList(std::vector<ParameterDesc>);
     };
 
-
-    constexpr const size_t K_UUID_SZ = sizeof(Uuid_t);
-
-    class InvocationMessage {
-    public:
-        typedef std::variant<int, std::string> Parameter_t;
-        typedef std::vector<Parameter_t> ParameterList_t;
-
-
-    private:
-        MethodName mMethod;
-        EInvocationType mType;
-        bool mIsUnpacked = false;
-        size_t mPackedCount = 0L;
-        size_t mLastOffset = 0L;
-        ParameterList_t mValues;
-        Uuid_t mInstanceId;
-        Buffer mPackedBuffer;
-
-    public:
-        void
-        unpackString(msgpack::object &pObjectHandle);
-
-        void
-        unpackInt(msgpack::object &pObjectHandle);
-
-
-        InvocationMessage() = delete;
-
-        explicit
-        InvocationMessage(EInvocationType pType):
-                mType{pType},
-                mMethod{std::move("n/a")}
-        {
-            add(mInstanceId);
-            add(mType);
-            add(mMethod.get());
-        }
-
-        explicit
-        InvocationMessage(MethodName &&pMethodName):
-                mType{EInvocationType::K_METHOD},
-                mMethod{std::move(pMethodName)}
-        {
-            add(mInstanceId);
-            add(mType);
-            add(mMethod.get());
-        }
-
-        template<typename ParVal0, typename... ParVal_t>
-        InvocationMessage &
-        add(ParVal0 pVal0, ParVal_t... pValues) {
-            add(pVal0);
-            add(pValues...);
-            mPackedCount++;
-            return *this;
-        }
-
-        InvocationMessage &
-        add(const std::string &pVal);
-
-        InvocationMessage &
-        add(const MethodName &pVal) {
-            return add(pVal.get());
-        }
-
-        InvocationMessage &
-        add(std::string_view &&pVal);
-
-        InvocationMessage &
-        add(const char* const pVal);
-
-        InvocationMessage &
-        add(int pVal);
-
-        InvocationMessage &
-        add(EInvocationType pVal) {
-            return add(int(pVal));
-        }
-
-        void
-        unpack();
-
-        template<typename T>
-        T
-        get(size_t pIdx) const {
-            return std::get<T>(mValues[pIdx]);
-        }
-
-        size_t
-        size() const {
-            return mValues.size();
-        }
-
-        bool
-        unpacked() const {
-            return mIsUnpacked;
-        }
-
-        const Buffer &getBuffer() const { return mPackedBuffer; }
-
-        InvocationMessage &setBuffer(const Buffer &pBuffer) {
-            mValues.clear();
-            mPackedBuffer.resize(pBuffer.size());
-            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
-            mIsUnpacked = true;
-            return *this;
-        }
-
-        InvocationMessage &setBuffer(std::string_view pBuffer) {
-            mValues.clear();
-            mPackedBuffer.resize(pBuffer.size());
-            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
-            mIsUnpacked = true;
-            return *this;
-        }
-
-        EInvocationType getType() const {
-            return mType;
-        }
-
-        void setType(EInvocationType pType) {
-            mType = pType;
-        }
-
-        void unpackHeader(const size_t myBufLength, size_t &aOff);
-
-        const std::string& getMethodName() { return mMethod.get(); }
-
-        InvocationMessage &add(const Uuid_t &pVal);
-
-        const Uuid_t &getInstnceId() const;
-    };
-
 }
+#include <string>
+#include <vector>
+#include <variant>
+#include <algorithm>
+#include <cstddef>
+#include <msgpack.hpp>
+#include "stribohBaseInstanceId.hpp"
+#include "stribohBaseBuffer.hpp"
+#include "stribohBaseSignature.hpp"
+#include "stribohBaseMethodName.hpp"
+#include "stribohBaseEInvocationType.hpp"
 
-#endif //STRIBOH_BASE_PARAMETERS_HPP
+#endif //STRIBOH_BASE_PARAMETER_LIST_HPP

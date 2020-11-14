@@ -386,7 +386,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <future>
 #include <NamedType/named_type.hpp>
 
-#include "stribohBaseUuid.hpp"
+#include "stribohBaseInstanceId.hpp"
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseServerIface.hpp"
@@ -424,7 +424,7 @@ namespace striboh::base {
         };
 
 
-        using ResolvedService = std::pair<bool,Uuid_t>;
+        using ResolvedService = std::pair<bool,InstanceId>;
 
         struct BrokerIface {
 
@@ -439,8 +439,8 @@ namespace striboh::base {
                 return mLogIface;
             }
 
-            static Uuid_t
-            generateUuid();
+            static InstanceId
+            generateInstanceId();
 
             virtual void
             initialize() = 0;
@@ -452,9 +452,9 @@ namespace striboh::base {
             shutdown() = 0;
 
             virtual InvocationMessage
-            invokeMethod(const Uuid_t& pInstanceId, InvocationMessage pInvocation) = 0;
+            invokeMethod(const InstanceId& pInstanceId, InvocationMessage pInvocation) = 0;
 
-            virtual Uuid_t
+            virtual InstanceId
             addServant(Interface& pMethodSignature) = 0;
 
             virtual ResolvedResult

@@ -377,290 +377,101 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <thread>
+#include <boost/log/trivial.hpp>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/uuid/uuid_io.hpp>
-
-#include "stribohBaseBroker.hpp"
-#include "stribohBaseInterface.hpp"
-#include "stribohBaseBrokerIface.hpp"
-#include "stribohIdlAstModuleNode.hpp"
-#include "stribohIdlAstModuleBodyNode.hpp"
+#include "stribohBaseInstanceId.hpp"
+#include "stribohBaseInvocationMessage.hpp"
 #include "stribohBaseEInvocationType.hpp"
 
 namespace striboh::base {
 
-    using std::string;
-    using std::string_view;
-    using ::striboh::idl::ast::ModuleNode;
-    using ::striboh::idl::ast::ModuleListNode;
-    using ::striboh::idl::ast::InterfaceNode;
-    using ::striboh::idl::ast::IdentifierNode;
-    using ::striboh::idl::ast::ModuleBodyNode;
+    InvocationMessage&
+        InvocationMessage::add(const std::string& pVal) {
+            msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
+            return *this;
+        }
 
-    namespace pt = boost::property_tree;
+        InvocationMessage&
+        InvocationMessage::add(const InstanceId& pVal) {
+            msgpack::pack(mPackedBuffer, pVal.data);
+            mLastOffset = mPackedBuffer.size();
+            return *this;
+        }
 
-    const std::atomic<EServerState> &
-    Broker::serve() {
-        if (getState() != EServerState::K_NOMINAL) {
-            getLog().warn("ORB is not ready.");
-        } else {
-            setState(EServerState::K_STARTING);
-            mReceiver = std::async(std::launch::async, [this]() -> void { std::launch::async, this->dispatch(); });
-            if (getServer()) {
-                getLog().debug("We have a server attached, going to run it.");
-                getServer()->run();
-                getLog().debug("Server is running.");
-            }
-            int myCounter = 0;
-            do {
-                if (++myCounter % 100 == 0) {
-                    getLog().debug("Waiting for main servant. state = {}",
-                                   toString(getState()));
+        InvocationMessage &InvocationMessage::add(std::string_view&& pVal) {
+            msgpack::pack(mPackedBuffer, std::move(pVal));
+            mLastOffset = mPackedBuffer.size();
+            return *this;
+        }
+
+        InvocationMessage &
+        InvocationMessage::add(const int pVal) {
+            msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
+            return *this;
+        }
+
+        void InvocationMessage::unpack() {
+            // now starts streaming deserialization.
+            const std::size_t myBufLength=mPackedBuffer.size();
+            std::size_t aOff = 0;
+            unpackHeader(myBufLength, aOff);
+            msgpack::object_handle myObjHandle;
+            while (aOff != myBufLength) {
+                msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+                auto myObj = myObjHandle.get();
+                if( myObj.type == msgpack::type::STR ) {
+                    unpackString( myObj );
+                } else if( myObj.type == msgpack::type::POSITIVE_INTEGER || myObj.type == msgpack::type::NEGATIVE_INTEGER ) {
+                    unpackInt( myObj );
                 }
-                mReceiver.wait_for(std::chrono::duration<int, std::milli>(100));
-            } while (getState() != EServerState::K_STARTED);
+            };
+            mIsUnpacked = true;
         }
-        return getState();
-    }
 
-    void
-    Broker::dispatch() {
-        do {
-            setState(EServerState::K_STARTED);
-            getLog().debug("Going to sleep. state = {}", toString(getState()));
-            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(20 * 1000));
-        } while (getState() == EServerState::K_STARTED);
-        getLog().info("Shutdown completed. state = {}", toString(getState()));
-    }
-
-    std::future<void>
-    Broker::shutdown() {
-        if (getState() == EServerState::K_STARTED) {
-            return std::async(std::launch::async,
-                              [this]() -> void { this->doShutdown(); });
-        } else {
-            getLog().warn("ORB is not started.");
+        void
+        InvocationMessage::unpackHeader(const size_t myBufLength, size_t &aOff) {
+            msgpack::object_handle myObjHandle;
+            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+            auto myHeaderObj = myObjHandle.get();
+            myHeaderObj.convert(mInstanceId.data);
+            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+            myHeaderObj = myObjHandle.get();
+            int myTypeVal;
+            myHeaderObj.convert(myTypeVal);
+            mType <<= myTypeVal;
+            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+            myHeaderObj = myObjHandle.get();
+            myHeaderObj.convert(mMethod.get());
         }
-        return std::future<void>();
-    }
 
-    void Broker::doShutdown() {
-        EServerState myShutdownStateWas=getState();
-        setState(EServerState::K_SHUTTING_DOWN);
-        getLog().info("Going to shutdown. state = {}", toString(getState()));
-        if (myShutdownStateWas != EServerState::K_NOMINAL) {
-            mReceiver.wait();
+        void
+        InvocationMessage::unpackString(msgpack::object& pObj ) {
+            std::string myVal;
+            pObj.convert(myVal);
+            mValues.push_back(myVal);
         }
-        if (getServer()) {
-            getLog().debug("We have a server attached, going to shutdown it.");
-            getServer()->shutdown();
-            getLog().debug("Server shut down.");
+
+        void InvocationMessage::unpackInt(msgpack::object &pObj ) {
+            int myIntVal;
+            pObj.convert(myIntVal);
+            mValues.push_back(myIntVal);
         }
-        setState(EServerState::K_NOMINAL);
-        getLog().info("ORB shut down. state = {}", toString(getState()));
-    }
 
-    void
-    Broker::initialize() {
-
-    }
-
-    InvocationMessage
-    Broker::invokeMethod(const InstanceId &pInstanceId, InvocationMessage pValues) {
-        getLog().debug("Calling instance \"{}\" method \"{}\".",
-                               toString(pInstanceId), pValues.getMethodName());
-        auto myInterfaceIt = mInstances.find(pInstanceId);
-        if (myInterfaceIt != mInstances.end()) {
-            auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
-            if (myMethodIt != myInterfaceIt->second.end()) {
-                if (!pValues.unpacked()) {
-                    pValues.unpack();
-                }
-                return myMethodIt->invoke(pValues, Context(*this));
-            }
-        } else {
-            getLog().error("Did not find instance \"{}\"", toString(pInstanceId));
+        InvocationMessage &InvocationMessage::add(const char *const pVal) {
+            msgpack::pack(mPackedBuffer, pVal);
+            mLastOffset = mPackedBuffer.size();
+            return *this;
         }
-        InvocationMessage myRetVal(EInvocationType::K_ERROR);
-        // send the buffer over and retrieve the result
-        getLog().error("Did not find method {} on instance \"{}\".",
-                       pValues.getMethodName(), toString(pInstanceId));
-        return myRetVal;
+
+    const InstanceId &InvocationMessage::getInstanceId() const {
+        return mInstanceId;
     }
 
-    InstanceId
-    Broker::addServant(Interface &pInterface) {
-        InstanceId myUuid = generateInstanceId();
-        auto myPair = mInstances.try_emplace(myUuid, pInterface);
-        ModuleListNode *myChildModules = &mRoot.getModules();
-        ModuleBodyNode *myModuleBodyNode = nullptr;
-        for (string myModuleName : myPair.first->second.getPath()) {
-            myModuleBodyNode = addServantModule(myChildModules, myModuleName);
-            myChildModules = &myModuleBodyNode->getModules();
-        }
-        myModuleBodyNode->getInterfaces().emplace_back(
-                InterfaceNode(IdentifierNode(pInterface.getName().get()), myUuid));
-        return myUuid;
+    void InvocationMessage::setInstanceId( const InstanceId& pUuid) {
+        OverwriteBuffer myOverBuffer(mPackedBuffer);
+        msgpack::pack(myOverBuffer,pUuid.data);
     }
 
-    idl::ast::ModuleBodyNode *const
-    Broker::addServantModule(ModuleListNode *const myChildNodes, string &mDir) const {
-        auto myBegin = myChildNodes->begin();
-        auto myEnd = myChildNodes->end();
-        auto myFound = find_if(myBegin, myEnd, [&myDir = std::as_const(mDir)](const auto &pDirNode) -> bool {
-            if (myDir == pDirNode.getIdentifierStr())
-                return true;
-            return false;
-        });
-        if (myFound == myEnd) {
-            myChildNodes->emplace_back(ModuleNode(mDir));
-            ModuleNode &myNewNode = myChildNodes->back();
-            return &myNewNode.getModuleBody();
-        }
-        return &myFound->getModuleBody();
-    }
-
-    const ModuleNode *
-    Broker::resolveSubNodes
-            (
-                    PathIterator &pSegmentPtr,
-                    PathIterator pSegmentEnd,
-                    ResolvedResult &pRetVal,
-                    const ModuleListNode &pModuleListNode
-            )
-    const {
-        if (pSegmentPtr == pSegmentEnd) {
-            return nullptr;
-        }
-        for (const ModuleNode &myCurrentModule : pModuleListNode) {
-            if (myCurrentModule.getValueStr() == pSegmentPtr->get()) {
-                // if this is the last
-                ++pSegmentPtr;
-                if (pSegmentPtr == pSegmentEnd) {
-                    addSubmodulesToResult(pRetVal, myCurrentModule.getModuleBody());
-                    return &myCurrentModule;
-                } else {
-                    for (const auto &mySubNodeRef : pModuleListNode) {
-                        auto myModule = resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal,
-                                                        mySubNodeRef.getModuleBody().getModules());
-                        if (myModule) {
-                            return myModule;
-                        }
-                    }
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    void
-    Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleListNode &pModules) const {
-        pRetVal.mResult = EResolveResult::OK;
-        for (const auto &mySubNodeRef : pModules) {
-            pRetVal.mModules.emplace(PathSegment(mySubNodeRef.getValueStr()));
-        }
-    }
-
-    void
-    Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleBodyNode &pModule) const {
-        addSubmodulesToResult(pRetVal, pModule.getModules());
-        for (const auto &myInterface : pModule.getInterfaces()) {
-            pRetVal.mInterfaces.emplace(InterfaceName(myInterface.getName()));
-        }
-    }
-
-    ResolvedResult
-    Broker::resolve(std::string_view pPath) const {
-        ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
-        Path myPathToResolve;
-        if (pPath == K_SEPARATOR) {
-            addSubmodulesToResult(myRetVal, mRoot.getModules());
-        } else {
-            myPathToResolve = split(pPath, K_SEPARATOR);
-            auto mySubmodules = mRoot.getModules();
-            auto myPathBegin = myPathToResolve.get().begin();
-            resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
-        }
-        return myRetVal;
-    }
-
-    Path Broker::split(std::string_view pPathStr, std::string_view pSeparator) {
-        Path myRetVal;
-        while (!pPathStr.empty()) {
-            auto mySegIdx = pPathStr.find(pSeparator);
-            if (mySegIdx == string::npos) {
-                myRetVal.get().emplace_back(string(pPathStr));
-                break;
-            } else {
-                if (mySegIdx > 1) {
-                    myRetVal.get()
-                            .emplace_back(string(pPathStr.substr(0, mySegIdx)));
-                }
-            }
-            if (mySegIdx < pPathStr.size() - 1) {
-                pPathStr = pPathStr.substr(++mySegIdx);
-            } else break;
-        }
-        return myRetVal;
-    }
-
-    static const constexpr InstanceId theNullUuid{0};
-    static const constexpr ResolvedService theNullService{false, theNullUuid};
-
-    ResolvedService
-    Broker::resolveService(std::string_view pPath) const {
-        ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
-        Path myPathToResolve = split(pPath, K_SEPARATOR);
-        if (myPathToResolve.get().empty()) {
-            return theNullService;
-        }
-        PathSegment myInterfaceName{myPathToResolve.get().back()};
-        myPathToResolve.get().pop_back();
-        auto mySubmodules = mRoot.getModules();
-        auto myPathBegin = myPathToResolve.get().begin();
-        auto myModulePtr = resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
-        if (myModulePtr == nullptr) {
-            return theNullService;
-        }
-        return resolveService(myInterfaceName, *myModulePtr);
-    }
-
-    ResolvedService
-    Broker::resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode &pNode) {
-        for (auto &myInterface: pNode.getModuleBody().getInterfaces()) {
-            if (myInterface.getName() == pInterfaceName.get()) {
-                ResolvedService myFoundService(true, myInterface.getUuid());
-                return myFoundService;
-            }
-        }
-        return theNullService;
-    }
-
-    std::string
-    Broker::resolveServiceToStr(std::string_view pPath) const {
-        ResolvedService mySvc = resolveService(pPath);
-        pt::ptree myPt;
-        myPt.put(K_SVC_PATH, pPath);
-        myPt.put(K_SVC_RESULT, mySvc.first);
-        myPt.put(K_SVC_UUID, mySvc.second);
-        std::ostringstream myOstream;
-        pt::write_json(myOstream, myPt);
-        return myOstream.str();
-    }
-
-    ResolvedService
-    Broker::resolveServiceFromStr(const std::string &pJson) {
-        pt::ptree myPt;
-        std::istringstream myIstream(pJson);
-        pt::read_json(myIstream, myPt);
-        ResolvedService mySvc{myPt.get<bool>(K_SVC_RESULT), myPt.get<InstanceId>(K_SVC_UUID)};
-        return mySvc;
-    }
-
-    Broker::~Broker() {
-        doShutdown();
-    }
-}// namespace striboh
+}

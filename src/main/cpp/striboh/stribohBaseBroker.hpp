@@ -388,7 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 
-#include "stribohBaseParameters.hpp"
+#include "stribohBaseInvocationMessage.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportListNode.hpp"
@@ -406,7 +406,7 @@ namespace striboh::base {
 
         class Broker : public BrokerIface {
         public:
-            typedef std::map<Uuid_t ,Interface> Instances_t;
+            typedef std::map<InstanceId ,Interface> Instances_t;
 
             explicit Broker( LogIface& pLogIface ):
             BrokerIface(pLogIface){}
@@ -421,9 +421,9 @@ namespace striboh::base {
             shutdown() override;
 
             InvocationMessage
-            invokeMethod(const Uuid_t& pInstanceId, InvocationMessage pInvocation) override;
+            invokeMethod(const InstanceId& pInstanceId, InvocationMessage pInvocation) override;
 
-            Uuid_t
+            InstanceId
             addServant(Interface& pMethodSignature) override;
 
             ResolvedResult

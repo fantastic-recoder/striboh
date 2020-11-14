@@ -382,7 +382,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 
 #include "stribohBaseEInvocationType.hpp"
-#include "stribohBaseParameters.hpp"
+#include "stribohBaseInvocationMessage.hpp"
+#include "stribohBaseParameterList.hpp"
 
 namespace striboh::base {
 

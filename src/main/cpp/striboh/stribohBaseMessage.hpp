@@ -10,7 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include "stribohBaseParameters.hpp"
+#include "stribohBaseInvocationMessage.hpp"
 
 namespace striboh {
     namespace base {

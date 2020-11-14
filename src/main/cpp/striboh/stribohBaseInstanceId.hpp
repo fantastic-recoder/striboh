@@ -387,9 +387,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-    using Uuid_t = boost::uuids::uuid;
+    using InstanceId = boost::uuids::uuid;
 
-    inline std::string toString(const Uuid_t& pUuid) {
+    inline std::string toString(const InstanceId& pUuid) {
         std::ostringstream aOstream;
         aOstream << pUuid;
         return aOstream.str();

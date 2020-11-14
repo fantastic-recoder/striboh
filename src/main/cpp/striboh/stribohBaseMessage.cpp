@@ -5,7 +5,7 @@
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseMethod.hpp"
-#include "stribohBaseParameters.hpp"
+#include "stribohBaseInvocationMessage.hpp"
 
 namespace striboh {
     namespace base {

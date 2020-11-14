@@ -377,100 +377,164 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <boost/log/trivial.hpp>
+#ifndef STRIBOH_BASE_PARAMETERS_HPP
+#define STRIBOH_BASE_PARAMETERS_HPP
 
-#include "stribohBaseUuid.hpp"
-#include "stribohBaseParameters.hpp"
+#include <string>
+#include <vector>
+#include <variant>
+#include <algorithm>
+#include <cstddef>
+
+#include <msgpack.hpp>
+#include <variant>
+
+#include "stribohBaseInstanceId.hpp"
+#include "stribohBaseBuffer.hpp"
+#include "stribohBaseSignature.hpp"
+#include "stribohBaseMethodName.hpp"
 #include "stribohBaseEInvocationType.hpp"
+
 
 namespace striboh::base {
 
-        ParameterList::ParameterList(std::vector<ParameterDesc>) {
 
+    class InvocationMessage {
+    public:
+        typedef std::variant<int, std::string> Parameter_t;
+        typedef std::vector<Parameter_t> ParameterList_t;
+
+
+    private:
+        MethodName mMethod;
+        EInvocationType mType;
+        bool mIsUnpacked = false;
+        size_t mPackedCount = 0L;
+        size_t mLastOffset = 0L;
+        ParameterList_t mValues;
+        InstanceId mInstanceId={0,0,0,0,// 0-3
+                                 0,0,0,0,// 4-7
+                                  0,0,0,0,// 8-11
+                                  0,0,0,0}; // 12-15
+        Buffer mPackedBuffer;
+
+    public:
+        void
+        unpackString(msgpack::object &pObjectHandle);
+
+        void
+        unpackInt(msgpack::object &pObjectHandle);
+
+
+        InvocationMessage() = delete;
+
+        explicit
+        InvocationMessage(EInvocationType pType):
+                mType{pType},
+                mMethod{std::move("n/a")}
+        {
+            add(mInstanceId);
+            add(mType);
+            add(mMethod.get());
         }
 
-        InvocationMessage&
-        InvocationMessage::add(const std::string& pVal) {
-            msgpack::pack(mPackedBuffer, pVal);
-            mLastOffset = mPackedBuffer.size();
-            return *this;
+        explicit
+        InvocationMessage(MethodName &&pMethodName):
+                mType{EInvocationType::K_METHOD},
+                mMethod{std::move(pMethodName)}
+        {
+            add(mInstanceId);
+            add(mType);
+            add(mMethod.get());
         }
 
-        InvocationMessage&
-        InvocationMessage::add(const Uuid_t& pVal) {
-            msgpack::pack(mPackedBuffer, pVal.data);
-            mLastOffset = mPackedBuffer.size();
-            return *this;
-        }
-
-        InvocationMessage &InvocationMessage::add(std::string_view&& pVal) {
-            msgpack::pack(mPackedBuffer, std::move(pVal));
-            mLastOffset = mPackedBuffer.size();
+        template<typename ParVal0, typename... ParVal_t>
+        InvocationMessage &
+        add(ParVal0 pVal0, ParVal_t... pValues) {
+            add(pVal0);
+            add(pValues...);
+            mPackedCount++;
             return *this;
         }
 
         InvocationMessage &
-        InvocationMessage::add(const int pVal) {
-            msgpack::pack(mPackedBuffer, pVal);
-            mLastOffset = mPackedBuffer.size();
-            return *this;
+        add(const std::string &pVal);
+
+        InvocationMessage &
+        add(const MethodName &pVal) {
+            return add(pVal.get());
         }
 
-        void InvocationMessage::unpack() {
-            // now starts streaming deserialization.
-            const std::size_t myBufLength=mPackedBuffer.size();
-            std::size_t aOff = 0;
-            unpackHeader(myBufLength, aOff);
-            msgpack::object_handle myObjHandle;
-            while (aOff != myBufLength) {
-                msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-                auto myObj = myObjHandle.get();
-                if( myObj.type == msgpack::type::STR ) {
-                    unpackString( myObj );
-                } else if( myObj.type == msgpack::type::POSITIVE_INTEGER || myObj.type == msgpack::type::NEGATIVE_INTEGER ) {
-                    unpackInt( myObj );
-                }
-            };
+        InvocationMessage &
+        add(std::string_view &&pVal);
+
+        InvocationMessage &
+        add(const char* const pVal);
+
+        InvocationMessage &
+        add(int pVal);
+
+        InvocationMessage &
+        add(EInvocationType pVal) {
+            return add(int(pVal));
+        }
+
+        void
+        unpack();
+
+        template<typename T>
+        T
+        get(size_t pIdx) const {
+            return std::get<T>(mValues[pIdx]);
+        }
+
+        size_t
+        size() const {
+            return mValues.size();
+        }
+
+        bool
+        unpacked() const {
+            return mIsUnpacked;
+        }
+
+        const Buffer &getBuffer() const { return mPackedBuffer; }
+
+        InvocationMessage &setBuffer(const Buffer &pBuffer) {
+            mValues.clear();
+            mPackedBuffer.resize(pBuffer.size());
+            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
             mIsUnpacked = true;
-        }
-
-        void
-        InvocationMessage::unpackHeader(const size_t myBufLength, size_t &aOff) {
-            msgpack::object_handle myObjHandle;
-            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-            auto myHeaderObj = myObjHandle.get();
-            myHeaderObj.convert(mInstanceId.data);
-            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-            myHeaderObj = myObjHandle.get();
-            int myTypeVal;
-            myHeaderObj.convert(myTypeVal);
-            mType <<= myTypeVal;
-            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-            myHeaderObj = myObjHandle.get();
-            myHeaderObj.convert(mMethod.get());
-        }
-
-        void
-        InvocationMessage::unpackString(msgpack::object& pObj ) {
-            std::string myVal;
-            pObj.convert(myVal);
-            mValues.push_back(myVal);
-        }
-
-        void InvocationMessage::unpackInt(msgpack::object &pObj ) {
-            int myIntVal;
-            pObj.convert(myIntVal);
-            mValues.push_back(myIntVal);
-        }
-
-        InvocationMessage &InvocationMessage::add(const char *const pVal) {
-            msgpack::pack(mPackedBuffer, pVal);
-            mLastOffset = mPackedBuffer.size();
             return *this;
         }
 
-    const Uuid_t &InvocationMessage::getInstnceId() const {
-        return mInstanceId;
-    }
+        InvocationMessage &setBuffer(std::string_view pBuffer) {
+            mValues.clear();
+            mPackedBuffer.resize(pBuffer.size());
+            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
+            mIsUnpacked = true;
+            return *this;
+        }
+
+        EInvocationType getType() const {
+            return mType;
+        }
+
+        void setType(EInvocationType pType) {
+            mType = pType;
+        }
+
+        void unpackHeader(const size_t myBufLength, size_t &aOff);
+
+        const std::string& getMethodName() { return mMethod.get(); }
+
+        InvocationMessage &add(const InstanceId &pVal);
+
+        const InstanceId &getInstanceId() const;
+
+        void setInstanceId(const InstanceId& pUuid);
+    };
 
 }
+
+#endif //STRIBOH_BASE_PARAMETERS_HPP

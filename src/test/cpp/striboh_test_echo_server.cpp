@@ -423,7 +423,7 @@ int main( const int argc, const char* argv[]) {
     aBroker.serve();
 
     myLog.debug("Adding echo servant...") ;
-    Uuid_t  myUuid = aBroker.addServant(theEchoServerInterface );
+    InstanceId  myUuid = aBroker.addServant(theEchoServerInterface );
     myLog.info( "Test echo servant added." );
     int mySecondsCounter=0;
     int myStep=10;

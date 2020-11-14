@@ -385,6 +385,7 @@ enum class EInvocationType : int32_t {
     K_METHOD = 1,
     K_RETURN = 2,
     K_ERROR = 4,
+    K_CLOSE = 5,
     K_UNKNOWN = 0 //< parse error
 };
 

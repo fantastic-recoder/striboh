@@ -380,8 +380,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #ifndef STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
 #define STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
 
+#include <iostream>
+
 #include "striboh/stribohBaseInterface.hpp"
 #include "striboh/stribohBaseEInvocationType.hpp"
+#include "striboh/stribohBaseParameterList.hpp"
 
 namespace striboh {
     namespace base {
@@ -393,8 +396,10 @@ namespace striboh {
                                        {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                                },
                                [](const InvocationMessage &pIncoming, Context pCtx) {
+                                   std::string myWhom(std::string("Server greats ") + pIncoming.get<std::string>(0) + "!");
+                                   std::cout << myWhom << std::endl;
                                    return InvocationMessage(EInvocationType::K_RETURN)
-                                           .add(std::string("Server greats ") + pIncoming.get<std::string>(0));
+                                           .add(myWhom);
                                }
                         },
                         Method{"shutdown",

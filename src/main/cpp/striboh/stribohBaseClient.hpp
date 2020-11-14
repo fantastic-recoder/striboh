@@ -392,7 +392,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <memory>
 #include <string>
 
-#include "stribohBaseParameters.hpp"
+#include "stribohBaseInvocationMessage.hpp"
 #include "stribohBaseBrokerIface.hpp"
 
 namespace striboh {
@@ -424,8 +424,8 @@ namespace striboh {
             net::io_context& mIoContext;
             LogIface &mLog;
             InvocationMessage mValues;
-            std::future<InvocationMessage> mReturnValues;
-            beast::flat_buffer buffer_; // (Must persist between reads)
+            InvocationMessage mReturnValues;
+            beast::flat_buffer mReadBuffer; // (Must persist between reads)
         public:
             InvocationContext(
                     ObjectProxy& pObjectProxy,
@@ -433,7 +433,7 @@ namespace striboh {
                     const InvocationMessage& pValues,
                     LogIface &pLog );
 
-            InvocationMessage getReturnValue() { return mReturnValues.get(); }
+            InvocationMessage getReturnValue() { return mReturnValues; }
 
             /**
              * Start the asynchronous operation
@@ -441,7 +441,7 @@ namespace striboh {
             void startInvocation();
 
             void onWriteWebSocket(beast::error_code ec,
-                                  std::size_t bytes_transferred);
+                                  std::size_t pBytesTransferred);
 
             void onReadWebSocket(beast::error_code ec,
                                  std::size_t bytes_transferred);
@@ -468,7 +468,7 @@ namespace striboh {
             http::response<http::string_body> mResponse;
             const HostConnection &mClient;
             std::string mBaseUrl;
-            Uuid_t mUuid;
+            InstanceId mUuid;
             std::string mWebSocketUrl;
             beast::flat_buffer buffer_; // (Must persist between reads)
         public:

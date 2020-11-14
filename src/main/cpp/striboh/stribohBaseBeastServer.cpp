@@ -377,6 +377,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/http.hpp>
@@ -385,16 +391,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/asio/strand.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <algorithm>
-#include <cstdlib>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <thread>
-#include <vector>
-#include <cstdlib>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
@@ -537,6 +533,7 @@ namespace striboh {
                                     std::string(BOOST_BEAST_VERSION_STRING) +
                                     " stribohBeastServer");
                         }));
+                pWebSocketPtr->binary(true);
                 pWebSocketPtr->accept(pRequest);
                 return true;
             } else {
@@ -657,13 +654,14 @@ namespace striboh {
             HttpSendLambda mLambda;
             BrokerIface &mBroker;
             std::shared_ptr<void> mRes;
-
+            LogIface& mLog;
         public:
             // Take ownership of the socket
             explicit
-            WebSession(tcp::socket &&pSocket, BrokerIface &pBroker)
+            WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface& pLog)
                     : mLambda(*this), mBroker(pBroker),
-                      mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))) {
+                      mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
+                      mLog(pLog) {
             }
 
             // Get on the correct executor
@@ -734,6 +732,8 @@ namespace striboh {
 
             void
             doWsRead() {
+                mLog.debug("Going to read the Websocket.");
+                mReadBuffer.clear();
                 // Read a message into our buffer
                 mWebSocketStream->async_read(
                         mReadBuffer,
@@ -743,25 +743,27 @@ namespace striboh {
             }
 
             void
-            onWsRead(beast::error_code ec, std::size_t bytes_transferred) {
-                //boost::ignore_unused(bytes_transferred);
+            onWsRead(beast::error_code ec, std::size_t pBytesTransferred) {
                 // This indicates that the session was closed
-                if (ec == websocket::error::closed)
+                if (ec == websocket::error::closed) {
+                    mLog.debug("WebSocket closed.");
                     return;
-                if (ec)
-                    fail(ec, "onWsRead");;
-                InvocationMessage myMsg(EInvocationType::K_METHOD);;
-                myMsg.setBuffer(string_view((const char *) mReadBuffer.data().data(), bytes_transferred));
+                }
+                if (ec) {
+                    fail(ec, "onWsRead");
+                }
+                auto aBuffer{mReadBuffer.data()};
+                mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(),pBytesTransferred);
+                InvocationMessage myMsg(EInvocationType::K_METHOD);
+                myMsg.setBuffer(string_view(
+                        static_cast<const char *>(aBuffer.data()), mReadBuffer.size()));
                 myMsg.unpack();
-                mBroker.getLog().debug("Calling instance \"{}\" method \"{}\".",
-                                       toString(myMsg.getInstnceId()), myMsg.getMethodName());
-                InvocationMessage myReply = mBroker.invokeMethod(
-                        myMsg.getInstnceId(),
-                        InvocationMessage{MethodName(myMsg.getMethodName())}
-                                .add(
-                                        std::string("Peter!")));
-                static string_view myCloseMsg("close");
-                doWriteWebSocket(myCloseMsg);
+                myMsg.setType(EInvocationType::K_RETURN);
+                mLog.debug("message unpacked.");
+                InvocationMessage myReply = mBroker.invokeMethod(myMsg.getInstanceId(),myMsg);
+                auto& myReplyBuf{myReply.getBuffer()};
+                static string_view myReplyMsg(myReplyBuf.data(),myReplyBuf.size());
+                doWriteWebSocket(myReplyMsg);
             }
 
             void doWriteWebSocket(string_view pMsg) {
@@ -775,10 +777,10 @@ namespace striboh {
             }
 
             void doWriteBufferToWebSocket() {
-                mBroker.getLog().debug("Sending: {}",
-                                       string_view(static_cast<const char *>(mWriteBuffer.cdata().data()),
-                                                   mWriteBuffer.cdata().size()));
-                mWebSocketStream->async_write(mWriteBuffer.cdata(),
+                const auto aBuffer = mWriteBuffer.cdata();
+                mBroker.getLog().debug("Sending {} bytes.",
+                                       aBuffer.size());
+                mWebSocketStream->async_write(aBuffer,
                                               beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));
             }
 
@@ -799,7 +801,7 @@ namespace striboh {
                 boost::ignore_unused(bytes_transferred);
 
                 if (ec)
-                    return fail(ec, "write");
+                    return fail(ec, "onHttpWrite");
 
                 if (close) {
                     // This means we should close the connection, usually because
@@ -821,7 +823,7 @@ namespace striboh {
                 boost::ignore_unused(bytes_transferred);
 
                 if (ec)
-                    return fail(ec, "write");
+                    return fail(ec, "onWsWrite");
                 mBroker.getLog().debug("Web socket write ok.");
                 // Do another read
                 doWsRead();
@@ -837,15 +839,16 @@ namespace striboh {
             net::io_context &mIoc;
             tcp::acceptor mAcceptor;
             BrokerIface &mBroker;
-
+            LogIface& mLog;
         public:
             Listener
                     (
                             net::io_context &ioc,
                             tcp::endpoint endpoint,
-                            BrokerIface &pBroker
+                            BrokerIface &pBroker,
+                            LogIface& pLog
                     )
-                    : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker) {
+                    : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker), mLog(pLog) {
                 beast::error_code ec;
 
                 // Open the acceptor
@@ -887,7 +890,7 @@ namespace striboh {
         private:
             void
             doAccept() {
-                BOOST_LOG_TRIVIAL(info) << "Accepting ";
+                mLog.info("Accepting.");
                 // The new connection gets its own strand
                 mAcceptor.async_accept(
                         net::make_strand(mIoc),
@@ -899,10 +902,10 @@ namespace striboh {
             void
             onAccept(beast::error_code ec, tcp::socket socket) {
                 if (ec) {
-                    fail(ec, "accept");
+                    fail(ec, "onAccept");
                 } else {
                     // Create the session and run it
-                    std::make_shared<WebSession>(std::move(socket), mBroker)->run();
+                    std::make_shared<WebSession>(std::move(socket), mBroker, mLog)->run();
                 }
 
                 // Accept another connection
@@ -958,7 +961,7 @@ namespace striboh {
                                  toString(std::this_thread::get_id()));
             };
             // Create and launch a listening on port aPort
-            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker())->run();
+            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker(), mLog)->run();
 
             // Run the I/O service on the requested number of threads
             mAcceptTasks.reserve(mThreadNum - 1);
@@ -970,7 +973,6 @@ namespace striboh {
             mLog.debug("BeastServer::run() <--");
             return;
         }
-
 
     }
 }

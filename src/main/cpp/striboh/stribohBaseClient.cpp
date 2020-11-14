@@ -416,9 +416,12 @@ namespace striboh {
         ObjectProxy::invokeMethod(InvocationMessage pValues)
         {
             if(getConnectionStatus()==EConnectionStatus::K_INITIAL) {
+                mLog.debug("Going to do TCP connect.");
                 doTcpResolveAntConnect();
                 mIoContext.run();
+                mLog.debug("TCP connect returned.");
             }
+            pValues.setInstanceId(mUuid);
             auto myInvocationContext = std::make_shared<InvocationContext>
                     (*this,mIoContext,pValues,mLog);
             myInvocationContext->startInvocation();
@@ -435,25 +438,20 @@ namespace striboh {
         , mIoContext(pIoContext)
         , mValues(pValues)
         , mLog(pLog)
+        , mReturnValues(EInvocationType::K_RETURN)
         {
         }
 
         void
         InvocationContext::startInvocation()
         {
-            mReturnValues = std::async(
-                std::launch::async,
-                [this]()->InvocationMessage{
-                    InvocationMessage myRetVal(EInvocationType::K_RETURN);
-                    this->writeWebSocketMessage(string_view(mValues.getBuffer()));
-                    return myRetVal;
-                }
-            );
-
+            this->writeWebSocketMessage(string_view(mValues.getBuffer()));
             // Run the I/O service. The call will return when
             // the get operation is complete.
+            mLog.debug("startInvocation restarting ios.");
+            mIoContext.restart();
             mIoContext.run();
-            mLog.debug("proxy run finished.");
+            mLog.debug("startInvocation finished.");
             return ;
         }
 
@@ -470,8 +468,8 @@ namespace striboh {
                             shared_from_this()
                     )
             );
-            mLog.debug("Going to run io_context 4 connect.");
             mIoContext.run();
+            mLog.debug("doTcpResolveAntConnect() + mIoContext.run() returned.");
         }
 
         void
@@ -547,7 +545,7 @@ namespace striboh {
                     {
                         req.set(http::field::user_agent,
                                 std::string(BOOST_BEAST_VERSION_STRING) +
-                                " websocket-client-async");
+                                " striboh-websocket-client-async");
                     }));
 
             // Update the host_ string. This will provide the value of the
@@ -555,7 +553,7 @@ namespace striboh {
             // See https://tools.ietf.org/html/rfc7230#section-5.4
             mWebSocketUrl = mClient.getHost() + ':' + mClient.getPortStr();
 
-            // Perform the websocket handshake
+            // Perform the websocket handshaketimeout
             mWebSocket.async_handshake(mWebSocketUrl, mBaseUrl + "?upgrade",
                                        beast::bind_front_handler(
                                                &ObjectProxy::onUpgradeHandshake,
@@ -617,13 +615,13 @@ namespace striboh {
         {
             if(ec)
                 return fail(ec, "ObjectProxy::onUpgradeHandshake");
+            mWebSocket.binary(true);
             mLog.debug("ObjectProxy::onUpgradeHandshake ok.");
         }
 
         void
         InvocationContext::writeWebSocketMessage(string_view pMsg) {// Send the message
-            mLog.debug("Writing {} bytes message \"{}\"  to web socket.",
-                       pMsg.size(), pMsg );
+            mLog.debug("Writing {} bytes to web socket.", pMsg.size() );
             mObjectProxy.getWebSocket().async_write(
                     net::buffer(pMsg),
                     beast::bind_front_handler(
@@ -644,19 +642,19 @@ namespace striboh {
         }
 
         void InvocationContext::onWriteWebSocket(beast::error_code ec,
-                                           std::size_t bytes_transferred) {
-            boost::ignore_unused(bytes_transferred);
+                                           std::size_t pBytesTransferred) {
+            boost::ignore_unused(pBytesTransferred);
             if(ec)
-                return fail(ec, "write");
-            mLog.debug("Web socket write succeeded.");
+                return fail(ec, "InvocationContext::onWriteWebSocket");
+            mLog.debug("Web socket wrote {} bytes.", pBytesTransferred);
             readWebSocketMessage();
         }
 
         void InvocationContext::readWebSocketMessage() {
-            buffer_.clear();
+            mReadBuffer.clear();
             mLog.debug("Going to read a message into our buffer.");
             mObjectProxy.getWebSocket().async_read(
-                    buffer_,
+                    mReadBuffer,
                     beast::bind_front_handler(
                             &InvocationContext::onReadWebSocket,
                             shared_from_this()));
@@ -665,18 +663,18 @@ namespace striboh {
         void InvocationContext::onReadWebSocket(beast::error_code ec, std::size_t bytes_transferred) {
             boost::ignore_unused(bytes_transferred);
             if(ec)
-                return fail(ec, "read");
-            auto myReadData{buffer_.cdata()};
+                return fail(ec, "InvocationContext::onReadWebSocket");
+            auto myReadData{mReadBuffer.cdata()};
             string_view myMsg(static_cast<const char*>(myReadData.data()),myReadData.size());
-            mLog.debug("Read {} bytes:\"{}\".",myMsg.size(),myMsg);
-            if(myMsg=="close") {
+            mLog.debug("Read {} bytes.",myMsg.size());
+            mReturnValues.setBuffer(myMsg);
+            mReturnValues.unpack();
+            if(mReturnValues.getType()==EInvocationType::K_CLOSE) {
                 // Close the WebSocket connection
                 mObjectProxy.getWebSocket().async_close(websocket::close_code::normal,
                                        beast::bind_front_handler(
                                                      &InvocationContext::onCloseWebSocket,
                                                      shared_from_this()));
-            } else {
-                readWebSocketMessage();
             }
         }
 
@@ -691,7 +689,7 @@ namespace striboh {
 
             // The make_printable() function helps print a ConstBufferSequence
             std::ostringstream myOstream;
-            myOstream << beast::make_printable(buffer_.data()) << std::endl;
+            myOstream << beast::make_printable(mReadBuffer.data()) << std::endl;
             mLog.debug("close() <-- rest buffer:{}",myOstream.str());
         }
     }

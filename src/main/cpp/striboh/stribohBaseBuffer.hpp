@@ -389,6 +389,16 @@ namespace striboh {
             size_t write(const char*, std::size_t);
         };
 
+        /// @brief writes over the start of another buffer
+        class OverwriteBuffer {
+            Buffer& mOverwriteBuffer;
+            size_t mOffset;
+        public:
+            explicit OverwriteBuffer(Buffer& p2BeOverWriten, size_t pOffset=0L)
+            : mOverwriteBuffer(p2BeOverWriten) , mOffset(pOffset) {}
+
+            size_t write(const char*, std::size_t);
+        };
     }
 }
 
