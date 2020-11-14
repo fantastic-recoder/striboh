@@ -648,8 +648,8 @@ namespace striboh {
                 }
             };
 
-            beast::flat_buffer mReadBuffer;
-            beast::flat_buffer mWriteBuffer;
+            Buffer mReadBuffer;
+            Buffer mWriteBuffer;
             std::shared_ptr<beast::tcp_stream> mTcpStream;
             std::shared_ptr<websocket::stream<beast::tcp_stream>> mWebSocketStream;
             http::request<http::string_body> mRequest;
@@ -755,21 +755,14 @@ namespace striboh {
                 if (ec) {
                     fail(ec, "onWsRead");
                 }
-                auto aBuffer{mReadBuffer.data()};
                 mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(),pBytesTransferred);
                 InvocationMessage myMsg(EInvocationType::K_METHOD);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(),myConstBuf.size()));
                 mLog.debug("message unpacked, {} values.",myMsg.size());
                 InvocationMessage myReply = mBroker.invokeMethod(mInstanceId,myMsg);
-                Buffer myBuffer;
-                myReply.packToBuffer(myBuffer);
                 mWriteBuffer.clear();
-                mWriteBuffer.reserve(myBuffer.size());
-                auto myMutable{mWriteBuffer.prepare(myBuffer.size())};
-                std::copy(myBuffer.begin(), myBuffer.end(),
-                          boost::asio::buffer_cast<unsigned char *>(myMutable));
-                mWriteBuffer.commit(myMutable.size());
+                myReply.packToBuffer(mWriteBuffer);
                 doWriteBufferToWebSocket();
             }
 

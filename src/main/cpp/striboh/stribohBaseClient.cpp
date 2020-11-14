@@ -623,7 +623,7 @@ namespace striboh {
         InvocationContext::writeWebSocketMessage() {// Send the message
             mLog.debug("Writing {} bytes to web socket.", mWriteBuffer.size() );
             mObjectProxy.getWebSocket().async_write(
-                    net::buffer(mWriteBuffer),
+                    mWriteBuffer.cdata(),
                     beast::bind_front_handler(
                             &InvocationContext::onWriteWebSocket,
                             shared_from_this()));

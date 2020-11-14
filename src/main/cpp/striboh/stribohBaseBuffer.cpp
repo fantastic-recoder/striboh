@@ -384,24 +384,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
+
         size_t Buffer::write(const char * pSrc, std::size_t pSize) {
-            const size_t myLastSize{size()};
-            resize(myLastSize+pSize);
-            std::copy(pSrc,pSrc+pSize,data()+myLastSize);
+            auto aMutableBuffer(prepare(pSize));
+            std::copy(pSrc,pSrc+pSize,static_cast<char*>(aMutableBuffer.data()));
+            commit(pSize);
             return size();
         }
 
-/*
-        size_t ReadBuffer::write(const char * pSrc, std::size_t pWriteSize) {
-            size_t myNewOffset = mOffset + pWriteSize;
-            if(myNewOffset > size()) {
-                throw std::range_error(fmt::format("ReadBuffer::write({},{}) {}>{}",pSrc,pWriteSize,myNewOffset,size()));
-            }
-            std::copy(pSrc, pSrc + pWriteSize, mMem + mOffset);
-            mOffset = myNewOffset;
-            return mOffset;
-        }
-        */
     }
 }
 

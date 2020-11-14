@@ -385,7 +385,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
-        class Buffer: public std::string {
+    class Buffer: public boost::beast::flat_buffer {
         public:
 
             size_t write(const char*, std::size_t);
@@ -400,7 +400,7 @@ namespace striboh {
             : mMem(static_cast<const char*>(pVoid)) , mOffset(0), mSize(pSize) {}
 
             explicit ReadBuffer(const Buffer& pMutableBuffer)
-                    : mMem(pMutableBuffer.data()) , mOffset(0), mSize(pMutableBuffer.size()) {}
+                    : mMem(static_cast<const char*>(pMutableBuffer.cdata().data())) , mOffset(0), mSize(pMutableBuffer.cdata().size()) {}
 
             size_t write(const char*, std::size_t);
 
