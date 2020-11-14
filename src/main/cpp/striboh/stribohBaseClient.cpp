@@ -421,7 +421,6 @@ namespace striboh {
                 mIoContext.run();
                 mLog.debug("TCP connect returned.");
             }
-            pValues.setInstanceId(mUuid);
             auto myInvocationContext = std::make_shared<InvocationContext>
                     (*this,mIoContext,pValues,mLog);
             myInvocationContext->startInvocation();
@@ -445,7 +444,8 @@ namespace striboh {
         void
         InvocationContext::startInvocation()
         {
-            this->writeWebSocketMessage(string_view(mValues.getBuffer()));
+            mValues.packToBuffer(mWriteBuffer);
+            this->writeWebSocketMessage();
             // Run the I/O service. The call will return when
             // the get operation is complete.
             mLog.debug("startInvocation restarting ios.");
@@ -620,10 +620,10 @@ namespace striboh {
         }
 
         void
-        InvocationContext::writeWebSocketMessage(string_view pMsg) {// Send the message
-            mLog.debug("Writing {} bytes to web socket.", pMsg.size() );
+        InvocationContext::writeWebSocketMessage() {// Send the message
+            mLog.debug("Writing {} bytes to web socket.", mWriteBuffer.size() );
             mObjectProxy.getWebSocket().async_write(
-                    net::buffer(pMsg),
+                    net::buffer(mWriteBuffer),
                     beast::bind_front_handler(
                             &InvocationContext::onWriteWebSocket,
                             shared_from_this()));
@@ -660,20 +660,17 @@ namespace striboh {
                             shared_from_this()));
         }
 
-        void InvocationContext::onReadWebSocket(beast::error_code ec, std::size_t bytes_transferred) {
-            boost::ignore_unused(bytes_transferred);
+        void InvocationContext::onReadWebSocket(beast::error_code ec, std::size_t pBytesTransferred) {
             if(ec)
                 return fail(ec, "InvocationContext::onReadWebSocket");
-            auto myReadData{mReadBuffer.cdata()};
-            string_view myMsg(static_cast<const char*>(myReadData.data()),myReadData.size());
-            mLog.debug("Read {} bytes.",myMsg.size());
-            mReturnValues.setBuffer(myMsg);
-            mReturnValues.unpack();
+            auto aConstBuffer(mReadBuffer.cdata());
+            mLog.debug("Read {}({}) bytes.",aConstBuffer.size(),pBytesTransferred);
+            mReturnValues.unpackFromBuffer(ReadBuffer(aConstBuffer.data(),aConstBuffer.size()));
             if(mReturnValues.getType()==EInvocationType::K_CLOSE) {
                 // Close the WebSocket connection
                 mObjectProxy.getWebSocket().async_close(websocket::close_code::normal,
                                        beast::bind_front_handler(
-                                                     &InvocationContext::onCloseWebSocket,
+                                               &InvocationContext::onCloseWebSocket,
                                                      shared_from_this()));
             }
         }

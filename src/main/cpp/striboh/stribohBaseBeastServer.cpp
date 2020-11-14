@@ -464,7 +464,7 @@ namespace striboh {
         handleHttpRequest
                 (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, BrokerIface &pBroker,
                  std::shared_ptr<websocket::stream<beast::tcp_stream>> &pWebSocketPtr,
-                 std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr) {
+                 std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr, InstanceId& pInstanceId ) {
             // Returns a bad request response
             auto const bad_request =
                     [&pRequest](beast::string_view why) {
@@ -517,7 +517,9 @@ namespace striboh {
 
             std::string theResponse;
             if (myParams.find("svc") != myParams.end()) {
-                theResponse = pBroker.resolveServiceToStr(myParams[K_BASE_URL][0]);
+                pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
+                pInstanceId = aSvc.second;
+                theResponse = pBroker.resolvedServiceToStr(myParams[K_BASE_URL][0],aSvc);
             } else if (myParams.find("upgrade") != myParams.end() &&
                        boost::beast::websocket::is_upgrade(pRequest)) {
                 pWebSocketPtr
@@ -655,14 +657,15 @@ namespace striboh {
             BrokerIface &mBroker;
             std::shared_ptr<void> mRes;
             LogIface& mLog;
+            InstanceId mInstanceId;
         public:
             // Take ownership of the socket
             explicit
             WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface& pLog)
-                    : mLambda(*this), mBroker(pBroker),
+                    : mLambda(*this),
+                      mBroker(pBroker),
                       mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
-                      mLog(pLog) {
-            }
+                      mLog(pLog) {}
 
             // Get on the correct executor
             void
@@ -704,7 +707,7 @@ namespace striboh {
                     return fail(ec, "onHttpRead");
                 // Send the response
                 if (handleHttpRequest(std::move(mRequest), mLambda, mBroker,
-                                      mWebSocketStream, mTcpStream)) {
+                                      mWebSocketStream, mTcpStream, mInstanceId)) {
                     mBroker.getLog().debug("Upgraded!");
                     doWsRead();
                 }
@@ -755,32 +758,25 @@ namespace striboh {
                 auto aBuffer{mReadBuffer.data()};
                 mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(),pBytesTransferred);
                 InvocationMessage myMsg(EInvocationType::K_METHOD);
-                myMsg.setBuffer(string_view(
-                        static_cast<const char *>(aBuffer.data()), mReadBuffer.size()));
-                myMsg.unpack();
-                myMsg.setType(EInvocationType::K_RETURN);
-                mLog.debug("message unpacked.");
-                InvocationMessage myReply = mBroker.invokeMethod(myMsg.getInstanceId(),myMsg);
-                auto& myReplyBuf{myReply.getBuffer()};
-                static string_view myReplyMsg(myReplyBuf.data(),myReplyBuf.size());
-                doWriteWebSocket(myReplyMsg);
-            }
-
-            void doWriteWebSocket(string_view pMsg) {
+                auto myConstBuf(mReadBuffer.cdata());
+                myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(),myConstBuf.size()));
+                mLog.debug("message unpacked, {} values.",myMsg.size());
+                InvocationMessage myReply = mBroker.invokeMethod(mInstanceId,myMsg);
+                Buffer myBuffer;
+                myReply.packToBuffer(myBuffer);
                 mWriteBuffer.clear();
-                mWriteBuffer.reserve(pMsg.size());
-                auto myMutable{mWriteBuffer.prepare(pMsg.size())};
-                std::copy(pMsg.begin(), pMsg.end(),
+                mWriteBuffer.reserve(myBuffer.size());
+                auto myMutable{mWriteBuffer.prepare(myBuffer.size())};
+                std::copy(myBuffer.begin(), myBuffer.end(),
                           boost::asio::buffer_cast<unsigned char *>(myMutable));
                 mWriteBuffer.commit(myMutable.size());
                 doWriteBufferToWebSocket();
             }
 
             void doWriteBufferToWebSocket() {
-                const auto aBuffer = mWriteBuffer.cdata();
                 mBroker.getLog().debug("Sending {} bytes.",
-                                       aBuffer.size());
-                mWebSocketStream->async_write(aBuffer,
+                                       mWriteBuffer.size());
+                mWebSocketStream->async_write(mWriteBuffer.data(),
                                               beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));
             }
 

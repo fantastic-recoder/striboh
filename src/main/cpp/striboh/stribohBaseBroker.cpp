@@ -476,9 +476,6 @@ namespace striboh::base {
         if (myInterfaceIt != mInstances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
-                if (!pValues.unpacked()) {
-                    pValues.unpack();
-                }
                 return myMethodIt->invoke(pValues, Context(*this));
             }
         } else {
@@ -640,12 +637,11 @@ namespace striboh::base {
     }
 
     std::string
-    Broker::resolveServiceToStr(std::string_view pPath) const {
-        ResolvedService mySvc = resolveService(pPath);
+    Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc) const {
         pt::ptree myPt;
         myPt.put(K_SVC_PATH, pPath);
-        myPt.put(K_SVC_RESULT, mySvc.first);
-        myPt.put(K_SVC_UUID, mySvc.second);
+        myPt.put(K_SVC_RESULT, pSvc.first);
+        myPt.put(K_SVC_UUID, pSvc.second);
         std::ostringstream myOstream;
         pt::write_json(myOstream, myPt);
         return myOstream.str();

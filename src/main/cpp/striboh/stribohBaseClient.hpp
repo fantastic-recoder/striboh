@@ -426,6 +426,7 @@ namespace striboh {
             InvocationMessage mValues;
             InvocationMessage mReturnValues;
             beast::flat_buffer mReadBuffer; // (Must persist between reads)
+            Buffer mWriteBuffer; // (Must persist between reads)
         public:
             InvocationContext(
                     ObjectProxy& pObjectProxy,
@@ -448,7 +449,7 @@ namespace striboh {
 
             void onCloseWebSocket(beast::error_code ec);
 
-            void writeWebSocketMessage(std::string_view pMsg);
+            void writeWebSocketMessage();
 
             void readWebSocketMessage();
 

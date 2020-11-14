@@ -398,8 +398,7 @@ namespace striboh {
                                [](const InvocationMessage &pIncoming, Context pCtx) {
                                    std::string myWhom(std::string("Server greats ") + pIncoming.get<std::string>(0) + "!");
                                    std::cout << myWhom << std::endl;
-                                   return InvocationMessage(EInvocationType::K_RETURN)
-                                           .add(myWhom);
+                                   return InvocationMessage(EInvocationType::K_RETURN,{myWhom});
                                }
                         },
                         Method{"shutdown",

@@ -401,30 +401,18 @@ namespace striboh::base {
 
     class InvocationMessage {
     public:
-        typedef std::variant<int, std::string> Parameter_t;
-        typedef std::vector<Parameter_t> ParameterList_t;
+        typedef std::variant<int, std::string> Parameter;
+        typedef std::vector<Parameter> Parameters;
 
+
+        void packToBuffer(Buffer &pBuffer);
 
     private:
         MethodName mMethod;
         EInvocationType mType;
-        bool mIsUnpacked = false;
-        size_t mPackedCount = 0L;
-        size_t mLastOffset = 0L;
-        ParameterList_t mValues;
-        InstanceId mInstanceId={0,0,0,0,// 0-3
-                                 0,0,0,0,// 4-7
-                                  0,0,0,0,// 8-11
-                                  0,0,0,0}; // 12-15
-        Buffer mPackedBuffer;
+        Parameters mValues;
 
     public:
-        void
-        unpackString(msgpack::object &pObjectHandle);
-
-        void
-        unpackInt(msgpack::object &pObjectHandle);
-
 
         InvocationMessage() = delete;
 
@@ -433,9 +421,14 @@ namespace striboh::base {
                 mType{pType},
                 mMethod{std::move("n/a")}
         {
-            add(mInstanceId);
-            add(mType);
-            add(mMethod.get());
+        }
+
+        explicit
+        InvocationMessage(EInvocationType pType, Parameters&& pList):
+                mType{pType},
+                mMethod{std::move("n/a")},
+                mValues(std::move(pList))
+        {
         }
 
         explicit
@@ -443,44 +436,54 @@ namespace striboh::base {
                 mType{EInvocationType::K_METHOD},
                 mMethod{std::move(pMethodName)}
         {
-            add(mInstanceId);
-            add(mType);
-            add(mMethod.get());
+        }
+
+        explicit
+        InvocationMessage(MethodName &&pMethodName, Parameters&& pList):
+                mType{EInvocationType::K_METHOD},
+                mMethod{std::move(pMethodName)},
+                mValues(std::move(pList))
+        {
         }
 
         template<typename ParVal0, typename... ParVal_t>
         InvocationMessage &
-        add(ParVal0 pVal0, ParVal_t... pValues) {
-            add(pVal0);
-            add(pValues...);
-            mPackedCount++;
+        add(Buffer &pBuffer, ParVal0 pVal0, ParVal_t... pValues) {
+            add(pBuffer, pVal0);
+            add(pBuffer, pValues...);
             return *this;
         }
 
         InvocationMessage &
-        add(const std::string &pVal);
+        add(Buffer &pBuffer, const std::string &pVal);
 
         InvocationMessage &
-        add(const MethodName &pVal) {
-            return add(pVal.get());
+        add(Buffer &pBuffer, const MethodName &pVal) {
+            return add(pBuffer,pVal.get());
         }
 
         InvocationMessage &
-        add(std::string_view &&pVal);
+        add(Buffer &pBuffer, std::string_view &&pVal);
 
         InvocationMessage &
-        add(const char* const pVal);
+        add(Buffer &pBuffer, const char* const pVal);
 
         InvocationMessage &
-        add(int pVal);
+        add(Buffer &pBuffer, int pVal);
 
         InvocationMessage &
-        add(EInvocationType pVal) {
-            return add(int(pVal));
+        add(Buffer &pBuffer, EInvocationType pVal) {
+            return add(pBuffer, int(pVal));
         }
+
+        InvocationMessage
+        &add(Buffer& pBuffer, const InstanceId &pVal);
 
         void
-        unpack();
+        unpack(const ReadBuffer&, InstanceId &pVal);
+
+        void
+        unpack(const ReadBuffer& pBuffer);
 
         template<typename T>
         T
@@ -493,26 +496,9 @@ namespace striboh::base {
             return mValues.size();
         }
 
-        bool
-        unpacked() const {
-            return mIsUnpacked;
-        }
-
-        const Buffer &getBuffer() const { return mPackedBuffer; }
-
-        InvocationMessage &setBuffer(const Buffer &pBuffer) {
+        InvocationMessage &unpackFromBuffer(const ReadBuffer &pBuffer) {
             mValues.clear();
-            mPackedBuffer.resize(pBuffer.size());
-            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
-            mIsUnpacked = true;
-            return *this;
-        }
-
-        InvocationMessage &setBuffer(std::string_view pBuffer) {
-            mValues.clear();
-            mPackedBuffer.resize(pBuffer.size());
-            std::copy(pBuffer.begin(), pBuffer.end(), mPackedBuffer.begin());
-            mIsUnpacked = true;
+            unpack(pBuffer);
             return *this;
         }
 
@@ -524,17 +510,20 @@ namespace striboh::base {
             mType = pType;
         }
 
-        void unpackHeader(const size_t myBufLength, size_t &aOff);
-
         const std::string& getMethodName() { return mMethod.get(); }
 
-        InvocationMessage &add(const InstanceId &pVal);
+    private:
+        void
+        unpackString(msgpack::object &pObjectHandle);
 
-        const InstanceId &getInstanceId() const;
+        void
+        unpackInt(msgpack::object &pObjectHandle);
 
-        void setInstanceId(const InstanceId& pUuid);
+        void
+        unpackHeader(const ReadBuffer& , const size_t myBufLength, size_t &aOff);
+
     };
 
-}
+}  // namespace striboh::base
 
 #endif //STRIBOH_BASE_PARAMETERS_HPP

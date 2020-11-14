@@ -381,23 +381,32 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #define STRIBOH_STRIBOHBASEBUFFER_HPP
 
 #include <vector>
+#include <boost/beast/core.hpp>
 
 namespace striboh {
     namespace base {
         class Buffer: public std::string {
         public:
+
             size_t write(const char*, std::size_t);
         };
 
-        /// @brief writes over the start of another buffer
-        class OverwriteBuffer {
-            Buffer& mOverwriteBuffer;
+        class ReadBuffer {
+            const char* mMem;
             size_t mOffset;
+            size_t mSize;
         public:
-            explicit OverwriteBuffer(Buffer& p2BeOverWriten, size_t pOffset=0L)
-            : mOverwriteBuffer(p2BeOverWriten) , mOffset(pOffset) {}
+            explicit ReadBuffer(const void *pVoid, size_t pSize)
+            : mMem(static_cast<const char*>(pVoid)) , mOffset(0), mSize(pSize) {}
+
+            explicit ReadBuffer(const Buffer& pMutableBuffer)
+                    : mMem(pMutableBuffer.data()) , mOffset(0), mSize(pMutableBuffer.size()) {}
 
             size_t write(const char*, std::size_t);
+
+            const char* data() const { return mMem; }
+
+            constexpr size_t size() const { return mSize; }
         };
     }
 }

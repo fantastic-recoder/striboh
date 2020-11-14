@@ -464,7 +464,7 @@ namespace striboh::base {
             resolveService(std::string_view pPath ) const = 0;
 
             virtual std::string
-            resolveServiceToStr(std::string_view pPath ) const = 0;
+            resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc ) const = 0;
 
             const std::shared_ptr<ServerIface>&
             getServer() const { return mServerIface; }

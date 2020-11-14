@@ -386,40 +386,37 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh::base {
 
     InvocationMessage&
-        InvocationMessage::add(const std::string& pVal) {
-            msgpack::pack(mPackedBuffer, pVal);
-            mLastOffset = mPackedBuffer.size();
+        InvocationMessage::add(Buffer& pBuffer, const std::string& pVal) {
+            msgpack::pack(pBuffer, pVal);
             return *this;
         }
 
         InvocationMessage&
-        InvocationMessage::add(const InstanceId& pVal) {
-            msgpack::pack(mPackedBuffer, pVal.data);
-            mLastOffset = mPackedBuffer.size();
+        InvocationMessage::add(Buffer& pBuffer, const InstanceId& pVal) {
+            msgpack::pack(pBuffer, pVal.data);
             return *this;
         }
 
-        InvocationMessage &InvocationMessage::add(std::string_view&& pVal) {
-            msgpack::pack(mPackedBuffer, std::move(pVal));
-            mLastOffset = mPackedBuffer.size();
+        InvocationMessage &InvocationMessage::add(Buffer& pBuffer, std::string_view&& pVal) {
+            msgpack::pack(pBuffer, std::move(pVal));
             return *this;
         }
 
         InvocationMessage &
-        InvocationMessage::add(const int pVal) {
-            msgpack::pack(mPackedBuffer, pVal);
-            mLastOffset = mPackedBuffer.size();
+        InvocationMessage::add(Buffer& pBuffer, const int pVal) {
+            msgpack::pack(pBuffer, pVal);
             return *this;
         }
 
-        void InvocationMessage::unpack() {
+        void InvocationMessage::unpack(const ReadBuffer& pBuffer) {
             // now starts streaming deserialization.
-            const std::size_t myBufLength=mPackedBuffer.size();
+            mValues.clear();
+            const std::size_t myBufLength=pBuffer.size();
             std::size_t aOff = 0;
-            unpackHeader(myBufLength, aOff);
+            unpackHeader(pBuffer,myBufLength, aOff);
             msgpack::object_handle myObjHandle;
             while (aOff != myBufLength) {
-                msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
+                msgpack::unpack(myObjHandle, pBuffer.data(), myBufLength, aOff);
                 auto myObj = myObjHandle.get();
                 if( myObj.type == msgpack::type::STR ) {
                     unpackString( myObj );
@@ -427,23 +424,24 @@ namespace striboh::base {
                     unpackInt( myObj );
                 }
             };
-            mIsUnpacked = true;
         }
 
         void
-        InvocationMessage::unpackHeader(const size_t myBufLength, size_t &aOff) {
+        InvocationMessage::unpackHeader(const ReadBuffer &pBuffer, const size_t myBufLength, size_t &aOff) {
             msgpack::object_handle myObjHandle;
-            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-            auto myHeaderObj = myObjHandle.get();
-            myHeaderObj.convert(mInstanceId.data);
-            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-            myHeaderObj = myObjHandle.get();
-            int myTypeVal;
-            myHeaderObj.convert(myTypeVal);
-            mType <<= myTypeVal;
-            msgpack::unpack(myObjHandle, mPackedBuffer.data(), myBufLength, aOff);
-            myHeaderObj = myObjHandle.get();
-            myHeaderObj.convert(mMethod.get());
+            msgpack::object myHeaderObj;
+            {
+                msgpack::unpack(myObjHandle, pBuffer.data(), myBufLength, aOff);
+                myHeaderObj = myObjHandle.get();
+                int myTypeVal;
+                myHeaderObj.convert(myTypeVal);
+                mType <<= myTypeVal;
+            }
+            {
+                msgpack::unpack(myObjHandle, pBuffer.data(), myBufLength, aOff);
+                myHeaderObj = myObjHandle.get();
+                myHeaderObj.convert(mMethod.get());
+            }
         }
 
         void
@@ -459,19 +457,22 @@ namespace striboh::base {
             mValues.push_back(myIntVal);
         }
 
-        InvocationMessage &InvocationMessage::add(const char *const pVal) {
-            msgpack::pack(mPackedBuffer, pVal);
-            mLastOffset = mPackedBuffer.size();
+        InvocationMessage &InvocationMessage::add(Buffer &pBuffer, const char *const pVal) {
+            msgpack::pack(pBuffer, pVal);
             return *this;
         }
 
-    const InstanceId &InvocationMessage::getInstanceId() const {
-        return mInstanceId;
-    }
-
-    void InvocationMessage::setInstanceId( const InstanceId& pUuid) {
-        OverwriteBuffer myOverBuffer(mPackedBuffer);
-        msgpack::pack(myOverBuffer,pUuid.data);
+    void InvocationMessage::packToBuffer(Buffer &pBuffer) {
+        msgpack::pack(pBuffer, int(mType));
+        msgpack::pack(pBuffer, mMethod.get());
+        for(auto myValue: mValues) {
+            std::visit(
+                [this,&pBuffer](auto&& pArg) {
+                    this->add(pBuffer,pArg);
+                },
+                myValue
+            );
+        }
     }
 
 }

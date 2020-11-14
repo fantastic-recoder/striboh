@@ -378,7 +378,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include <algorithm>
-
+#include <exception>
+#include <fmt/format.h>
 #include "stribohBaseBuffer.hpp"
 
 namespace striboh {
@@ -390,14 +391,17 @@ namespace striboh {
             return size();
         }
 
-        size_t OverwriteBuffer::write(const char * pSrc, std::size_t pSize) {
-            if(pSize > mOverwriteBuffer.size()) {
-                mOverwriteBuffer.resize(pSize);
+/*
+        size_t ReadBuffer::write(const char * pSrc, std::size_t pWriteSize) {
+            size_t myNewOffset = mOffset + pWriteSize;
+            if(myNewOffset > size()) {
+                throw std::range_error(fmt::format("ReadBuffer::write({},{}) {}>{}",pSrc,pWriteSize,myNewOffset,size()));
             }
-            std::copy(pSrc,pSrc+pSize,mOverwriteBuffer.data()+mOffset);
-            mOffset += pSize;
+            std::copy(pSrc, pSrc + pWriteSize, mMem + mOffset);
+            mOffset = myNewOffset;
             return mOffset;
         }
+        */
     }
 }
 
