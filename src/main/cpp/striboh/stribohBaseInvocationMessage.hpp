@@ -388,6 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <msgpack.hpp>
 #include <variant>
+#include <nlohmann/json.hpp>
 
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseBuffer.hpp"
@@ -401,15 +402,26 @@ namespace striboh::base {
 
     class InvocationMessage {
     public:
-        typedef std::variant<int, std::string> Parameter;
-        typedef std::vector<Parameter> Parameters;
+        typedef nlohmann::json Parameters;
 
+        static constexpr const char *const K_METHOD_NAME_KEY = "method";
+        static constexpr const char *const K_PARAMETERS_KEY = "parameters";
+        static constexpr const char *const K_RETURN_KEY = "return";
+        static constexpr const char *const K_MESSAGE_TYPE_KEY = "type";
 
-        void packToBuffer(Buffer &pBuffer);
+        const Parameters &getParameters() const {
+            return mValues[K_PARAMETERS_KEY];
+        }
+
+        Parameters &getParameters() {
+            return mValues[K_PARAMETERS_KEY];
+        }
+
+        Parameters &getValues() { return mValues; }
+
+        const Parameters &getValues() const { return mValues; }
 
     private:
-        MethodName mMethod;
-        EInvocationType mType;
         Parameters mValues;
 
     public:
@@ -417,100 +429,99 @@ namespace striboh::base {
         InvocationMessage() = delete;
 
         explicit
-        InvocationMessage(EInvocationType pType):
-                mType{pType},
-                mMethod{std::move("n/a")}
-        {
-        }
+        InvocationMessage(EInvocationType pType) :
+                mValues({
+                                {K_MESSAGE_TYPE_KEY, pType},
+                                {K_METHOD_NAME_KEY,  "n/a"},
+                                {K_PARAMETERS_KEY, {}}
+                        }) {}
 
         explicit
-        InvocationMessage(EInvocationType pType, Parameters&& pList):
-                mType{pType},
-                mMethod{std::move("n/a")},
-                mValues(std::move(pList))
-        {
-        }
+        InvocationMessage(EInvocationType pType, Parameters &&pList) :
+                mValues({
+                                {K_MESSAGE_TYPE_KEY, pType},
+                                {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
+                                {K_PARAMETERS_KEY, std::forward<Parameters &&>(pList)}
+                        }) {}
 
         explicit
-        InvocationMessage(MethodName &&pMethodName):
-                mType{EInvocationType::K_METHOD},
-                mMethod{std::move(pMethodName)}
-        {
-        }
+        InvocationMessage(MethodName &&pMethodName) :
+                mValues({
+                                {K_MESSAGE_TYPE_KEY, EInvocationType::K_METHOD},
+                                {K_METHOD_NAME_KEY,  std::forward<std::string>(pMethodName.get())},
+                                {K_PARAMETERS_KEY, Parameters{}}
+                        }) {}
 
         explicit
-        InvocationMessage(MethodName &&pMethodName, Parameters&& pList):
-                mType{EInvocationType::K_METHOD},
-                mMethod{std::move(pMethodName)},
-                mValues(std::move(pList))
-        {
+        InvocationMessage(MethodName &&pMethodName, Parameters &&pList)
+                : mValues({
+                                  {K_MESSAGE_TYPE_KEY, EInvocationType::K_METHOD},
+                                  {K_METHOD_NAME_KEY,  std::forward<std::string>(pMethodName.get())},
+                                  {K_PARAMETERS_KEY, std::forward<Parameters &&>(pList)}
+                          }) {}
+
+        void setMethodName(MethodName &&pName) {
+            mValues[K_METHOD_NAME_KEY] = std::move(pName.get());
         }
 
         template<typename ParVal0, typename... ParVal_t>
         InvocationMessage &
-        add(Buffer &pBuffer, ParVal0 pVal0, ParVal_t... pValues) {
-            add(pBuffer, pVal0);
-            add(pBuffer, pValues...);
+        pack(Buffer &pBuffer, ParVal0 pVal0, ParVal_t... pValues) {
+            pack(pBuffer, pVal0);
+            pack(pBuffer, pValues...);
             return *this;
         }
 
         InvocationMessage &
-        add(Buffer &pBuffer, const std::string &pVal);
+        pack(Buffer &pBuffer, const std::string &pVal);
 
         InvocationMessage &
-        add(Buffer &pBuffer, const MethodName &pVal) {
-            return add(pBuffer,pVal.get());
+        pack(Buffer &pBuffer, const MethodName &pVal) {
+            return pack(pBuffer, pVal.get());
         }
 
         InvocationMessage &
-        add(Buffer &pBuffer, std::string_view &&pVal);
+        pack(Buffer &pBuffer, std::string_view &&pVal);
 
         InvocationMessage &
-        add(Buffer &pBuffer, const char* const pVal);
+        pack(Buffer &pBuffer, const char *const pVal);
 
         InvocationMessage &
-        add(Buffer &pBuffer, int pVal);
+        pack(Buffer &pBuffer, int pVal);
 
         InvocationMessage &
-        add(Buffer &pBuffer, EInvocationType pVal) {
-            return add(pBuffer, int(pVal));
+        pack(Buffer &pBuffer, EInvocationType pVal) {
+            return pack(pBuffer, int(pVal));
         }
 
-        InvocationMessage
-        &add(Buffer& pBuffer, const InstanceId &pVal);
+        InvocationMessage &
+        pack(Buffer &pBuffer, const InstanceId &pVal);
 
         void
-        unpack(const ReadBuffer&, InstanceId &pVal);
+        packToBuffer(Buffer &pBuffer) const;
 
         void
-        unpack(const ReadBuffer& pBuffer);
+        unpack(const ReadBuffer &, InstanceId &pVal);
 
-        template<typename T>
-        T
-        get(size_t pIdx) const {
-            return std::get<T>(mValues[pIdx]);
-        }
+        InvocationMessage &
+        unpackFromBuffer(const ReadBuffer &pBuffer);
 
         size_t
         size() const {
-            return mValues.size();
+            return mValues[K_PARAMETERS_KEY].size();
         }
 
-        InvocationMessage &unpackFromBuffer(const ReadBuffer &pBuffer) {
-            mValues.clear();
-            unpack(pBuffer);
-            return *this;
+        EInvocationType
+        getType() const {
+            return mValues[K_MESSAGE_TYPE_KEY].get<EInvocationType>();
         }
 
-        EInvocationType getType() const {
-            return mType;
+        void
+        setType(EInvocationType pType) {
+            mValues[K_MESSAGE_TYPE_KEY] = pType;
         }
 
-        void setType(EInvocationType pType) {
-            mType = pType;
-        }
-
-        const std::string& getMethodName() { return mMethod.get(); }
+        MethodName getMethodName() { return MethodName(mValues[K_METHOD_NAME_KEY].get<std::string>()); }
 
     private:
         void
@@ -520,7 +531,7 @@ namespace striboh::base {
         unpackInt(msgpack::object &pObjectHandle);
 
         void
-        unpackHeader(const ReadBuffer& , const size_t myBufLength, size_t &aOff);
+        unpackHeader(const ReadBuffer &, const size_t myBufLength, size_t &aOff);
 
     };
 

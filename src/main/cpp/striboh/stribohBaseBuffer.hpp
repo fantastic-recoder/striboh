@@ -385,30 +385,48 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
-    class Buffer: public boost::beast::flat_buffer {
+        class Buffer : public boost::beast::flat_buffer {
         public:
 
-            size_t write(const char*, std::size_t);
+            Buffer() = default;
+
+            explicit Buffer(const std::vector<uint8_t>& pVector);
+
+            Buffer& operator = (const std::vector<uint8_t>& pVector);
+
+            size_t write(const char *, std::size_t);
+
+            void copyFrom(const std::vector<uint8_t> &pVector);
         };
 
         class ReadBuffer {
-            const char* mMem;
+            const char *mMem;
             size_t mOffset;
             size_t mSize;
         public:
             explicit ReadBuffer(const void *pVoid, size_t pSize)
-            : mMem(static_cast<const char*>(pVoid)) , mOffset(0), mSize(pSize) {}
+                    : mMem(static_cast<const char *>(pVoid)), mOffset(0), mSize(pSize) {}
 
-            explicit ReadBuffer(const Buffer& pMutableBuffer)
-                    : mMem(static_cast<const char*>(pMutableBuffer.cdata().data())) , mOffset(0), mSize(pMutableBuffer.cdata().size()) {}
+            explicit ReadBuffer(const Buffer &pMutableBuffer)
+                    : mMem(static_cast<const char *>(pMutableBuffer.cdata().data())), mOffset(0),
+                      mSize(pMutableBuffer.cdata().size()) {}
 
-            size_t write(const char*, std::size_t);
+            size_t write(const char *, std::size_t);
 
-            const char* data() const { return mMem; }
+            const char *data() const { return mMem; }
 
             constexpr size_t size() const { return mSize; }
+
+            const char* begin() const { return data(); }
+
+            const char* end() const { return data() + size(); }
         };
+
+        inline const char* begin(const ReadBuffer& pReadBuffer) { return pReadBuffer.data(); }
+
+        inline const char* end(const ReadBuffer& pReadBuffer) { return pReadBuffer.end(); }
     }
+
 }
 
 

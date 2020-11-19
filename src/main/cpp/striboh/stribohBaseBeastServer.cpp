@@ -713,17 +713,6 @@ namespace striboh {
                 }
             }
 
-            // Start the asynchronous operation
-            void
-            onWsRun() {
-                // Set suggested timeout settings for the websocket
-                // Accept the websocket handshake
-                mWebSocketStream->async_accept(
-                        beast::bind_front_handler(
-                                &WebSession::onAccept,
-                                shared_from_this()));
-            }
-
             void
             onAccept(beast::error_code ec) {
                 if (ec)
@@ -759,8 +748,9 @@ namespace striboh {
                 InvocationMessage myMsg(EInvocationType::K_METHOD);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(),myConstBuf.size()));
-                mLog.debug("message unpacked, {} values.",myMsg.size());
-                InvocationMessage myReply = mBroker.invokeMethod(mInstanceId,myMsg);
+                mLog.debug("Unpacked, {} values, message: {}.",myMsg.size(),myMsg.getValues().dump());
+                const InvocationMessage myReply = mBroker.invokeMethod(mInstanceId,std::forward<InvocationMessage&&>(myMsg));
+                mLog.debug("Replying {} values, message: {}.",myReply.size(),myReply.getValues().dump());
                 mWriteBuffer.clear();
                 myReply.packToBuffer(mWriteBuffer);
                 doWriteBufferToWebSocket();
@@ -833,7 +823,7 @@ namespace striboh {
             Listener
                     (
                             net::io_context &ioc,
-                            tcp::endpoint endpoint,
+                            tcp::endpoint pEndpoint,
                             BrokerIface &pBroker,
                             LogIface& pLog
                     )
@@ -841,7 +831,7 @@ namespace striboh {
                 beast::error_code ec;
 
                 // Open the acceptor
-                mAcceptor.open(endpoint.protocol(), ec);
+                mAcceptor.open(pEndpoint.protocol(), ec);
                 if (ec) {
                     fail(ec, "open");
                     return;
@@ -855,7 +845,7 @@ namespace striboh {
                 }
 
                 // Bind to the server address
-                mAcceptor.bind(endpoint, ec);
+                mAcceptor.bind(pEndpoint, ec);
                 if (ec) {
                     fail(ec, "bind");
                     return;
@@ -868,6 +858,7 @@ namespace striboh {
                     fail(ec, "listen");
                     return;
                 }
+                mLog.info("listening on http:/{}:{}/", pEndpoint.address().to_string(), pEndpoint.port());
             }
 
             // Start accepting incoming connections

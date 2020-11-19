@@ -385,94 +385,64 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-    InvocationMessage&
-        InvocationMessage::add(Buffer& pBuffer, const std::string& pVal) {
-            msgpack::pack(pBuffer, pVal);
-            return *this;
-        }
-
-        InvocationMessage&
-        InvocationMessage::add(Buffer& pBuffer, const InstanceId& pVal) {
-            msgpack::pack(pBuffer, pVal.data);
-            return *this;
-        }
-
-        InvocationMessage &InvocationMessage::add(Buffer& pBuffer, std::string_view&& pVal) {
-            msgpack::pack(pBuffer, std::move(pVal));
-            return *this;
-        }
-
-        InvocationMessage &
-        InvocationMessage::add(Buffer& pBuffer, const int pVal) {
-            msgpack::pack(pBuffer, pVal);
-            return *this;
-        }
-
-        void InvocationMessage::unpack(const ReadBuffer& pBuffer) {
-            // now starts streaming deserialization.
-            mValues.clear();
-            const std::size_t myBufLength=pBuffer.size();
-            std::size_t aOff = 0;
-            unpackHeader(pBuffer,myBufLength, aOff);
-            msgpack::object_handle myObjHandle;
-            while (aOff != myBufLength) {
-                msgpack::unpack(myObjHandle, pBuffer.data(), myBufLength, aOff);
-                auto myObj = myObjHandle.get();
-                if( myObj.type == msgpack::type::STR ) {
-                    unpackString( myObj );
-                } else if( myObj.type == msgpack::type::POSITIVE_INTEGER || myObj.type == msgpack::type::NEGATIVE_INTEGER ) {
-                    unpackInt( myObj );
-                }
-            };
-        }
-
-        void
-        InvocationMessage::unpackHeader(const ReadBuffer &pBuffer, const size_t myBufLength, size_t &aOff) {
-            msgpack::object_handle myObjHandle;
-            msgpack::object myHeaderObj;
-            {
-                msgpack::unpack(myObjHandle, pBuffer.data(), myBufLength, aOff);
-                myHeaderObj = myObjHandle.get();
-                int myTypeVal;
-                myHeaderObj.convert(myTypeVal);
-                mType <<= myTypeVal;
-            }
-            {
-                msgpack::unpack(myObjHandle, pBuffer.data(), myBufLength, aOff);
-                myHeaderObj = myObjHandle.get();
-                myHeaderObj.convert(mMethod.get());
-            }
-        }
-
-        void
-        InvocationMessage::unpackString(msgpack::object& pObj ) {
-            std::string myVal;
-            pObj.convert(myVal);
-            mValues.push_back(myVal);
-        }
-
-        void InvocationMessage::unpackInt(msgpack::object &pObj ) {
-            int myIntVal;
-            pObj.convert(myIntVal);
-            mValues.push_back(myIntVal);
-        }
-
-        InvocationMessage &InvocationMessage::add(Buffer &pBuffer, const char *const pVal) {
-            msgpack::pack(pBuffer, pVal);
-            return *this;
-        }
-
-    void InvocationMessage::packToBuffer(Buffer &pBuffer) {
-        msgpack::pack(pBuffer, int(mType));
-        msgpack::pack(pBuffer, mMethod.get());
-        for(auto myValue: mValues) {
-            std::visit(
-                [this,&pBuffer](auto&& pArg) {
-                    this->add(pBuffer,pArg);
-                },
-                myValue
-            );
-        }
+    InvocationMessage &
+    InvocationMessage::pack(Buffer &pBuffer, const std::string &pVal) {
+        msgpack::pack(pBuffer, pVal);
+        return *this;
     }
+
+    InvocationMessage &
+    InvocationMessage::pack(Buffer &pBuffer, const InstanceId &pVal) {
+        msgpack::pack(pBuffer, pVal.data);
+        return *this;
+    }
+
+    InvocationMessage &
+    InvocationMessage::pack(Buffer &pBuffer, std::string_view &&pVal) {
+        msgpack::pack(pBuffer, std::move(pVal));
+        return *this;
+    }
+
+    InvocationMessage &
+    InvocationMessage::pack(Buffer &pBuffer, int pVal) {
+        msgpack::pack(pBuffer, pVal);
+        return *this;
+    }
+
+
+    InvocationMessage &
+    InvocationMessage::unpackFromBuffer(const ReadBuffer &pBuffer) {
+        // now starts streaming deserialization.
+        mValues.clear();
+        const std::size_t myBufLength = pBuffer.size();
+        std::size_t aOff = 0;
+        mValues= nlohmann::json::from_msgpack( pBuffer );
+        return *this;
+    }
+
+    void
+    InvocationMessage::unpackString(msgpack::object &pObj) {
+        std::string myVal;
+        pObj.convert(myVal);
+        mValues.push_back(myVal);
+    }
+
+    void
+    InvocationMessage::unpackInt(msgpack::object &pObj) {
+        int myIntVal;
+        pObj.convert(myIntVal);
+        mValues.push_back(myIntVal);
+    }
+
+    InvocationMessage &
+    InvocationMessage::pack(Buffer &pBuffer, const char *const pVal) {
+        msgpack::pack(pBuffer, pVal);
+        return *this;
+    }
+
+    void InvocationMessage::packToBuffer(Buffer &pBuffer) const {
+        pBuffer = nlohmann::json::to_msgpack(mValues);
+    }
+
 
 }

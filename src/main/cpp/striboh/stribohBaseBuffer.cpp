@@ -392,6 +392,21 @@ namespace striboh {
             return size();
         }
 
+        Buffer::Buffer(const std::vector<uint8_t> &pVector) {
+            copyFrom(pVector);
+        }
+
+        void Buffer::copyFrom(const std::vector<uint8_t> &pVector) {
+            auto aMutableBuffer(prepare(pVector.size()));
+            std::copy(pVector.begin(),pVector.end(),static_cast<uint8_t*>(aMutableBuffer.data()));
+            commit(pVector.size());
+        }
+
+        Buffer &Buffer::operator=(const std::vector<uint8_t> &pVector) {
+            copyFrom(pVector);
+            return *this;
+        }
+
     }
 }
 

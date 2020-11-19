@@ -1,0 +1,16 @@
+{
+  "name": "striboh-tests",
+  "version": "1.0.0",
+  "description": "Striboh test client.",
+  "main": "striboh_test_echo_client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "../../../.git",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "what-the-pack": "^2.0.3",
+    "ws": "^7.4.0"
+  }
+}
