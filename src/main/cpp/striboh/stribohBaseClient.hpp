@@ -392,7 +392,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <memory>
 #include <string>
 
-#include "stribohBaseInvocationMessage.hpp"
+#include "stribohBaseMessage.hpp"
 #include "stribohBaseBrokerIface.hpp"
 
 namespace striboh {
@@ -423,18 +423,18 @@ namespace striboh {
             ObjectProxy& mObjectProxy;
             net::io_context& mIoContext;
             LogIface &mLog;
-            InvocationMessage mValues;
-            InvocationMessage mReturnValues;
+            Message mValues;
+            Message mReturnValues;
             beast::flat_buffer mReadBuffer; // (Must persist between reads)
             Buffer mWriteBuffer; // (Must persist between reads)
         public:
             InvocationContext(
                     ObjectProxy& pObjectProxy,
                     net::io_context& pIoContext,
-                    const InvocationMessage& pValues,
+                    const Message& pValues,
                     LogIface &pLog );
 
-            InvocationMessage getReturnValue() { return mReturnValues; }
+            Message getReturnValue() { return mReturnValues; }
 
             /**
              * Start the asynchronous operation
@@ -515,7 +515,7 @@ namespace striboh {
             }
 
             std::shared_ptr<InvocationContext>
-            invokeMethod(InvocationMessage pValues);
+            invokeMethod(Message pValues);
 
         private:
 

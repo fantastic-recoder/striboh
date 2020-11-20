@@ -392,7 +392,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseMethod.hpp>
-#include <striboh/stribohBaseInvocationMessage.hpp>
+#include <striboh/stribohBaseMessage.hpp>
 #include <striboh/stribohBaseSignature.hpp>
 #include <striboh/stribohBaseBrokerIface.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
@@ -412,13 +412,15 @@ using std::count;
 using striboh::base::InterfaceName;
 using striboh::base::Method;
 using striboh::base::ParameterList;
-using striboh::base::InvocationMessage;
+using striboh::base::Message;
 using striboh::base::ETypes;
 using boost::process::child;
 using boost::process::system;
 using boost::process::std_in;
 using boost::process::std_out;
 using boost::process::std_err;
+
+using json = nlohmann::json;
 
 static striboh::base::LogBoostImpl theLog;
 
@@ -467,8 +469,8 @@ TEST(stribohBaseTests, testStribohBrokerShutdown) {
 TEST(stribohBaseTests, testMethodParametersConstructor) {
     constexpr const char *const K_METHOD_NAME = "testMethod";
     const std::string myVal0("Test 0.");
-    InvocationMessage myList(MethodName(K_METHOD_NAME), {{"p0", myVal0},
-                                                         {"p1", 42}});
+    Message myList(MethodName(K_METHOD_NAME), {{"p0", myVal0},
+                                               {"p1", 42}});
     ASSERT_EQ(myVal0, myList.getParameters()["p0"].get<std::string>());
     ASSERT_EQ(42, myList.getParameters()["p1"].get<int>());
     ASSERT_EQ(K_METHOD_NAME, myList.getMethodName().get());
@@ -526,9 +528,9 @@ Interface createTestInterface() {
                            ParameterList{
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](InvocationMessage &&pIncoming, Context pCtx) -> InvocationMessage {
-                               InvocationMessage myReturn(EInvocationType::K_RETURN,
-                                                          {std::string("Server greats ")
+                           [](Message &&pIncoming, Context pCtx) -> Message {
+                               Message myReturn(EInvocationType::K_RETURN,
+                                                {std::string("Server greats ")
                                                            + pIncoming.getParameters()["p0"].get<std::string>()}
                                );
                                return myReturn;
@@ -588,12 +590,10 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     string myResolved = aBroker.resolvedServiceToStr(theM0M1Path, aSvc);
     EXPECT_FALSE(myResolved.empty());
     BOOST_LOG_TRIVIAL(debug) << myResolved;
-    std::istringstream myIstream(myResolved);
-    boost::property_tree::ptree myPt;
-    boost::property_tree::read_json(myIstream, myPt);
-    EXPECT_EQ(theM0M1Path, myPt.get<std::string>(K_SVC_PATH));
-    EXPECT_EQ(true, myPt.get<bool>(K_SVC_RESULT));
-    EXPECT_EQ(myUuid, myPt.get<InstanceId>(K_SVC_UUID));
+    auto aJson=json::parse(myResolved);
+    EXPECT_EQ(theM0M1Path, aJson[K_TAG_SVC][K_TAG_SVC_PATH]);
+    EXPECT_EQ(true, aJson[K_TAG_SVC][K_TAG_SVC_RESULT]);
+    EXPECT_EQ(myUuid, Broker::getInstanceId(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]));
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
@@ -608,11 +608,11 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
                            ParameterList{
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](InvocationMessage && pIncoming, Context pCtx) -> InvocationMessage {
+                           [](Message && pIncoming, Context pCtx) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.getValues().dump() ;
                                string p0(pIncoming.getParameters()["p0"].get<std::string>());
-                               InvocationMessage myRetVal(EInvocationType::K_RETURN,
-                                                          {{InvocationMessage::K_RETURN_KEY, "Server greats " + p0}});
+                               Message myRetVal(EInvocationType::K_RETURN,
+                                                {{Message::K_RETURN_KEY, "Server greats " + p0}});
                                 BOOST_LOG_TRIVIAL(debug) << "Returning: " << myRetVal.getValues().dump() ;
                                return myRetVal;
                            }
@@ -620,13 +620,12 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
             }
     };
     InstanceId myUuid = aBroker.addServant(myInterface);
-    InvocationMessage myMsg(MethodName("echo"), {{"p0","Peter!"}});
+    Message myMsg(MethodName("echo"), {{"p0", "Peter!"}});
     BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.getValues().dump() ;
-    InvocationMessage myReply = aBroker.invokeMethod(
-            myUuid,
-            std::forward<InvocationMessage&&>(myMsg));
+    myMsg.setInstanceId(myUuid);
+    Message myReply = aBroker.invokeMethod(std::forward<Message&&>(myMsg));
     ASSERT_TRUE(myReply.size() == 1) << "Parameter list is empty, should have 1 element!";
-    EXPECT_EQ(std::string("Server greats Peter!"), myReply.getParameters()[InvocationMessage::K_RETURN_KEY].get<std::string>());
+    EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturns().get<std::string>());
     aBroker.shutdown();
 }
 
@@ -634,12 +633,15 @@ static constexpr const char *const K_TEST_METHOD_NAME2 = "abrakadabra";
 
 TEST(stribohBaseTests, testSerailization)
 {
-    InvocationMessage myInputValues(MethodName("testMethod"),
-                                    {{"p0","Echo string."}, {"p1",42}, {"p2","end."}});
+    Message myInputValues(MethodName("testMethod"),
+                          {{"p0","Echo string."}, {"p1",42}, {"p2","end."}});
+    const InstanceId myIId = Broker::generateInstanceId();
+    myInputValues.setInstanceId(myIId);
+    EXPECT_EQ(myIId, myInputValues.getInstanceId() );
     EXPECT_EQ(3, myInputValues.size());
     Buffer myBuff;
     myInputValues.packToBuffer(myBuff);
-    InvocationMessage myOutputValues(MethodName("testMethod"));
+    Message myOutputValues(MethodName("testMethod"));
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
     EXPECT_EQ(3, myOutputValues.size());
     EXPECT_EQ("Echo string.", myOutputValues.getParameters()["p0"].get<string>());
@@ -651,6 +653,18 @@ TEST(stribohBaseTests, testSerailization)
     EXPECT_EQ(K_TEST_METHOD_NAME2, myOutputValues.getMethodName().get());
     myOutputValues.setType(EInvocationType::K_RETURN);
     EXPECT_EQ(EInvocationType::K_RETURN, myOutputValues.getType());
+    EXPECT_EQ(myIId, myOutputValues.getInstanceId() );
+    constexpr const char* K_HELLO_RETURNED = "Hallo returned!";
+    Message myReturnIn{Return{K_HELLO_RETURNED}};
+    BOOST_LOG_TRIVIAL(debug) << myReturnIn.getValues().dump();
+    ASSERT_EQ(K_HELLO_RETURNED,myReturnIn.getReturns());
+    ASSERT_EQ(EInvocationType::K_RETURN,myReturnIn.getType());
+    Buffer myBuff1;
+    myReturnIn.packToBuffer(myBuff);
+    Message myReturnOut((ReadBuffer(myBuff)));
+    BOOST_LOG_TRIVIAL(debug) << myReturnOut.getValues().dump();
+    ASSERT_EQ(K_HELLO_RETURNED,myReturnOut.getReturns());
+    ASSERT_EQ(EInvocationType::K_RETURN,myReturnOut.getType());
 }
 
 
@@ -673,23 +687,23 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     EXPECT_TRUE(myProxy->isConnected());
     {
         auto myResult0 = myProxy
-                ->invokeMethod(InvocationMessage(MethodName("echo"), {{"p0","Peter"}}));
-        InvocationMessage myReply = myResult0->getReturnValue();
+                ->invokeMethod(Message(MethodName("echo"), {{"p0", "Peter"}}));
+        Message myReply = myResult0->getReturnValue();
         EXPECT_EQ(1, myReply.size()) << "Parameter list is empty, should have 1 element!";
-        EXPECT_EQ(std::string("Server greats Peter!"), myReply.getParameters()[InvocationMessage::K_RETURN_KEY].get<std::string>());
+        EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturns().get<std::string>());
     }
     {
         auto myResult2 = myProxy
-                ->invokeMethod(InvocationMessage(MethodName("echo"), {{"p0","Paul"}}));
-        InvocationMessage myReply2 = myResult2->getReturnValue();
+                ->invokeMethod(Message(MethodName("echo"), {{"p0", "Paul"}}));
+        Message myReply2 = myResult2->getReturnValue();
         EXPECT_EQ(1, myReply2.size()) << "Parameter list is empty, should have 1 element!";
-        EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getParameters()[InvocationMessage::K_RETURN_KEY].get<std::string>());
+        EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getReturns().get<std::string>());
     }
     {
         auto myResult1 = myProxy
-                ->invokeMethod(InvocationMessage(MethodName("shutdown")));
-        InvocationMessage myReply1 = myResult1->getReturnValue();
-        ASSERT_EQ(0, myReply1.size());
+                ->invokeMethod(Message(MethodName("shutdown")));
+        Message myReply1 = myResult1->getReturnValue();
+        ASSERT_EQ(1, myReply1.size());
     }
     if (myServerChildProcess) {
         myServerChildProcess->wait_for(30s);

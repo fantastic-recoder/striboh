@@ -390,53 +390,58 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-        class Broker;
-        class Context;
-        using InterfaceName = fluent::NamedType<std::string,struct InterfaceNameTag>;
+    class Broker;
 
-        inline bool operator < (const InterfaceName& pLeft, const InterfaceName& pRight ) {
-            return pLeft < pRight;
+    class Context;
+
+    using InterfaceName = fluent::NamedType<std::string, struct InterfaceNameTag>;
+
+    inline bool operator<(const InterfaceName &pLeft, const InterfaceName &pRight) {
+        return pLeft < pRight;
+    }
+
+    class Interface {
+    public:
+        typedef std::vector<Method> Methods_t;
+        typedef std::vector<std::string> Path_t;
+
+        explicit Interface
+                (
+                        std::initializer_list<std::string> pPath,
+                        InterfaceName pName,
+                        std::initializer_list<Method>
+                );
+
+        Methods_t::iterator findMethod(std::string_view pMethodName);
+
+        Methods_t::iterator end();
+
+        const Path_t &getPath() const;
+
+        bool isLocal() const {
+            return true;
         }
 
-        class Interface {
-        public:
-            typedef std::vector<Method> Methods_t;
-            typedef std::vector<std::string> Path_t;
-
-            explicit Interface
-            (
-                    std::initializer_list<std::string> pPath,
-                    InterfaceName pName,
-                    std::initializer_list<Method>
-            );
-
-            Methods_t::iterator findMethod( std::string_view pMethodName );
-
-            Methods_t::iterator end();
-
-            const Path_t &getPath() const;
-
-            bool isLocal() const {
-                return true;
-            }
-
-            const InterfaceName &getName() const {
-                return mName;
-            }
+        const InterfaceName &getName() const {
+            return mName;
+        }
 
 
-        private:
-            Methods_t mMethods;
-            Path_t    mPath;
-            InterfaceName mName;
-        };
+    private:
+        Methods_t mMethods;
+        Path_t mPath;
+        InterfaceName mName;
+    };
 
-        static const  constexpr char *const K_SVC_PATH = "svc.path";
+    static const constexpr char *const K_TAG_SVC = "svc";
 
-        static const constexpr char *const K_SVC_RESULT = "svc.result";
+    static const constexpr char *const K_TAG_SVC_PATH = "path";
 
-        static const constexpr char *const K_SVC_UUID = "svc.uuid";
+    static const constexpr char *const K_TAG_SVC_RESULT = "result";
 
-    }
+    static const constexpr char *const K_TAG_SVC_UUID = "uuid";
+
+    static const constexpr char *const K_TAG_SVC_UUID_ARR = "uuid_arr";
+}
 
 #endif //STRIBOH_BASE_INTERFACE_HPP

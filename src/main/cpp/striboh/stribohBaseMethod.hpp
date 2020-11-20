@@ -382,7 +382,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 
 #include "stribohBaseEInvocationType.hpp"
-#include "stribohBaseInvocationMessage.hpp"
+#include "stribohBaseMessage.hpp"
 #include "stribohBaseParameterList.hpp"
 
 namespace striboh::base {
@@ -401,11 +401,11 @@ namespace striboh::base {
         Broker &mBroker;
     };
 
-    class InvocationMessage;
+    class Message;
 
     class Method {
     public:
-        typedef InvocationMessage(*MethodGlue_t)(InvocationMessage &&, Context);
+        typedef Message(*MethodGlue_t)(Message &&, Context);
 
         explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation)
                 : mName(pName), mImplementation(pImplementation) {}
@@ -414,10 +414,10 @@ namespace striboh::base {
             return mName;
         }
 
-        InvocationMessage invoke(InvocationMessage &&pIns, Context pCtx) {
+        Message invoke(Message &&pIns, Context pCtx) {
             if (mImplementation)
-                return mImplementation(std::forward<InvocationMessage &&>(pIns), pCtx);
-            return InvocationMessage(EInvocationType::K_RETURN);
+                return mImplementation(std::forward<Message &&>(pIns), pCtx);
+            return Message(EInvocationType::K_RETURN);
         }
 
     private:

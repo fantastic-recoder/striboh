@@ -395,17 +395,17 @@ namespace striboh {
                                ParameterList{
                                        {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                                },
-                               [](InvocationMessage &&pIncoming, Context pCtx) {
+                               [](Message &&pIncoming, Context pCtx) {
                                    std::string myWhom(std::string("Server greats ") + pIncoming.getParameters()["p0"].get<std::string>() + "!");
                                    std::cout << myWhom << std::endl;
-                                   return InvocationMessage(EInvocationType::K_RETURN,{{"return",myWhom}});
+                                   return Message(Return{myWhom});
                                }
                         },
                         Method{"shutdown",
                                ParameterList{},
-                               [](InvocationMessage &&pIncoming, Context pCtx) {
+                               [](Message &&pIncoming, Context pCtx) {
                                    pCtx.getBroker().shutdown();
-                                   return InvocationMessage(EInvocationType::K_RETURN);
+                                   return Message(Return{});
                                }
                         }
 

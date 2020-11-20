@@ -389,6 +389,13 @@ namespace striboh::base {
 
     using InstanceId = boost::uuids::uuid;
 
+    using InstanceIdArr = std::array<uint8_t,sizeof(InstanceId)>;
+
+    inline InstanceId& operator <<= (InstanceId& pTarget, const InstanceIdArr& pSource) {
+        std::copy(pSource.begin(),pSource.end(),pTarget.begin());
+        return pTarget;
+    }
+
     inline std::string toString(const InstanceId& pUuid) {
         std::ostringstream aOstream;
         aOstream << pUuid;

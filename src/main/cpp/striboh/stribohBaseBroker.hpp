@@ -388,7 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 
-#include "stribohBaseInvocationMessage.hpp"
+#include "stribohBaseMessage.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportListNode.hpp"
@@ -420,8 +420,8 @@ namespace striboh::base {
             std::future<void>
             shutdown() override;
 
-            InvocationMessage
-            invokeMethod(const InstanceId& pInstanceId, InvocationMessage&& pInvocation) override;
+            Message
+            invokeMethod(Message&& pInvocation) override;
 
             InstanceId
             addServant(Interface& pMethodSignature) override;
@@ -443,6 +443,9 @@ namespace striboh::base {
             resolveServiceFromStr(const std::string& pJson);
 
             virtual ~Broker();
+
+            static InstanceId
+            getInstanceId(const nlohmann::json &aJson);
         private:
 
             void
@@ -475,6 +478,7 @@ namespace striboh::base {
             resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
 
             void doShutdown();
+
         };
 
     }

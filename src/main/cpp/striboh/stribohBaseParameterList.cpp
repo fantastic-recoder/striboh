@@ -378,7 +378,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include "stribohBaseEInvocationType.hpp"
-#include "stribohBaseInvocationMessage.hpp"
+#include "stribohBaseMessage.hpp"
 #include "stribohBaseInstanceId.hpp"
 #include <boost/log/trivial.hpp>
 #include "stribohBaseParameterList.hpp"

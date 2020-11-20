@@ -378,8 +378,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include <thread>
-
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
@@ -400,7 +398,7 @@ namespace striboh::base {
     using ::striboh::idl::ast::IdentifierNode;
     using ::striboh::idl::ast::ModuleBodyNode;
 
-    namespace pt = boost::property_tree;
+    using json = ::nlohmann::json;
 
     const std::atomic<EServerState> &
     Broker::serve() {
@@ -468,23 +466,24 @@ namespace striboh::base {
 
     }
 
-    InvocationMessage
-    Broker::invokeMethod(const InstanceId &pInstanceId, InvocationMessage&& pValues) {
+    Message
+    Broker::invokeMethod(Message&& pValues) {
+        const InstanceId aInstanceId(pValues.getInstanceId());
         getLog().debug("Calling instance \"{}\" method \"{}\".",
-                               toString(pInstanceId), pValues.getMethodName().get());
-        auto myInterfaceIt = mInstances.find(pInstanceId);
+                       toString(aInstanceId), pValues.getMethodName().get());
+        auto myInterfaceIt = mInstances.find(aInstanceId);
         if (myInterfaceIt != mInstances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName().get());
             if (myMethodIt != myInterfaceIt->second.end()) {
-                return myMethodIt->invoke(std::forward<InvocationMessage&&>(pValues), Context(*this));
+                return myMethodIt->invoke(std::forward<Message&&>(pValues), Context(*this));
             }
         } else {
-            getLog().error("Did not find instance \"{}\"", toString(pInstanceId));
+            getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
         }
-        InvocationMessage myRetVal(EInvocationType::K_ERROR);
+        Message myRetVal(EInvocationType::K_ERROR);
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
-                       pValues.getMethodName().get(), toString(pInstanceId));
+                       pValues.getMethodName().get(), toString(aInstanceId));
         return myRetVal;
     }
 
@@ -638,22 +637,26 @@ namespace striboh::base {
 
     std::string
     Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc) const {
-        pt::ptree myPt;
-        myPt.put(K_SVC_PATH, pPath);
-        myPt.put(K_SVC_RESULT, pSvc.first);
-        myPt.put(K_SVC_UUID, pSvc.second);
-        std::ostringstream myOstream;
-        pt::write_json(myOstream, myPt);
-        return myOstream.str();
+        json aJson;
+        aJson[K_TAG_SVC][K_TAG_SVC_PATH] =  pPath;
+        aJson[K_TAG_SVC][K_TAG_SVC_RESULT] = pSvc.first;
+        aJson[K_TAG_SVC][K_TAG_SVC_UUID] = toString(pSvc.second);
+        aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR] = pSvc.second.data;
+        return aJson.dump();
     }
 
     ResolvedService
     Broker::resolveServiceFromStr(const std::string &pJson) {
-        pt::ptree myPt;
-        std::istringstream myIstream(pJson);
-        pt::read_json(myIstream, myPt);
-        ResolvedService mySvc{myPt.get<bool>(K_SVC_RESULT), myPt.get<InstanceId>(K_SVC_UUID)};
+        json aJson=json::parse(pJson);
+        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], getInstanceId(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]) };
         return mySvc;
+    }
+
+    InstanceId Broker::getInstanceId(const json &aJson) {
+        InstanceId myReturn;
+        InstanceIdArr *myArr = new(myReturn.data) InstanceIdArr();
+        *myArr = aJson;
+        return myReturn;
     }
 
     Broker::~Broker() {

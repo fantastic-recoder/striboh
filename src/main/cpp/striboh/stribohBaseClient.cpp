@@ -413,8 +413,9 @@ namespace striboh {
          * @return
          */
         std::shared_ptr<InvocationContext>
-        ObjectProxy::invokeMethod(InvocationMessage pValues)
+        ObjectProxy::invokeMethod(Message pValues)
         {
+            pValues.setInstanceId(mUuid);
             if(getConnectionStatus()==EConnectionStatus::K_INITIAL) {
                 mLog.debug("Going to do TCP connect.");
                 doTcpResolveAntConnect();
@@ -430,7 +431,7 @@ namespace striboh {
         InvocationContext::InvocationContext(
             ObjectProxy& pObjectProxy,
             net::io_context& pIoContext,
-            const InvocationMessage& pValues,
+            const Message& pValues,
             LogIface &pLog
         )
         : mObjectProxy(pObjectProxy)

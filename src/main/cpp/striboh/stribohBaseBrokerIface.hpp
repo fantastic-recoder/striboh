@@ -451,8 +451,8 @@ namespace striboh::base {
             virtual std::future<void>
             shutdown() = 0;
 
-            virtual InvocationMessage
-            invokeMethod(const InstanceId& pInstanceId, InvocationMessage&& pInvocation) = 0;
+            virtual Message
+            invokeMethod(Message&& pInvocation) = 0;
 
             virtual InstanceId
             addServant(Interface& pMethodSignature) = 0;

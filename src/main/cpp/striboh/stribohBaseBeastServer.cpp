@@ -464,7 +464,7 @@ namespace striboh {
         handleHttpRequest
                 (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, BrokerIface &pBroker,
                  std::shared_ptr<websocket::stream<beast::tcp_stream>> &pWebSocketPtr,
-                 std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr, InstanceId& pInstanceId ) {
+                 std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr) {
             // Returns a bad request response
             auto const bad_request =
                     [&pRequest](beast::string_view why) {
@@ -518,8 +518,7 @@ namespace striboh {
             std::string theResponse;
             if (myParams.find("svc") != myParams.end()) {
                 pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
-                pInstanceId = aSvc.second;
-                theResponse = pBroker.resolvedServiceToStr(myParams[K_BASE_URL][0],aSvc);
+                theResponse = pBroker.resolvedServiceToStr(myParams[K_BASE_URL][0], aSvc);
             } else if (myParams.find("upgrade") != myParams.end() &&
                        boost::beast::websocket::is_upgrade(pRequest)) {
                 pWebSocketPtr
@@ -656,12 +655,11 @@ namespace striboh {
             HttpSendLambda mLambda;
             BrokerIface &mBroker;
             std::shared_ptr<void> mRes;
-            LogIface& mLog;
-            InstanceId mInstanceId;
+            LogIface &mLog;
         public:
             // Take ownership of the socket
             explicit
-            WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface& pLog)
+            WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface &pLog)
                     : mLambda(*this),
                       mBroker(pBroker),
                       mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
@@ -695,19 +693,17 @@ namespace striboh {
             }
 
             void
-            onHttpRead(
-                    beast::error_code ec,
-                    std::size_t bytes_transferred) {
-                boost::ignore_unused(bytes_transferred);
+            onHttpRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
+                boost::ignore_unused(pBytesTransferred);
 
                 // This means they closed the connection
-                if (ec == http::error::end_of_stream)
+                if (pErrorCode == http::error::end_of_stream)
                     return doCloseHttpStream();
-                if (ec)
-                    return fail(ec, "onHttpRead");
+                if (pErrorCode)
+                    return fail(pErrorCode, "onHttpRead");
                 // Send the response
                 if (handleHttpRequest(std::move(mRequest), mLambda, mBroker,
-                                      mWebSocketStream, mTcpStream, mInstanceId)) {
+                                      mWebSocketStream, mTcpStream)) {
                     mBroker.getLog().debug("Upgraded!");
                     doWsRead();
                 }
@@ -744,13 +740,13 @@ namespace striboh {
                 if (ec) {
                     fail(ec, "onWsRead");
                 }
-                mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(),pBytesTransferred);
-                InvocationMessage myMsg(EInvocationType::K_METHOD);
+                mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
+                Message myMsg(EInvocationType::K_METHOD);
                 auto myConstBuf(mReadBuffer.cdata());
-                myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(),myConstBuf.size()));
-                mLog.debug("Unpacked, {} values, message: {}.",myMsg.size(),myMsg.getValues().dump());
-                const InvocationMessage myReply = mBroker.invokeMethod(mInstanceId,std::forward<InvocationMessage&&>(myMsg));
-                mLog.debug("Replying {} values, message: {}.",myReply.size(),myReply.getValues().dump());
+                myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
+                mLog.debug("Unpacked, {} values, message: {}.", myMsg.size(), myMsg.getValues().dump());
+                const Message myReply = mBroker.invokeMethod(std::forward<Message &&>(myMsg));
+                mLog.debug("Replying {} values, message: {}.", myReply.size(), myReply.getValues().dump());
                 mWriteBuffer.clear();
                 myReply.packToBuffer(mWriteBuffer);
                 doWriteBufferToWebSocket();
@@ -818,14 +814,14 @@ namespace striboh {
             net::io_context &mIoc;
             tcp::acceptor mAcceptor;
             BrokerIface &mBroker;
-            LogIface& mLog;
+            LogIface &mLog;
         public:
             Listener
                     (
                             net::io_context &ioc,
                             tcp::endpoint pEndpoint,
                             BrokerIface &pBroker,
-                            LogIface& pLog
+                            LogIface &pLog
                     )
                     : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker), mLog(pLog) {
                 beast::error_code ec;
