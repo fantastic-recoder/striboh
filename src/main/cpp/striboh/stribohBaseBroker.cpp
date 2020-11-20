@@ -648,15 +648,8 @@ namespace striboh::base {
     ResolvedService
     Broker::resolveServiceFromStr(const std::string &pJson) {
         json aJson=json::parse(pJson);
-        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], getInstanceId(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]) };
+        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], from_json( aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR] ) };
         return mySvc;
-    }
-
-    InstanceId Broker::getInstanceId(const json &aJson) {
-        InstanceId myReturn;
-        InstanceIdArr *myArr = new(myReturn.data) InstanceIdArr();
-        *myArr = aJson;
-        return myReturn;
     }
 
     Broker::~Broker() {

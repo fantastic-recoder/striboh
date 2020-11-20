@@ -593,7 +593,7 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     auto aJson=json::parse(myResolved);
     EXPECT_EQ(theM0M1Path, aJson[K_TAG_SVC][K_TAG_SVC_PATH]);
     EXPECT_EQ(true, aJson[K_TAG_SVC][K_TAG_SVC_RESULT]);
-    EXPECT_EQ(myUuid, Broker::getInstanceId(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]));
+    EXPECT_EQ(myUuid, from_json(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]));
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer)

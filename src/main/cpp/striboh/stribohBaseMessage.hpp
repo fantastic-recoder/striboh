@@ -400,7 +400,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh::base {
 
 
-    typedef nlohmann::json Json;
+    using Json = nlohmann::json;
 
     using Return = fluent::NamedType<nlohmann::json, struct ReturnTag>;
 
@@ -446,13 +446,12 @@ namespace striboh::base {
         InstanceId
         getInstanceId() {
             InstanceId myReturn;
-            InstanceIdArr *myArr = new(myReturn.data) InstanceIdArr();
-            *myArr = mValues[K_INSTANCE_ID_KEY];
+            from_json(mValues[K_INSTANCE_ID_KEY],myReturn);
             return myReturn;
         }
 
         void setInstanceId(const InstanceId &pInstanceId) {
-            mValues[K_INSTANCE_ID_KEY] = pInstanceId.data;
+            to_json(mValues[K_INSTANCE_ID_KEY], pInstanceId);
         }
 
         Message() = delete;

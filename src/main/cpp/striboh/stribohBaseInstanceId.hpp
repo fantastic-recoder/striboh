@@ -385,18 +385,38 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <nlohmann/json.hpp>
+
 namespace striboh::base {
 
     using InstanceId = boost::uuids::uuid;
 
-    using InstanceIdArr = std::array<uint8_t,sizeof(InstanceId)>;
+    using InstanceIdArr = std::array<uint8_t, sizeof(InstanceId)>;
 
-    inline InstanceId& operator <<= (InstanceId& pTarget, const InstanceIdArr& pSource) {
-        std::copy(pSource.begin(),pSource.end(),pTarget.begin());
+    inline InstanceId &operator<<=(InstanceId &pTarget, const InstanceIdArr &pSource) {
+        std::copy(pSource.begin(), pSource.end(), pTarget.begin());
         return pTarget;
     }
 
-    inline std::string toString(const InstanceId& pUuid) {
+    inline ::nlohmann::json & to_json(::nlohmann::json &pJson, const InstanceId &pValue) {
+        pJson = pValue.data;
+        return pJson;
+    }
+
+    inline InstanceId& from_json(const ::nlohmann::json &j, InstanceId &pValue) {
+        InstanceIdArr *myArr = new(pValue.data) InstanceIdArr;
+        (*myArr) = j;
+        return pValue;
+    }
+
+    inline InstanceId from_json(const ::nlohmann::json &pJson) {
+        InstanceId aInstanceId;
+        from_json(pJson,aInstanceId);
+        return aInstanceId;
+    }
+
+
+    inline std::string toString(const InstanceId &pUuid) {
         std::ostringstream aOstream;
         aOstream << pUuid;
         return aOstream.str();

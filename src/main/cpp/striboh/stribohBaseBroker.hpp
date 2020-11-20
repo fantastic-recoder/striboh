@@ -444,8 +444,6 @@ namespace striboh::base {
 
             virtual ~Broker();
 
-            static InstanceId
-            getInstanceId(const nlohmann::json &aJson);
         private:
 
             void
