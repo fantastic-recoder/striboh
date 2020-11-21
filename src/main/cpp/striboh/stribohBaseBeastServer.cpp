@@ -730,15 +730,20 @@ namespace striboh {
                                 shared_from_this()));
             }
 
+            /**
+             * @TODO What to do width errors? Need a catch?
+             * @param pErrorCode - self evident.
+             * @param pBytesTransferred - self evident.
+             */
             void
-            onWsRead(beast::error_code ec, std::size_t pBytesTransferred) {
+            onWsRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
                 // This indicates that the session was closed
-                if (ec == websocket::error::closed) {
+                if (pErrorCode == websocket::error::closed) {
                     mLog.debug("WebSocket closed.");
                     return;
                 }
-                if (ec) {
-                    fail(ec, "onWsRead");
+                if (pErrorCode) {
+                    fail(pErrorCode, "onWsRead");
                 }
                 mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
                 Message myMsg(EInvocationType::K_METHOD);
@@ -875,13 +880,18 @@ namespace striboh {
                                 shared_from_this()));
             }
 
+            /**
+             * @TODO Think through what to do when the port is not free.
+             * @param pErrorCode - self evident.
+             * @param pSocket - network socket.
+             */
             void
-            onAccept(beast::error_code ec, tcp::socket socket) {
-                if (ec) {
-                    fail(ec, "onAccept");
+            onAccept(beast::error_code pErrorCode, tcp::socket pSocket) {
+                if (pErrorCode) {
+                    fail(pErrorCode, "onAccept (is port taken?)");
                 } else {
                     // Create the session and run it
-                    std::make_shared<WebSession>(std::move(socket), mBroker, mLog)->run();
+                    std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
                 }
 
                 // Accept another connection

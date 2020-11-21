@@ -393,11 +393,6 @@ namespace striboh::base {
 
     using InstanceIdArr = std::array<uint8_t, sizeof(InstanceId)>;
 
-    inline InstanceId &operator<<=(InstanceId &pTarget, const InstanceIdArr &pSource) {
-        std::copy(pSource.begin(), pSource.end(), pTarget.begin());
-        return pTarget;
-    }
-
     inline ::nlohmann::json & to_json(::nlohmann::json &pJson, const InstanceId &pValue) {
         pJson = pValue.data;
         return pJson;

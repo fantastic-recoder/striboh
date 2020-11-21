@@ -395,7 +395,7 @@ namespace striboh {
                                ParameterList{
                                        {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                                },
-                               [](Message &&pIncoming, Context pCtx) {
+                               [](const Message &pIncoming, Context pCtx) {
                                    std::string myWhom(std::string("Server greats ") + pIncoming.getParameters()["p0"].get<std::string>() + "!");
                                    std::cout << myWhom << std::endl;
                                    return Message(Return{myWhom});
@@ -403,7 +403,7 @@ namespace striboh {
                         },
                         Method{"shutdown",
                                ParameterList{},
-                               [](Message &&pIncoming, Context pCtx) {
+                               [](const Message &pIncoming, Context pCtx) {
                                    pCtx.getBroker().shutdown();
                                    return Message(Return{});
                                }

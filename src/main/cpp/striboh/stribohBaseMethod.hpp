@@ -405,7 +405,7 @@ namespace striboh::base {
 
     class Method {
     public:
-        typedef Message(*MethodGlue_t)(Message &&, Context);
+        typedef Message(*MethodGlue_t)(const Message &, Context);
 
         explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation)
                 : mName(pName), mImplementation(pImplementation) {}
@@ -414,9 +414,9 @@ namespace striboh::base {
             return mName;
         }
 
-        Message invoke(Message &&pIns, Context pCtx) {
+        Message invoke(const Message &pIns, Context pCtx) {
             if (mImplementation)
-                return mImplementation(std::forward<Message &&>(pIns), pCtx);
+                return mImplementation(pIns, pCtx);
             return Message(EInvocationType::K_RETURN);
         }
 

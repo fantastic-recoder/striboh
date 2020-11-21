@@ -435,16 +435,16 @@ namespace striboh::base {
         const Json &getValues() const { return mValues; }
 
         MethodName
-        getMethodName() {
+        getMethodName() const {
             return MethodName(mValues[K_METHOD_NAME_KEY].get<std::string>());
         }
 
-        void setMethodName(MethodName &&pName) {
-            mValues[K_METHOD_NAME_KEY] = std::forward<std::string>(pName.get());
+        void setMethodName(const MethodName &pName) {
+            mValues[K_METHOD_NAME_KEY] = pName.get();
         }
 
         InstanceId
-        getInstanceId() {
+        getInstanceId() const {
             InstanceId myReturn;
             from_json(mValues[K_INSTANCE_ID_KEY],myReturn);
             return myReturn;
@@ -455,6 +455,10 @@ namespace striboh::base {
         }
 
         Message() = delete;
+        Message( const Message& ) = default;
+        Message( Message&& ) = default;
+        Message& operator = (Message&& ) = default;
+
 
         explicit
         Message(EInvocationType pType) :
@@ -465,7 +469,7 @@ namespace striboh::base {
                         }) {}
 
         explicit
-        Message(EInvocationType pType, Json &&pList) :
+        Message(EInvocationType pType, Json &&pList) noexcept :
                 mValues({
                                 {K_MESSAGE_TYPE_KEY, pType},
                                 {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
@@ -473,15 +477,15 @@ namespace striboh::base {
                         }) {}
 
         explicit
-        Message(MethodName &&pMethodName) :
+        Message(const MethodName &pMethodName) noexcept :
                 mValues({
                                 {K_MESSAGE_TYPE_KEY, EInvocationType::K_METHOD},
-                                {K_METHOD_NAME_KEY,  std::forward<std::string>(pMethodName.get())},
+                                {K_METHOD_NAME_KEY,  pMethodName.get()},
                                 {K_PARAMETERS_KEY,   Json{}}
                         }) {}
 
         explicit
-        Message(Return &&pReturns) :
+        Message(const Return &pReturns) noexcept :
                 mValues({
                                 {K_MESSAGE_TYPE_KEY, EInvocationType::K_RETURN},
                                 {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
@@ -489,10 +493,10 @@ namespace striboh::base {
                         }) {}
 
         explicit
-        Message(MethodName &&pMethodName, Json &&pList) :
+        Message(const MethodName &pMethodName, Json &&pList) noexcept :
                 mValues({
                                 {K_MESSAGE_TYPE_KEY, EInvocationType::K_METHOD},
-                                {K_METHOD_NAME_KEY,  std::forward<std::string>(pMethodName.get())},
+                                {K_METHOD_NAME_KEY,  pMethodName.get()},
                                 {K_PARAMETERS_KEY,   std::forward<Json &&>(pList)}
                         }) {}
 

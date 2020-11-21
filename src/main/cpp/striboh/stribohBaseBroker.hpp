@@ -421,7 +421,7 @@ namespace striboh::base {
             shutdown() override;
 
             Message
-            invokeMethod(Message&& pInvocation) override;
+            invokeMethod(const Message& pInvocation) override;
 
             InstanceId
             addServant(Interface& pMethodSignature) override;

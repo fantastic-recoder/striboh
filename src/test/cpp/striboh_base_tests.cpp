@@ -528,7 +528,7 @@ Interface createTestInterface() {
                            ParameterList{
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](Message &&pIncoming, Context pCtx) -> Message {
+                           [](const Message &pIncoming, Context pCtx) -> Message {
                                Message myReturn(EInvocationType::K_RETURN,
                                                 {std::string("Server greats ")
                                                            + pIncoming.getParameters()["p0"].get<std::string>()}
@@ -608,7 +608,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
                            ParameterList{
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](Message && pIncoming, Context pCtx) -> Message {
+                           [](const Message & pIncoming, Context pCtx) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.getValues().dump() ;
                                string p0(pIncoming.getParameters()["p0"].get<std::string>());
                                Message myRetVal(EInvocationType::K_RETURN,
