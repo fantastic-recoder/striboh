@@ -1,8 +1,10 @@
+import { encode, decode } from '@msgpack/msgpack';
+
+const msgpack = require("@msgpack/msgpack");
+
 const http = require('http');
 const WebSocket = require('ws');
-const MessagePack = require('what-the-pack');
 
-const { encode, decode } = MessagePack.initialize(2**22); // 4MB
 
 const options = {
     hostname: '127.0.0.1',
@@ -37,7 +39,7 @@ const ws = new WebSocket('ws://localhost:63898/m0/m1/Hello?upgrade');
 ws.on('open', function open() {
     console.log('Connected to Server via WS.');
     const data = {"siid":theUuid,"mthd":"echo","prms":{"p0":"Paul"},"type":1};
-    encoded = encode(data);
+    let encoded = msgpack.encode(data);
     ws.send(encoded);
 })
 
@@ -47,7 +49,7 @@ ws.onerror = (error) => {
 
 ws.onmessage = (e) => {
     //console.log(e);
-    let myReplyObj = decode(e.data);
+    let myReplyObj = msgpack.decode(e.data);
     console.log(myReplyObj)
     ws.close();
 }

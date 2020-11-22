@@ -378,10 +378,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include <boost/log/trivial.hpp>
+#include <string_view>
 
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseMessage.hpp"
-#include "stribohBaseEInvocationType.hpp"
+#include "stribohBaseEMessageType.hpp"
+
+using std::string_view;
 
 namespace striboh::base {
 
@@ -446,4 +449,210 @@ namespace striboh::base {
     }
 
 
-}
+    bool MessageVisitor::visit_nil() {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(checkForError())
+            return false;
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        return true;
+    }
+
+    bool MessageVisitor::visit_boolean(bool v) {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        return true;
+    }
+
+    bool MessageVisitor::end_array() {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        return true;
+    }
+
+    bool MessageVisitor::visit_str(const char *v, uint32_t pSize) {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap()) {
+            return false;
+        }
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        string_view aStringView(v, pSize);
+        mLog.debug( "     str={}", aStringView );
+        if(aStringView == Message::K_METHOD_NAME_KEY) {
+            setState(K_EXPECTING_METHOD);
+        } else if(aStringView == Message::K_PARAMETERS_KEY) {
+            setState(K_EXPECTING_PARAMETERS);
+        } else if(getState()==K_EXPECTING_METHOD) {
+            mMessage.setMethodName(aStringView);
+            setState(K_INSIDE_MESSAGE);
+        } else if(getState()==K_PARSING_PARAMETERS) {
+            mParameterName = aStringView;
+        } else if(getState()==K_PARSING_PARAMETER) {
+            mMessage.getParameters().emplace_back(Parameter(mParameterName, aStringView));
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        return true;
+    }
+
+    bool MessageVisitor::start_array(uint32_t pNumElements) {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        return true;
+    }
+
+    bool MessageVisitor::end_array_item() {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        return true;
+    }
+
+    bool MessageVisitor::start_map(uint32_t pNumPairs) {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(getState() == K_INITIAL) {
+            setState(K_INSIDE_MESSAGE);
+            setError(EMessageParsingError::K_PARSE_OK);
+        } else if( getState()==K_EXPECTING_PARAMETERS) {
+            setState(K_PARSING_PARAMETERS);
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mMapSize = pNumPairs;
+        return true;
+    }
+
+    bool MessageVisitor::end_map_key() {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_PARSING_PARAMETERS) {
+            setState(K_PARSING_PARAMETER);
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        return true;
+    }
+
+    bool MessageVisitor::end_map() {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_FINISHED_PARAMETERS) {
+            setState(K_INSIDE_MESSAGE);
+        } else if(getState()==K_PARSING_PARAMETERS) {
+            setState(K_FINISHED_PARAMETERS);
+        } else if(getState()==K_PARSING_PARAMETER) {
+            setState(K_PARSING_PARAMETERS);
+        } else if(getState()==K_INSIDE_MESSAGE) {
+            setState(K_INITIAL);
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mMapSize=0;
+        return true;
+    }
+
+    void MessageVisitor::insufficient_bytes(size_t, size_t) {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        return;
+    }
+
+    bool MessageVisitor::visit_negative_integer(int64_t v) {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        return true;
+    }
+
+    bool MessageVisitor::visit_positive_integer(uint64_t v) {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_EXPECTING_PARAMETERS) {
+            return false;
+        }
+        return true;
+    }
+
+    bool MessageVisitor::end_map_value() {
+        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
+        if(notStartsWithMap())
+            return false;
+        if(getState()==K_PARSING_PARAMETER) {
+            setState(K_PARSING_PARAMETERS);
+        }
+        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        return true;
+    }
+
+    void MessageVisitor::parse_error(size_t, size_t) {
+        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        return ;
+    }
+
+    MessageVisitor::MessageVisitor(Message1 &pMessage, LogIface& pLog) :
+            mMessage(pMessage),
+            mLog(pLog),
+            mState(K_INITIAL),
+            mParsingError(EMessageParsingError::K_INITIAL),
+            mMapSize(0)
+            {}
+
+    EMessageParsingError
+    MessageVisitor::getParsingError() const {
+        return mParsingError;
+    }
+
+    uint16_t
+    MessageVisitor::getState() const {
+        return mState;
+    }
+
+    void
+    MessageVisitor::setState(uint16_t pState) {
+        mState = pState;
+    }
+
+    bool MessageVisitor::notStartsWithMap(){
+        if(getState()==K_INITIAL) {
+            setState(K_ERROR);
+            setError(EMessageParsingError::K_MESSAGE_DOES_NOT_START_WITH_MAP);
+            return true;
+        }
+        return false;
+    }
+
+    void MessageVisitor::setError(EMessageParsingError pError) {
+        mParsingError = pError;
+    }
+
+    bool MessageVisitor::checkForError() {
+        return ( getState()==K_ERROR ) || ( getParsingError() != EMessageParsingError::K_PARSE_OK );
+    }
+
+
+    Parameter::Parameter(const std::string& pParameterName, const string_view& pValue)
+    : mName(pParameterName)
+    , mValue(std::string(pValue))
+    {
+    }
+} // end namespace striboh::base

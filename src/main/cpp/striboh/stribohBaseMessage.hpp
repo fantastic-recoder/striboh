@@ -394,8 +394,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
 #include "stribohBaseMethodName.hpp"
-#include "stribohBaseEInvocationType.hpp"
-
+#include "stribohBaseEMessageType.hpp"
+#include "stribohBaseEMessageParsingError.hpp"
+#include "stribohBaseLogIface.hpp"
 
 namespace striboh::base {
 
@@ -446,7 +447,7 @@ namespace striboh::base {
         InstanceId
         getInstanceId() const {
             InstanceId myReturn;
-            from_json(mValues[K_INSTANCE_ID_KEY],myReturn);
+            from_json(mValues[K_INSTANCE_ID_KEY], myReturn);
             return myReturn;
         }
 
@@ -455,13 +456,16 @@ namespace striboh::base {
         }
 
         Message() = delete;
-        Message( const Message& ) = default;
-        Message( Message&& ) = default;
-        Message& operator = (Message&& ) = default;
+
+        Message(const Message &) = default;
+
+        Message(Message &&) = default;
+
+        Message &operator=(Message &&) = default;
 
 
         explicit
-        Message(EInvocationType pType) :
+        Message(EMessageType pType) :
                 mValues({
                                 {K_MESSAGE_TYPE_KEY, pType},
                                 {K_METHOD_NAME_KEY,  "n/a"},
@@ -469,7 +473,7 @@ namespace striboh::base {
                         }) {}
 
         explicit
-        Message(EInvocationType pType, Json &&pList) noexcept :
+        Message(EMessageType pType, Json &&pList) noexcept:
                 mValues({
                                 {K_MESSAGE_TYPE_KEY, pType},
                                 {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
@@ -477,25 +481,25 @@ namespace striboh::base {
                         }) {}
 
         explicit
-        Message(const MethodName &pMethodName) noexcept :
+        Message(const MethodName &pMethodName) noexcept:
                 mValues({
-                                {K_MESSAGE_TYPE_KEY, EInvocationType::K_METHOD},
+                                {K_MESSAGE_TYPE_KEY, EMessageType::K_METHOD},
                                 {K_METHOD_NAME_KEY,  pMethodName.get()},
                                 {K_PARAMETERS_KEY,   Json{}}
                         }) {}
 
         explicit
-        Message(const Return &pReturns) noexcept :
+        Message(const Return &pReturns) noexcept:
                 mValues({
-                                {K_MESSAGE_TYPE_KEY, EInvocationType::K_RETURN},
+                                {K_MESSAGE_TYPE_KEY, EMessageType::K_RETURN},
                                 {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
                                 {K_PARAMETERS_KEY,   {{K_RETURN_KEY, pReturns.get()}}}
                         }) {}
 
         explicit
-        Message(const MethodName &pMethodName, Json &&pList) noexcept :
+        Message(const MethodName &pMethodName, Json &&pList) noexcept:
                 mValues({
-                                {K_MESSAGE_TYPE_KEY, EInvocationType::K_METHOD},
+                                {K_MESSAGE_TYPE_KEY, EMessageType::K_METHOD},
                                 {K_METHOD_NAME_KEY,  pMethodName.get()},
                                 {K_PARAMETERS_KEY,   std::forward<Json &&>(pList)}
                         }) {}
@@ -523,7 +527,7 @@ namespace striboh::base {
         pack(Buffer &pBuffer, int pVal);
 
         Message &
-        pack(Buffer &pBuffer, EInvocationType pVal) {
+        pack(Buffer &pBuffer, EMessageType pVal) {
             return pack(pBuffer, int(pVal));
         }
 
@@ -544,13 +548,13 @@ namespace striboh::base {
             return mValues[K_PARAMETERS_KEY].size();
         }
 
-        EInvocationType
+        EMessageType
         getType() const {
-            return mValues[K_MESSAGE_TYPE_KEY].get<EInvocationType>();
+            return mValues[K_MESSAGE_TYPE_KEY].get<EMessageType>();
         }
 
         void
-        setType(EInvocationType pType) {
+        setType(EMessageType pType) {
             mValues[K_MESSAGE_TYPE_KEY] = pType;
         }
 
@@ -564,6 +568,169 @@ namespace striboh::base {
         void
         unpackHeader(const ReadBuffer &, const size_t myBufLength, size_t &aOff);
 
+    };
+
+    class Object {};
+
+    using Value = std::variant<int,bool,std::string,std::unique_ptr<Object>>;
+
+    struct Parameter {
+        Parameter(const std::string& pParameterName, const std::string_view &pValue);
+
+        const Value& getValue() const { return mValue; }
+        Value& getValue() { return mValue; }
+
+        const std::string& getName() const { return mName; }
+    private:
+        Value mValue;
+        std::string mName;
+    };
+
+    struct Parameters : public std::vector<Parameter> {};
+
+    struct Returns : public std::vector<Parameter> {};
+
+    class Message1 {
+    public:
+        const std::string &getMethodName() const {
+            return mMethodName;
+        }
+
+        void setMethodName(const std::string &pMethodName) {
+            mMethodName = pMethodName;
+        }
+
+        void setMethodName(std::string_view&& pMethodName) {
+            mMethodName = pMethodName;
+        }
+
+        void setMethodName(const std::string_view& pMethodName) {
+            mMethodName = pMethodName;
+        }
+
+        EMessageType getType() const {
+            return mType;
+        }
+
+        void setType(EMessageType pType) {
+            mType = pType;
+        }
+
+        const Parameters &getParameters() const {
+            return mParameters;
+        }
+
+        const Returns &getReturns() const {
+            return mReturns;
+        }
+
+        Parameters &getParameters() {
+            return mParameters;
+        }
+
+        Returns &getReturns() {
+            return mReturns;
+        }
+
+
+    private:
+        std::string mMethodName;
+        EMessageType mType;
+        Parameters mParameters;
+        Returns mReturns;
+    public:
+    };
+
+    struct MessageVisitor : msgpack::v2::null_visitor {
+        constexpr static const uint16_t K_ERROR /*...............*/  = 0;
+        constexpr static const uint16_t K_EXPECTING_METHOD /*.....*/ = 1;
+        constexpr static const uint16_t K_PARSING_RETURNS /*.....*/  = 1 << 2;
+        constexpr static const uint16_t K_PARSING_PARAMETERS  /*.*/  = 1 << 3;
+        constexpr static const uint16_t K_EXPECTING_SIID  /*.....*/  = 1 << 4;
+        constexpr static const uint16_t K_PARSING_SIID  /*.......*/  = 1 << 5;
+        constexpr static const uint16_t K_EXPECTING_PARAMETERS /**/  = 1 << 6;
+        constexpr static const uint16_t K_PARSING_PARAMETER /*...*/  = 1 << 7;
+        constexpr static const uint16_t K_FINISHED_PARAMETERS /*.*/  = 1 << 8;
+        constexpr static const uint16_t K_INSIDE_MESSAGE  /*.....*/  = 1 << 12;
+        constexpr static const uint16_t K_INITIAL  /*............*/  = 1 << 15;
+
+        constexpr const char* const getStateStr() {
+            switch(mState) {
+                case K_ERROR:
+                    return "K_ERROR state";
+                case K_EXPECTING_METHOD:
+                    return "K_EXPECTING_METHOD state";
+                case K_FINISHED_PARAMETERS:
+                    return "K_FINISHED_PARAMETERS state";
+                case K_PARSING_RETURNS:
+                    return "K_PARSING_RETURNS state";
+                case K_PARSING_PARAMETERS:
+                    return "K_PARSING_PARAMETERS state";
+                case K_EXPECTING_SIID:
+                    return "K_EXPECTING_SIID state";
+                case K_EXPECTING_PARAMETERS:
+                    return "K_EXPECTING_PARAMETERS state";
+                case K_PARSING_PARAMETER:
+                    return "K_PARSING_PARAMETER state";
+                case K_INSIDE_MESSAGE:
+                    return "K_INSIDE_MESSAGE state";
+                case K_INITIAL:
+                    return "K_INITIAL state";
+                default:
+                    return "unknown";
+            }
+        }
+
+        MessageVisitor(Message1 &pMessage, LogIface& pLog );
+
+        bool visit_nil();
+
+        bool visit_boolean(bool v);
+
+        bool visit_positive_integer(uint64_t v);
+
+        bool visit_negative_integer(int64_t v);
+
+        bool visit_str(const char *v, uint32_t pSize);
+
+        bool start_array(uint32_t /*num_elements*/);
+
+        bool end_array_item();
+
+        bool end_array();
+
+        bool start_map(uint32_t);
+
+        bool end_map_key();
+
+        bool end_map_value();
+
+        bool end_map();
+
+        void parse_error(size_t /*parsed_offset*/, size_t /*error_offset*/);
+
+        void insufficient_bytes(size_t /*parsed_offset*/, size_t /*error_offset*/);
+
+        EMessageParsingError getParsingError() const;
+
+        uint16_t getState() const;
+
+    private:
+        void setState(uint16_t pState);
+
+        bool notStartsWithMap();
+
+        void setError(EMessageParsingError pError);
+
+        bool checkForError();
+
+        uint32_t mMapSize;
+        Message1 &mMessage;
+        LogIface &mLog;
+        uint16_t mState;
+        EMessageParsingError mParsingError;
+
+        std::string mParameterName;
     };
 
 }  // namespace striboh::base

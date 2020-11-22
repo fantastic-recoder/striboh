@@ -383,7 +383,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <iostream>
 
 #include "striboh/stribohBaseInterface.hpp"
-#include "striboh/stribohBaseEInvocationType.hpp"
+#include "striboh/stribohBaseEMessageType.hpp"
 #include "striboh/stribohBaseParameterList.hpp"
 
 namespace striboh {

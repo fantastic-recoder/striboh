@@ -396,7 +396,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBeastServer.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseUtils.hpp"
-#include "stribohBaseEInvocationType.hpp"
+#include "stribohBaseEMessageType.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -746,7 +746,7 @@ namespace striboh {
                     fail(pErrorCode, "onWsRead");
                 }
                 mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
-                Message myMsg(EInvocationType::K_METHOD);
+                Message myMsg(EMessageType::K_METHOD);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
                 mLog.debug("Unpacked, {} values, message: {}.", myMsg.size(), myMsg.getValues().dump());

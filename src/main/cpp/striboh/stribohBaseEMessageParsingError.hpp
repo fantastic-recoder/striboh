@@ -376,23 +376,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_E_INVOCATION_TYPE_HPP
-#define STRIBOH_BASE_E_INVOCATION_TYPE_HPP
+#ifndef STRIBOH_BASE_E_MESSAGE_PARSING_ERROR_HPP
+#define STRIBOH_BASE_E_MESSAGE_PARSING_ERROR_HPP
 
-#include <cstdint>
-
-enum class EInvocationType : int32_t {
-    K_METHOD = 1,
-    K_RETURN = 2,
-    K_ERROR = 4,
-    K_CLOSE = 5,
-    K_UNKNOWN = 0 //< parse error
-};
-
-inline const EInvocationType &operator<<=(EInvocationType &pType, int pTypeVale) {
-    pType = EInvocationType{pTypeVale};
-    return pType;
+namespace striboh::base {
+    enum class EMessageParsingError {
+        K_MESSAGE_DOES_NOT_START_WITH_MAP = 10,
+        K_PARSE_OK = 0,
+        K_INITIAL = 1
+    };
 }
 
-
-#endif //STRIBOH_BASE_E_INVOCATION_TYPE_HPP
+#endif //STRIBOH_BASE_E_MESSAGE_PARSING_ERROR_HPP

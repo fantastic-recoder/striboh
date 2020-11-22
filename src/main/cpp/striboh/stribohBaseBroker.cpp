@@ -386,7 +386,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleBodyNode.hpp"
-#include "stribohBaseEInvocationType.hpp"
+#include "stribohBaseEMessageType.hpp"
 
 namespace striboh::base {
 
@@ -480,7 +480,7 @@ namespace striboh::base {
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
         }
-        Message myRetVal(EInvocationType::K_ERROR);
+        Message myRetVal(EMessageType::K_ERROR);
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
                        pValues.getMethodName().get(), toString(aInstanceId));

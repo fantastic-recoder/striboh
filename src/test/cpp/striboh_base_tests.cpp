@@ -398,9 +398,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseLogBoostImpl.hpp>
 #include <striboh/stribohBaseUtils.hpp>
 #include <striboh/stribohBaseClient.hpp>
-#include <striboh/stribohBaseEInvocationType.hpp>
+#include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 
+#include <msgpack.hpp>
 #include "striboh_test_echo_server_common.hpp"
 
 using namespace striboh::base;
@@ -529,7 +530,7 @@ Interface createTestInterface() {
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const Message &pIncoming, Context pCtx) -> Message {
-                               Message myReturn(EInvocationType::K_RETURN,
+                               Message myReturn(EMessageType::K_RETURN,
                                                 {std::string("Server greats ")
                                                            + pIncoming.getParameters()["p0"].get<std::string>()}
                                );
@@ -611,7 +612,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
                            [](const Message & pIncoming, Context pCtx) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.getValues().dump() ;
                                string p0(pIncoming.getParameters()["p0"].get<std::string>());
-                               Message myRetVal(EInvocationType::K_RETURN,
+                               Message myRetVal(EMessageType::K_RETURN,
                                                 {{Message::K_RETURN_KEY, "Server greats " + p0}});
                                 BOOST_LOG_TRIVIAL(debug) << "Returning: " << myRetVal.getValues().dump() ;
                                return myRetVal;
@@ -648,23 +649,23 @@ TEST(stribohBaseTests, testSerailization)
     EXPECT_EQ(42, myOutputValues.getParameters()["p1"].get<int>());
     EXPECT_EQ("end.", myOutputValues.getParameters()["p2"].get<string>());
     EXPECT_EQ("testMethod", myOutputValues.getMethodName().get());
-    EXPECT_EQ(EInvocationType::K_METHOD, myOutputValues.getType());
+    EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
     myOutputValues.setMethodName(MethodName(K_TEST_METHOD_NAME2));
     EXPECT_EQ(K_TEST_METHOD_NAME2, myOutputValues.getMethodName().get());
-    myOutputValues.setType(EInvocationType::K_RETURN);
-    EXPECT_EQ(EInvocationType::K_RETURN, myOutputValues.getType());
+    myOutputValues.setType(EMessageType::K_RETURN);
+    EXPECT_EQ(EMessageType::K_RETURN, myOutputValues.getType());
     EXPECT_EQ(myIId, myOutputValues.getInstanceId() );
     constexpr const char* K_HELLO_RETURNED = "Hallo returned!";
     Message myReturnIn{Return{K_HELLO_RETURNED}};
     BOOST_LOG_TRIVIAL(debug) << myReturnIn.getValues().dump();
     ASSERT_EQ(K_HELLO_RETURNED,myReturnIn.getReturns());
-    ASSERT_EQ(EInvocationType::K_RETURN,myReturnIn.getType());
+    ASSERT_EQ(EMessageType::K_RETURN, myReturnIn.getType());
     Buffer myBuff1;
     myReturnIn.packToBuffer(myBuff);
     Message myReturnOut((ReadBuffer(myBuff)));
     BOOST_LOG_TRIVIAL(debug) << myReturnOut.getValues().dump();
     ASSERT_EQ(K_HELLO_RETURNED,myReturnOut.getReturns());
-    ASSERT_EQ(EInvocationType::K_RETURN,myReturnOut.getType());
+    ASSERT_EQ(EMessageType::K_RETURN, myReturnOut.getType());
 }
 
 
@@ -710,4 +711,82 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         EXPECT_EQ(0, myServerChildProcess->exit_code());
     }
     return;
+}
+
+TEST(stribohBaseTests, testJson) {
+    Json myJson0 = R"({ "p0":"aa", "p1":"cc"})"_json;
+    string_view p0(myJson0["p0"].get<string_view>());
+    EXPECT_EQ("aa",p0);
+    Json& p1= myJson0["p1"];
+    EXPECT_EQ("cc",p1.get<string_view>());
+}
+
+TEST(stribohBaseTests, testMessageParsing) {
+        Json myJson0 = 42;
+        Buffer myMsgPack(Json::to_msgpack(myJson0));
+        Message1 myMsg;
+        MessageVisitor myMessageVisitor(myMsg,theLog);
+        std::size_t myOffset = 0;
+        auto myPackedData(myMsgPack.cdata());
+        bool ret = msgpack::v2::parse(static_cast<const char*>(myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
+        EXPECT_EQ(EMessageParsingError::K_MESSAGE_DOES_NOT_START_WITH_MAP,myMessageVisitor.getParsingError());
+}
+
+constexpr static const char *const K_TEST_METHOD_NAME = "testMethodName";
+
+TEST(stribohBaseTests, testParseMethodName)
+{
+    Json myJson0 = {{Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME}};
+    Buffer myMsgPack(Json::to_msgpack(myJson0));
+    Message1 myMsg;
+    MessageVisitor myMessageVisitor(myMsg,theLog);
+    std::size_t myOffset = 0;
+    auto myPackedData(myMsgPack.cdata());
+    bool ret = msgpack::v2::parse(static_cast<const char*>(
+            myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
+    EXPECT_EQ(EMessageParsingError::K_PARSE_OK,myMessageVisitor.getParsingError());
+    EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
+}
+
+TEST(stribohBaseTests, testParseStringParameter)
+{
+    {
+        Json myJson0 = {
+                {Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME},
+                {Message::K_PARAMETERS_KEY,  {{"p0", "Paul"}}}
+        };
+        Buffer myMsgPack(Json::to_msgpack(myJson0));
+        Message1 myMsg;
+        MessageVisitor myMessageVisitor(myMsg, theLog);
+        std::size_t myOffset = 0;
+        auto myPackedData(myMsgPack.cdata());
+        bool ret = msgpack::v2::parse(static_cast<const char *>(
+                                              myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
+        EXPECT_EQ(EMessageParsingError::K_PARSE_OK, myMessageVisitor.getParsingError());
+        EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
+        ASSERT_EQ(1, myMsg.getParameters().size());
+        EXPECT_EQ("p0", myMsg.getParameters()[0].getName());
+        EXPECT_EQ("Paul", std::get<std::string>(myMsg.getParameters()[0].getValue()));
+    }
+    {
+        Json myJson1 = {
+                {Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME},
+                {Message::K_PARAMETERS_KEY,  {{"p1", "Peter"},{"p2","Paul"}}
+                }
+        };
+        Buffer myMsgPack(Json::to_msgpack(myJson1));
+        Message1 myMsg;
+        MessageVisitor myMessageVisitor(myMsg, theLog);
+        std::size_t myOffset = 0;
+        auto myPackedData(myMsgPack.cdata());
+        bool ret = msgpack::v2::parse(static_cast<const char *>(
+                                              myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
+        EXPECT_EQ(EMessageParsingError::K_PARSE_OK, myMessageVisitor.getParsingError());
+        EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
+        ASSERT_EQ(2, myMsg.getParameters().size());
+        EXPECT_EQ("p1", myMsg.getParameters()[0].getName());
+        EXPECT_EQ("Peter", std::get<std::string>(myMsg.getParameters()[0].getValue()));
+        EXPECT_EQ("p2", myMsg.getParameters()[1].getName());
+        EXPECT_EQ("Paul", std::get<std::string>(myMsg.getParameters()[1].getValue()));
+    }
 }

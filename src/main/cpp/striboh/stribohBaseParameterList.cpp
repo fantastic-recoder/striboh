@@ -377,7 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "stribohBaseEInvocationType.hpp"
+#include "stribohBaseEMessageType.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseInstanceId.hpp"
 #include <boost/log/trivial.hpp>

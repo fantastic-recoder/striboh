@@ -381,7 +381,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <string>
 
-#include "stribohBaseEInvocationType.hpp"
+#include "stribohBaseEMessageType.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseParameterList.hpp"
 
@@ -417,7 +417,7 @@ namespace striboh::base {
         Message invoke(const Message &pIns, Context pCtx) {
             if (mImplementation)
                 return mImplementation(pIns, pCtx);
-            return Message(EInvocationType::K_RETURN);
+            return Message(EMessageType::K_RETURN);
         }
 
     private:

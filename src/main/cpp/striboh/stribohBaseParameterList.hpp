@@ -412,6 +412,6 @@ namespace striboh::base {
 #include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
 #include "stribohBaseMethodName.hpp"
-#include "stribohBaseEInvocationType.hpp"
+#include "stribohBaseEMessageType.hpp"
 
 #endif //STRIBOH_BASE_PARAMETER_LIST_HPP
