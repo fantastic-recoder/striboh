@@ -385,8 +385,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <boost/log/trivial.hpp>
 #include <boost/process.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/filesystem.hpp>
 
@@ -747,6 +745,7 @@ TEST(stribohBaseTests, testParseMethodName)
     EXPECT_EQ(EMessageParsingError::K_PARSE_OK,myMessageVisitor.getParsingError());
     EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
 }
+
 
 TEST(stribohBaseTests, testParseStringParameter)
 {

@@ -377,14 +377,25 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <boost/log/trivial.hpp>
+#include <boost/statechart/state_machine.hpp>
+#include <boost/statechart/simple_state.hpp>
+#include <boost/statechart/transition.hpp>
+#include <boost/statechart/custom_reaction.hpp>
+
+#include <sml/sml.hpp>
+namespace sml = boost::sml;
+
 #include <string_view>
 
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseEMessageType.hpp"
+#include "stribohBaseLogIface.hpp"
 
 using std::string_view;
+namespace sc = boost::statechart;
+namespace mpl = boost::mpl;
+
 
 namespace striboh::base {
 
@@ -448,6 +459,56 @@ namespace striboh::base {
         pBuffer = nlohmann::json::to_msgpack(mValues);
     }
 
+    template<class TDerived>
+    struct ScopeMessage {
+        std::string mScopeName;
+        LogIface& mLog;
+
+        ScopeMessage(LogIface& pLog) :
+        mScopeName(typeid(TDerived).name()),
+        mLog(pLog) {
+            mLog.debug("{} -->", mScopeName);
+        }
+
+        virtual ~ScopeMessage() {
+            mLog.debug("{} <--", mScopeName);
+        }
+    };
+
+    struct EventStartMap : sc::event<EventStartMap> {};
+    struct EventEndMap : sc::event<EventEndMap> {};
+    struct EventNil: sc::event<EventNil>{};
+
+    template<typename Type>
+    struct EventType: sc::event<EventType<Type>>{
+        Type mVal;
+        EventType(Type pVal):mVal(pVal){}
+    };
+
+    struct EventStartArray: sc::event<EventStartArray>{};
+    struct EventEndArray: sc::event<EventEndArray>{};
+    struct EventEndArrayItem: sc::event<EventEndArrayItem>{};
+    struct EventEndMapKey: sc::event<EventEndMapKey>{};
+    struct EventEndMapValue: sc::event<EventEndMapValue>{};
+
+    struct EventParseError: sc::event<EventParseError>{
+        size_t mParsedOffset, mErrorOffset;
+        EventParseError(size_t pParsedOffset, size_t pErrorOffset):
+        mParsedOffset(pParsedOffset),mErrorOffset(pErrorOffset){}
+    };
+
+    struct OutsideMessageState;
+    struct InsideMessageState;
+    struct ParsingParametersState;
+    struct ParsingReturnArrayState;
+    struct ParsingMessageTypeState;
+    struct ParsingErrorState;
+
+    struct MessageParser : sc::state_machine<MessageParser, OutsideMessageState> {
+        Message1 &mMessage;
+        LogIface &mLog;
+
+    };
 
     bool MessageVisitor::visit_nil() {
         mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );

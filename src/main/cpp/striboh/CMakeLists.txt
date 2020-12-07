@@ -8,3 +8,4 @@ target_link_libraries(striboh_idl_compiler striboh_idl boost_program_options boo
 target_include_directories(striboh_base PUBLIC ../NamedType/include)
 target_include_directories(striboh_base PUBLIC ../di/include)
 target_include_directories(striboh_base PUBLIC ../fmt/include)
+target_include_directories(striboh_base PUBLIC ..)

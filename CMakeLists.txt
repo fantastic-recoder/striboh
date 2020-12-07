@@ -12,14 +12,19 @@ conan_basic_setup()
 include(FetchContent)
 FetchContent_Declare(sml
         PREFIX ${CMAKE_SOURCE_DIR}/src/main/cpp/sml
-        URL https://github.com/boost-ext/sml/archive/master.zip
+        URL https://raw.githubusercontent.com/boost-ext/sml/master/include/boost/sml.hpp
+        DOWNLOAD_NO_EXTRACT true
         )
 
 FetchContent_GetProperties(sml)
 if(NOT sml_POPULATED)
     FetchContent_Populate(sml)
-    add_subdirectory(${sml_SOURCE_DIR} ${sml_BINARY_DIR})
+    # Copy an additional/replacement file into the populated source
+    file(COPY ${CMAKE_SOURCE_DIR}/src/main/cpp/sml/src/sml.hpp DESTINATION
+            ${CMAKE_SOURCE_DIR}/src/main/cpp/sml)
 endif()
+
+set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 
 add_subdirectory(src/main/cpp/NamedType)
 add_subdirectory(src/main/cpp/fmt)
