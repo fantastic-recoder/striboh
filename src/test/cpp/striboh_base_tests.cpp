@@ -722,7 +722,7 @@ TEST(stribohBaseTests, testJson) {
 TEST(stribohBaseTests, testMessageParsing) {
         Json myJson0 = 42;
         Buffer myMsgPack(Json::to_msgpack(myJson0));
-        Message1 myMsg;
+        Message1 myMsg(theLog);
         MessageVisitor myMessageVisitor(myMsg,theLog);
         std::size_t myOffset = 0;
         auto myPackedData(myMsgPack.cdata());
@@ -736,7 +736,7 @@ TEST(stribohBaseTests, testParseMethodName)
 {
     Json myJson0 = {{Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME}};
     Buffer myMsgPack(Json::to_msgpack(myJson0));
-    Message1 myMsg;
+    Message1 myMsg(theLog);
     MessageVisitor myMessageVisitor(myMsg,theLog);
     std::size_t myOffset = 0;
     auto myPackedData(myMsgPack.cdata());
@@ -755,7 +755,7 @@ TEST(stribohBaseTests, testParseStringParameter)
                 {Message::K_PARAMETERS_KEY,  {{"p0", "Paul"}}}
         };
         Buffer myMsgPack(Json::to_msgpack(myJson0));
-        Message1 myMsg;
+        Message1 myMsg(theLog);
         MessageVisitor myMessageVisitor(myMsg, theLog);
         std::size_t myOffset = 0;
         auto myPackedData(myMsgPack.cdata());
@@ -774,7 +774,7 @@ TEST(stribohBaseTests, testParseStringParameter)
                 }
         };
         Buffer myMsgPack(Json::to_msgpack(myJson1));
-        Message1 myMsg;
+        Message1 myMsg(theLog);
         MessageVisitor myMessageVisitor(myMsg, theLog);
         std::size_t myOffset = 0;
         auto myPackedData(myMsgPack.cdata());
@@ -788,4 +788,47 @@ TEST(stribohBaseTests, testParseStringParameter)
         EXPECT_EQ("p2", myMsg.getParameters()[1].getName());
         EXPECT_EQ("Paul", std::get<std::string>(myMsg.getParameters()[1].getValue()));
     }
+}
+
+TEST(stribohBaseTests, testGenerateAndParseReturn) {
+    static const string_view K_ALFONS("Alfons");
+    Message1 m0(Value(string(K_ALFONS)),theLog);
+    InstanceId myUuid0 = Broker::generateInstanceId();
+    m0.setInstanceId(myUuid0);
+    Buffer myBuffer;
+    m0.packToBuffer(myBuffer);
+    const Json myJson = Message1::toJson(ReadBuffer(myBuffer));
+    const string myJsonStr = Message1::jsonToStr(myJson);
+    theLog.debug("Generated: {}",myJsonStr);
+    EXPECT_EQ(K_ALFONS,myJson[Message1::K_RETURN_KEY].get<string>());
+    EXPECT_EQ(int(EMessageType::K_RETURN),myJson[Message1::K_MESSAGE_TYPE_KEY].get<int>());
+    Message1 m1(theLog);
+    m1.parse(ReadBuffer(myBuffer));
+    EXPECT_EQ(K_ALFONS,std::get<string>(m1.getReturn()));
+    EXPECT_EQ(EMessageType::K_RETURN,m1.getType());
+    EXPECT_EQ(myUuid0,m1.getInstanceId());
+}
+
+TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
+    Message1 m0("helloMethod",{{"p1",42L},{"p2",string("Santa Maria")}},theLog);
+    InstanceId myUuid0 = Broker::generateInstanceId();
+    m0.setInstanceId(myUuid0);
+    Buffer myBuffer;
+    m0.packToBuffer(myBuffer);
+    const Json myJson = Message1::toJson(ReadBuffer(myBuffer));
+    const string myJsonStr = Message1::jsonToStr(myJson);
+    theLog.debug("Generated: {}",myJsonStr);
+    EXPECT_EQ("Santa Maria",myJson[Message1::K_PARAMETERS_KEY]["p2"].get<string>());
+    EXPECT_EQ(42L,myJson[Message1::K_PARAMETERS_KEY]["p1"].get<int64_t>());
+    EXPECT_EQ("helloMethod",myJson[Message1::K_METHOD_NAME_KEY]);
+    EXPECT_EQ(int(EMessageType::K_METHOD),myJson[Message1::K_MESSAGE_TYPE_KEY].get<int>());
+    Message1 m1(theLog);
+    m1.parse(ReadBuffer(myBuffer));
+    EXPECT_EQ(myUuid0,m1.getInstanceId());
+    EXPECT_EQ("p2",m1.getParameters()[1].getName());
+    EXPECT_EQ("Santa Maria",std::get<string>(m1.getParameters()[1].getValue()));
+    EXPECT_EQ("p1",m1.getParameters()[0].getName());
+    EXPECT_EQ(42L,std::get<u_int64_t>(m1.getParameters()[0].getValue()));
+    EXPECT_EQ("helloMethod",m1.getMethodName());
+    EXPECT_EQ(EMessageType::K_METHOD,m1.getType());
 }

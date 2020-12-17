@@ -381,7 +381,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <cstdint>
 
-enum class EMessageType : int32_t {
+enum class EMessageType : int8_t {
     K_METHOD = 1,
     K_RETURN = 2,
     K_ERROR = 4,
@@ -389,7 +389,7 @@ enum class EMessageType : int32_t {
     K_UNKNOWN = 0 //< parse error
 };
 
-inline const EMessageType &operator<<=(EMessageType &pType, int pTypeVale) {
+inline const EMessageType &operator<<=(EMessageType &pType, int8_t pTypeVale) {
     pType = EMessageType{pTypeVale};
     return pType;
 }

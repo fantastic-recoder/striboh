@@ -9,13 +9,14 @@ enable_testing()
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
+###############################################################################
+# SML begin
 include(FetchContent)
 FetchContent_Declare(sml
         PREFIX ${CMAKE_SOURCE_DIR}/src/main/cpp/sml
         URL https://raw.githubusercontent.com/boost-ext/sml/master/include/boost/sml.hpp
         DOWNLOAD_NO_EXTRACT true
         )
-
 FetchContent_GetProperties(sml)
 if(NOT sml_POPULATED)
     FetchContent_Populate(sml)
@@ -23,6 +24,8 @@ if(NOT sml_POPULATED)
     file(COPY ${CMAKE_SOURCE_DIR}/src/main/cpp/sml/src/sml.hpp DESTINATION
             ${CMAKE_SOURCE_DIR}/src/main/cpp/sml)
 endif()
+# SML end
+###############################################################################
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 

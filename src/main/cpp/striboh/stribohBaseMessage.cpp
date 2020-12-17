@@ -377,25 +377,46 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <boost/statechart/state_machine.hpp>
-#include <boost/statechart/simple_state.hpp>
-#include <boost/statechart/transition.hpp>
-#include <boost/statechart/custom_reaction.hpp>
-
+#include <sstream>
 #include <sml/sml.hpp>
+
 namespace sml = boost::sml;
 
+#include <variant>
 #include <string_view>
+#include <string>
 
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseEMessageType.hpp"
 #include "stribohBaseLogIface.hpp"
+#include "stribohBaseExceptionInMessageParser.hpp"
 
 using std::string_view;
-namespace sc = boost::statechart;
 namespace mpl = boost::mpl;
 
+namespace msgpack {
+    MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+        namespace adaptor {
+
+            template<>
+            struct pack<striboh::base::Object> {
+                template<typename Stream>
+                msgpack::packer<Stream> &operator()
+                        (
+                                msgpack::packer<Stream> &pStream,
+                                striboh::base::Object const &
+                        )
+                const {
+                    // your implementation
+                    pStream.pack_map(0);
+                    return pStream;
+                }
+            };
+
+        } // namespace adaptor
+    } // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
+} // namespace msgpack
 
 namespace striboh::base {
 
@@ -430,7 +451,7 @@ namespace striboh::base {
         mValues.clear();
         const std::size_t myBufLength = pBuffer.size();
         std::size_t aOff = 0;
-        mValues= nlohmann::json::from_msgpack( pBuffer );
+        mValues = nlohmann::json::from_msgpack(pBuffer);
         return *this;
     }
 
@@ -459,224 +480,172 @@ namespace striboh::base {
         pBuffer = nlohmann::json::to_msgpack(mValues);
     }
 
-    template<class TDerived>
-    struct ScopeMessage {
-        std::string mScopeName;
-        LogIface& mLog;
-
-        ScopeMessage(LogIface& pLog) :
-        mScopeName(typeid(TDerived).name()),
-        mLog(pLog) {
-            mLog.debug("{} -->", mScopeName);
-        }
-
-        virtual ~ScopeMessage() {
-            mLog.debug("{} <--", mScopeName);
-        }
-    };
-
-    struct EventStartMap : sc::event<EventStartMap> {};
-    struct EventEndMap : sc::event<EventEndMap> {};
-    struct EventNil: sc::event<EventNil>{};
-
-    template<typename Type>
-    struct EventType: sc::event<EventType<Type>>{
-        Type mVal;
-        EventType(Type pVal):mVal(pVal){}
-    };
-
-    struct EventStartArray: sc::event<EventStartArray>{};
-    struct EventEndArray: sc::event<EventEndArray>{};
-    struct EventEndArrayItem: sc::event<EventEndArrayItem>{};
-    struct EventEndMapKey: sc::event<EventEndMapKey>{};
-    struct EventEndMapValue: sc::event<EventEndMapValue>{};
-
-    struct EventParseError: sc::event<EventParseError>{
-        size_t mParsedOffset, mErrorOffset;
-        EventParseError(size_t pParsedOffset, size_t pErrorOffset):
-        mParsedOffset(pParsedOffset),mErrorOffset(pErrorOffset){}
-    };
-
-    struct OutsideMessageState;
-    struct InsideMessageState;
-    struct ParsingParametersState;
-    struct ParsingReturnArrayState;
-    struct ParsingMessageTypeState;
-    struct ParsingErrorState;
-
-    struct MessageParser : sc::state_machine<MessageParser, OutsideMessageState> {
-        Message1 &mMessage;
-        LogIface &mLog;
-
-    };
-
     bool MessageVisitor::visit_nil() {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(checkForError())
+        if (checkForError())
             return false;
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
         return true;
     }
 
     bool MessageVisitor::visit_boolean(bool v) {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
         return true;
     }
 
     bool MessageVisitor::end_array() {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
         return true;
     }
 
     bool MessageVisitor::visit_str(const char *v, uint32_t pSize) {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap()) {
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap()) {
             return false;
         }
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
         string_view aStringView(v, pSize);
-        mLog.debug( "     str={}", aStringView );
-        if(aStringView == Message::K_METHOD_NAME_KEY) {
+        mLog.debug("     str={}", aStringView);
+        if (aStringView == Message::K_METHOD_NAME_KEY) {
             setState(K_EXPECTING_METHOD);
-        } else if(aStringView == Message::K_PARAMETERS_KEY) {
+        } else if (aStringView == Message::K_PARAMETERS_KEY) {
             setState(K_EXPECTING_PARAMETERS);
-        } else if(getState()==K_EXPECTING_METHOD) {
+        } else if (getState() == K_EXPECTING_METHOD) {
             mMessage.setMethodName(aStringView);
             setState(K_INSIDE_MESSAGE);
-        } else if(getState()==K_PARSING_PARAMETERS) {
+        } else if (getState() == K_PARSING_PARAMETERS) {
             mParameterName = aStringView;
-        } else if(getState()==K_PARSING_PARAMETER) {
+        } else if (getState() == K_PARSING_PARAMETER) {
             mMessage.getParameters().emplace_back(Parameter(mParameterName, aStringView));
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
         return true;
     }
 
     bool MessageVisitor::start_array(uint32_t pNumElements) {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
         return true;
     }
 
     bool MessageVisitor::end_array_item() {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
         return true;
     }
 
     bool MessageVisitor::start_map(uint32_t pNumPairs) {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(getState() == K_INITIAL) {
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (getState() == K_INITIAL) {
             setState(K_INSIDE_MESSAGE);
             setError(EMessageParsingError::K_PARSE_OK);
-        } else if( getState()==K_EXPECTING_PARAMETERS) {
+        } else if (getState() == K_EXPECTING_PARAMETERS) {
             setState(K_PARSING_PARAMETERS);
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
         mMapSize = pNumPairs;
         return true;
     }
 
     bool MessageVisitor::end_map_key() {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_PARSING_PARAMETERS) {
+        if (getState() == K_PARSING_PARAMETERS) {
             setState(K_PARSING_PARAMETER);
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
         return true;
     }
 
     bool MessageVisitor::end_map() {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_FINISHED_PARAMETERS) {
+        if (getState() == K_FINISHED_PARAMETERS) {
             setState(K_INSIDE_MESSAGE);
-        } else if(getState()==K_PARSING_PARAMETERS) {
+        } else if (getState() == K_PARSING_PARAMETERS) {
             setState(K_FINISHED_PARAMETERS);
-        } else if(getState()==K_PARSING_PARAMETER) {
+        } else if (getState() == K_PARSING_PARAMETER) {
             setState(K_PARSING_PARAMETERS);
-        } else if(getState()==K_INSIDE_MESSAGE) {
+        } else if (getState() == K_INSIDE_MESSAGE) {
             setState(K_INITIAL);
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
-        mMapSize=0;
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
+        mMapSize = 0;
         return true;
     }
 
     void MessageVisitor::insufficient_bytes(size_t, size_t) {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
         return;
     }
 
     bool MessageVisitor::visit_negative_integer(int64_t v) {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
         return true;
     }
 
     bool MessageVisitor::visit_positive_integer(uint64_t v) {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_EXPECTING_PARAMETERS) {
+        if (getState() == K_EXPECTING_PARAMETERS) {
             return false;
         }
         return true;
     }
 
     bool MessageVisitor::end_map_value() {
-        mLog.debug( "-->  {} {}",__FUNCTION__, getStateStr() );
-        if(notStartsWithMap())
+        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
+        if (notStartsWithMap())
             return false;
-        if(getState()==K_PARSING_PARAMETER) {
+        if (getState() == K_PARSING_PARAMETER) {
             setState(K_PARSING_PARAMETERS);
         }
-        mLog.debug( "<--  {} {}",__FUNCTION__, getStateStr() );
+        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
         return true;
     }
 
     void MessageVisitor::parse_error(size_t, size_t) {
-        mLog.debug( "<--> {} {}",__FUNCTION__, getStateStr() );
-        return ;
+        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
+        return;
     }
 
-    MessageVisitor::MessageVisitor(Message1 &pMessage, LogIface& pLog) :
+    MessageVisitor::MessageVisitor(Message1 &pMessage, LogIface &pLog) :
             mMessage(pMessage),
             mLog(pLog),
             mState(K_INITIAL),
             mParsingError(EMessageParsingError::K_INITIAL),
-            mMapSize(0)
-            {}
+            mMapSize(0) {}
 
     EMessageParsingError
     MessageVisitor::getParsingError() const {
@@ -693,8 +662,8 @@ namespace striboh::base {
         mState = pState;
     }
 
-    bool MessageVisitor::notStartsWithMap(){
-        if(getState()==K_INITIAL) {
+    bool MessageVisitor::notStartsWithMap() {
+        if (getState() == K_INITIAL) {
             setState(K_ERROR);
             setError(EMessageParsingError::K_MESSAGE_DOES_NOT_START_WITH_MAP);
             return true;
@@ -707,13 +676,376 @@ namespace striboh::base {
     }
 
     bool MessageVisitor::checkForError() {
-        return ( getState()==K_ERROR ) || ( getParsingError() != EMessageParsingError::K_PARSE_OK );
+        return (getState() == K_ERROR) || (getParsingError() != EMessageParsingError::K_PARSE_OK);
+    }
+
+    struct SmlLogger {
+
+        SmlLogger(LogIface &pLog) : mLog(pLog) {}
+
+        template<class SM, class TEvent>
+        void log_process_event(const TEvent &) {
+            mLog.debug("[{}][process_event] {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TEvent>());
+        }
+
+        template<class SM, class TGuard, class TEvent>
+        void log_guard(const TGuard &, const TEvent &, bool result) {
+            mLog.debug("[{}][guard] {} {} {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TGuard>(),
+                       sml::aux::get_type_name<TEvent>(), (result ? "[OK]" : "[Reject]"));
+        }
+
+        template<class SM, class TAction, class TEvent>
+        void log_action(const TAction &, const TEvent &) {
+            mLog.debug("[{}][action] {} {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TAction>(),
+                       sml::aux::get_type_name<TEvent>());
+        }
+
+        template<class SM, class TSrcState, class TDstState>
+        void log_state_change(const TSrcState &src, const TDstState &dst) {
+            mLog.debug("[{}][transition] {} -> {}", sml::aux::get_type_name<SM>(), src.c_str(), dst.c_str());
+        }
+
+    private:
+        LogIface &mLog;
+    };
+
+    template<typename T>
+    struct EvtVal {
+        T mVal;
+
+        EvtVal() = delete;
+
+        explicit EvtVal(T pVal) : mVal(pVal) {}
+
+    };
+
+    struct EvtNil {
+    };
+
+    struct EvtStartMap {
+    };
+
+    struct EvtEndMap {
+    };
+
+    struct EvtStartArray {
+    };
+
+    struct EvtEndArray {
+    };
+
+    struct EvtEndArrayItem {
+    };
+
+    struct EvtEndMapKey {
+    };
+
+    struct EvtEndMapValue {
+    };
+
+    using EvtStringVal = EvtVal<std::string>;
+    using EvtBool = EvtVal<bool>;
+    using EvtInt64 = EvtVal<int64_t>;
+    using EvtUInt64 = EvtVal<uint64_t>;
+
+    struct MessageParserContext {
+        Message1 &mMessage;
+        std::string mKey;
+        std::vector<uint8_t> mInstanceId;
+
+        MessageParserContext(Message1 &pMessage)
+                : mMessage(pMessage) {}
+    };
+
+    constexpr auto actionStoreKey
+            = [](const EvtStringVal &pEvent, MessageParserContext &pContext) {
+                pContext.mKey = pEvent.mVal;
+    };
+
+    constexpr auto  actionStoreMessageType
+            = [](const EvtUInt64 &pEvent, MessageParserContext &pContext) {
+        pContext.mMessage.setType(EMessageType(pEvent.mVal));
+    };
+
+    constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
+        return pEvt.mVal == Message1::K_PARAMETERS_KEY;
+    };
+
+    constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
+        return pEvt.mVal == Message1::K_METHOD_NAME_KEY;
+    };
+
+    constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
+        return pEvt.mVal == Message1::K_RETURN_KEY;
+    };
+
+    constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
+        return pEvt.mVal == Message1::K_INSTANCE_ID_KEY;
+    };
+
+    constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
+        return pEvt.mVal == Message1::K_MESSAGE_TYPE_KEY;
+    };
+
+    constexpr auto actionStartInstanceId = [](const EvtStringVal &, MessageParserContext &pContext) {
+        pContext.mInstanceId.clear();
+    };
+
+    constexpr auto actionStoreInstanceIdByte = [](const EvtUInt64 &pEvt, MessageParserContext &pContext) {
+        pContext.mInstanceId.push_back(pEvt.mVal);
+    };
+
+    constexpr auto actionStoreInstanceId = [](const EvtEndArray&, MessageParserContext &pContext) {
+        InstanceId myNewId;
+        if(pContext.mInstanceId.size()!=myNewId.size()) {
+            throw std::runtime_error(fmt::format("Instance ID has wrong size - {}, and not {}.",
+                                                 pContext.mInstanceId.size(),myNewId.size()));
+        }
+        std::copy(pContext.mInstanceId.begin(),pContext.mInstanceId.end(),myNewId.begin());
+        pContext.mMessage.setInstanceId(myNewId);
+    };
+
+    constexpr auto actionStoreMethodName = [](const EvtStringVal& pEvt, MessageParserContext &pContext) {
+        pContext.mMessage.setMethodName(pEvt.mVal);
+    };
+
+    struct MessageParserConfig {
+
+        struct ActionAddParameter {
+            template<typename TEvent>
+            void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
+                pContext.mMessage.getParameters().emplace_back(Parameter(pContext.mKey, pEvent.mVal));
+            };
+        };
+
+        struct ActionSetReturn {
+            template<typename TEvent>
+            void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
+                pContext.mMessage.setReturn(pEvent.mVal);
+            };
+        };
+
+        auto operator()() const {
+            using namespace sml;
+            /**
+             * Initial state: *initial_state
+             * Transition DSL: src_state + event [ guard ] / action = dst_state
+             */
+            return make_transition_table(
+                    *"BeforeMessageState"_s + event<EvtStartMap> = "ParsingMessageState"_s,
+                    "BeforeMessageState"_s + event<EvtBool> = "ErrorState"_s,
+                    //"ParsingMessageState"_s + event<EvtStringVal> / actionStoreKey = "ParsingMessageState"_s,
+                    // message type
+                    "ParsingMessageState"_s + event<EvtStringVal>[checkMessageTypeKey] = "ParsingMessageType"_s,
+                    "ParsingMessageType"_s + event<EvtUInt64> / actionStoreMessageType = "ParsingMessageState"_s,
+                    // instance id
+                    "ParsingMessageState"_s + event<EvtStringVal>[checkInstanceKey] / actionStartInstanceId = "ParsingInstanceId"_s,
+                    "ParsingInstanceId"_s + event<EvtUInt64>   / actionStoreInstanceIdByte,
+                    "ParsingInstanceId"_s + event<EvtEndArray> / actionStoreInstanceId = "ParsingMessageState"_s,
+                    // parameters of a method
+                    "ParsingMessageState"_s + event<EvtStringVal>[checkParametersKey] = "ParsingParameters"_s,
+                    "ParsingParameters"_s + event<EvtStartMap> = "ParsingParametersKey"_s,
+                    "ParsingParametersKey"_s + event<EvtStringVal> / actionStoreKey = "ParsingParametersKey"_s,
+                    "ParsingParametersKey"_s + event<EvtEndMapKey> = "ParsingParameterValue"_s,
+                    "ParsingParameterValue"_s + event<EvtInt64> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                    "ParsingParameterValue"_s + event<EvtUInt64> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                    "ParsingParameterValue"_s + event<EvtBool> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                    "ParsingParameterValue"_s + event<EvtStringVal> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                    "ParsingParameterValue"_s + event<EvtEndMapValue> = "ParsingParametersKey"_s,
+                    "ParsingParametersKey"_s + event<EvtEndMap> = "ParsingMessageState"_s,
+                    // method name
+                    "ParsingMessageState"_s + event<EvtStringVal>[checkMethodNameKey] = "ParsingMethodName"_s,
+                    "ParsingMethodName"_s + event<EvtStringVal> / actionStoreMethodName = "ParsingMessageState"_s,
+                    // return value
+                    "ParsingMessageState"_s + event<EvtStringVal>[checkReturnKey] = "ParsingReturn"_s,
+                    "ParsingReturn"_s + event<EvtInt64> / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                    "ParsingReturn"_s + event<EvtUInt64> / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                    "ParsingReturn"_s + event<EvtBool> / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                    "ParsingReturn"_s + event<EvtStringVal> / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                    // finished
+                    "ParsingMessageState"_s + event<EvtEndMap> = "AfterMessageState"_s
+            );
+        }
+    };
+
+
+    struct MessageVisitor1 : msgpack::v2::null_visitor {
+
+        using MessageParser = sml::sm
+                <
+                        MessageParserConfig,
+                        MessageParserContext,
+                        sml::logger<SmlLogger>
+                >;
+
+        MessageVisitor1(MessageParserContext &pContext, const ReadBuffer &pBuffer, LogIface &pLog)
+                : mLog(pLog), mLogger(mLog), mBuffer(pBuffer), mMessageParser{pContext, mLogger} {
+        }
+
+        inline bool isInErrorState() {
+            using namespace sml;
+            return !mMessageParser.is("ErrorState"_s);
+        }
+
+        inline bool visit_nil() {
+            mMessageParser.process_event(EvtNil());
+            return isInErrorState();
+        }
+
+        inline bool visit_boolean(bool v) {
+            mMessageParser.process_event(EvtBool(v));
+            return isInErrorState();
+        }
+
+        inline bool visit_positive_integer(uint64_t v) {
+            mMessageParser.process_event(EvtUInt64(v));
+            return isInErrorState();
+        }
+
+        inline bool visit_negative_integer(int64_t v) {
+            mMessageParser.process_event(EvtInt64(v));
+            return isInErrorState();
+        }
+
+        inline bool visit_str(const char *v, uint32_t pSize) {
+            mMessageParser.process_event(EvtStringVal(std::string(v, pSize)));
+            return isInErrorState();
+        }
+
+        inline bool start_array(uint32_t pArraySize) {
+            mMessageParser.process_event(EvtStartArray());
+            return isInErrorState();
+        }
+
+        inline bool end_array_item() {
+            mMessageParser.process_event(EvtEndArrayItem());
+            return isInErrorState();
+        }
+
+        inline bool end_array() {
+            mMessageParser.process_event(EvtEndArray());
+            return isInErrorState();
+        }
+
+        inline bool start_map(uint32_t pMapSize) {
+            mMessageParser.process_event(EvtStartMap());
+            return isInErrorState();
+        }
+
+        inline bool end_map_key() {
+            mMessageParser.process_event(EvtEndMapKey());
+            return isInErrorState();
+        }
+
+        inline bool end_map_value() {
+            mMessageParser.process_event(EvtEndMapValue());
+            return isInErrorState();
+        }
+
+        inline bool end_map() {
+            mMessageParser.process_event(EvtEndMap());
+            return isInErrorState();
+        }
+
+        void parse_error(size_t pParsedOffset, size_t pErrorOffset) {
+            throw new ExceptionInMessageParser
+                    (
+                            "Parser error",
+                            pErrorOffset,
+                            string_view(mBuffer.data() + pParsedOffset, pErrorOffset - pParsedOffset),
+                            string_view(mBuffer.data() + pErrorOffset, mBuffer.size() - pErrorOffset)
+                    );
+        }
+
+        void insufficient_bytes(size_t pParsedOffset, size_t pErrorOffset) {
+            throw new ExceptionInMessageParser
+                    (
+                            "Insufficient bytes",
+                            pErrorOffset,
+                            string_view(mBuffer.data() + pParsedOffset, pErrorOffset - pParsedOffset),
+                            string_view(mBuffer.data() + pErrorOffset, mBuffer.size() - pErrorOffset)
+                    );
+        }
+
+    private:
+
+        LogIface &mLog;
+        SmlLogger mLogger;
+        MessageParser mMessageParser;
+        const ReadBuffer &mBuffer;
+    };
+
+    bool Message1::parse(const ReadBuffer &myBuff) {
+        MessageParserContext myContext(*this);
+        MessageVisitor1 myMessageVisitor(myContext, myBuff, mLog);
+        size_t myOffset = 0;
+        bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(),
+                                           myOffset, myMessageVisitor);
+        return myReturn;
+    }
+
+    Message1::Message1(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
+            : mMethodName(pMethodName), mParameters(std::forward<Parameters>(pParameters)),
+              mType(EMessageType::K_METHOD), mLog(pLog) {
+    }
+
+    Message1::Message1(Value &&pReturn, LogIface &pLog)
+            : mReturn(std::forward<Value>(pReturn)), mType(EMessageType::K_RETURN), mLog(pLog) {
+    }
+
+    Message1::Message1(LogIface &pLog) : mLog(pLog), mType(EMessageType::K_UNKNOWN) {
     }
 
 
-    Parameter::Parameter(const std::string& pParameterName, const string_view& pValue)
-    : mName(pParameterName)
-    , mValue(std::string(pValue))
-    {
+    void
+    Message1::packToBuffer(Buffer &pBuffer) const {
+        pBuffer.clear();
+        msgpack::packer<Buffer> myPacker(pBuffer);
+        if (getType() == EMessageType::K_RETURN) {
+            myPacker.pack_map(3); // type + instance id + return value
+            packType(myPacker);
+            packInstanceId(myPacker);
+            packReturnValue(myPacker);
+        } else if (getType() == EMessageType::K_METHOD) {
+            myPacker.pack_map(4); // type + instance id + method name + parameters
+            packType(myPacker);
+            packInstanceId(myPacker);
+            packMethodName(myPacker);
+            packParameters(myPacker);
+        }
     }
+
+    void Message1::packParameters(msgpack::packer<Buffer> &myPacker) const {
+        packString(myPacker, string_view(K_PARAMETERS_KEY));
+        const int32_t myMapSize = getParameters().size();
+        myPacker.pack_map(myMapSize);
+        for (const Parameter &myPar: getParameters()) {
+            string_view myName = myPar.getName();
+            packString(myPacker, myName);
+            std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, myPar.getValue());
+        }
+    }
+
+    void Message1::packReturnValue(msgpack::packer<Buffer> &myPacker) const {
+        packString(myPacker, std::string_view(K_RETURN_KEY));
+        std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, mReturn);
+    }
+
+    void Message1::packInstanceId(msgpack::packer<Buffer> &pPacker) const {
+        packString(pPacker, Message1::K_INSTANCE_ID_KEY);
+        pPacker.pack_array(mInstanceId.size());
+        for (auto myC : getInstanceId())
+            pPacker.pack(myC);
+    }
+
+    Json Message1::toJson(const ReadBuffer &pBuffer) {
+        return nlohmann::json::from_msgpack(pBuffer);
+    }
+
+    std::string Message1::jsonToStr(Json pJson) {
+        std::ostringstream myJsonStream;
+        myJsonStream << pJson;
+        return myJsonStream.str();
+    }
+
 } // end namespace striboh::base
