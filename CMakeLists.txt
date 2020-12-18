@@ -9,9 +9,9 @@ enable_testing()
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
+include(FetchContent)
 ###############################################################################
 # SML begin
-include(FetchContent)
 FetchContent_Declare(sml
         PREFIX ${CMAKE_SOURCE_DIR}/src/main/cpp/sml
         URL https://raw.githubusercontent.com/boost-ext/sml/master/include/boost/sml.hpp
@@ -27,10 +27,26 @@ endif()
 # SML end
 ###############################################################################
 
+###############################################################################
+# DI begin
+FetchContent_Declare(di
+        PREFIX ${CMAKE_SOURCE_DIR}/src/main/cpp/di
+        URL https://raw.githubusercontent.com/boost-ext/di/cpp14/include/boost/di.hpp
+        DOWNLOAD_NO_EXTRACT true
+        )
+FetchContent_GetProperties(di)
+if(NOT di_POPULATED)
+    FetchContent_Populate(di)
+    # Copy an additional/replacement file into the populated source
+    file(COPY ${CMAKE_SOURCE_DIR}/src/main/cpp/di/src/di.hpp DESTINATION
+            ${CMAKE_SOURCE_DIR}/src/main/cpp/di)
+endif()
+# SML end
+###############################################################################
+
+
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 
-add_subdirectory(src/main/cpp/NamedType)
-add_subdirectory(src/main/cpp/fmt)
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
 
