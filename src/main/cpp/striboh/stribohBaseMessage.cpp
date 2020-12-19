@@ -420,265 +420,6 @@ namespace msgpack {
 
 namespace striboh::base {
 
-    Message &
-    Message::pack(Buffer &pBuffer, const std::string &pVal) {
-        msgpack::pack(pBuffer, pVal);
-        return *this;
-    }
-
-    Message &
-    Message::pack(Buffer &pBuffer, const InstanceId &pVal) {
-        msgpack::pack(pBuffer, pVal.data);
-        return *this;
-    }
-
-    Message &
-    Message::pack(Buffer &pBuffer, std::string_view &&pVal) {
-        msgpack::pack(pBuffer, std::move(pVal));
-        return *this;
-    }
-
-    Message &
-    Message::pack(Buffer &pBuffer, int pVal) {
-        msgpack::pack(pBuffer, pVal);
-        return *this;
-    }
-
-
-    Message &
-    Message::unpackFromBuffer(const ReadBuffer &pBuffer) {
-        // now starts streaming deserialization.
-        mValues.clear();
-        const std::size_t myBufLength = pBuffer.size();
-        std::size_t aOff = 0;
-        mValues = nlohmann::json::from_msgpack(pBuffer);
-        return *this;
-    }
-
-    void
-    Message::unpackString(msgpack::object &pObj) {
-        std::string myVal;
-        pObj.convert(myVal);
-        mValues.push_back(myVal);
-    }
-
-    void
-    Message::unpackInt(msgpack::object &pObj) {
-        int myIntVal;
-        pObj.convert(myIntVal);
-        mValues.push_back(myIntVal);
-    }
-
-    Message &
-    Message::pack(Buffer &pBuffer, const char *const pVal) {
-        msgpack::pack(pBuffer, pVal);
-        return *this;
-    }
-
-    void Message::packToBuffer(Buffer &pBuffer) const {
-        pBuffer.clear();
-        pBuffer = nlohmann::json::to_msgpack(mValues);
-    }
-
-    bool MessageVisitor::visit_nil() {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (checkForError())
-            return false;
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        return true;
-    }
-
-    bool MessageVisitor::visit_boolean(bool v) {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        return true;
-    }
-
-    bool MessageVisitor::end_array() {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        return true;
-    }
-
-    bool MessageVisitor::visit_str(const char *v, uint32_t pSize) {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap()) {
-            return false;
-        }
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        string_view aStringView(v, pSize);
-        mLog.debug("     str={}", aStringView);
-        if (aStringView == Message::K_METHOD_NAME_KEY) {
-            setState(K_EXPECTING_METHOD);
-        } else if (aStringView == Message::K_PARAMETERS_KEY) {
-            setState(K_EXPECTING_PARAMETERS);
-        } else if (getState() == K_EXPECTING_METHOD) {
-            mMessage.setMethodName(aStringView);
-            setState(K_INSIDE_MESSAGE);
-        } else if (getState() == K_PARSING_PARAMETERS) {
-            mParameterName = aStringView;
-        } else if (getState() == K_PARSING_PARAMETER) {
-            mMessage.getParameters().emplace_back(Parameter(mParameterName, aStringView));
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        return true;
-    }
-
-    bool MessageVisitor::start_array(uint32_t pNumElements) {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        return true;
-    }
-
-    bool MessageVisitor::end_array_item() {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        return true;
-    }
-
-    bool MessageVisitor::start_map(uint32_t pNumPairs) {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (getState() == K_INITIAL) {
-            setState(K_INSIDE_MESSAGE);
-            setError(EMessageParsingError::K_PARSE_OK);
-        } else if (getState() == K_EXPECTING_PARAMETERS) {
-            setState(K_PARSING_PARAMETERS);
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        mMapSize = pNumPairs;
-        return true;
-    }
-
-    bool MessageVisitor::end_map_key() {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_PARSING_PARAMETERS) {
-            setState(K_PARSING_PARAMETER);
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        return true;
-    }
-
-    bool MessageVisitor::end_map() {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_FINISHED_PARAMETERS) {
-            setState(K_INSIDE_MESSAGE);
-        } else if (getState() == K_PARSING_PARAMETERS) {
-            setState(K_FINISHED_PARAMETERS);
-        } else if (getState() == K_PARSING_PARAMETER) {
-            setState(K_PARSING_PARAMETERS);
-        } else if (getState() == K_INSIDE_MESSAGE) {
-            setState(K_INITIAL);
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        mMapSize = 0;
-        return true;
-    }
-
-    void MessageVisitor::insufficient_bytes(size_t, size_t) {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        return;
-    }
-
-    bool MessageVisitor::visit_negative_integer(int64_t v) {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        return true;
-    }
-
-    bool MessageVisitor::visit_positive_integer(uint64_t v) {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_EXPECTING_PARAMETERS) {
-            return false;
-        }
-        return true;
-    }
-
-    bool MessageVisitor::end_map_value() {
-        mLog.debug("-->  {} {}", __FUNCTION__, getStateStr());
-        if (notStartsWithMap())
-            return false;
-        if (getState() == K_PARSING_PARAMETER) {
-            setState(K_PARSING_PARAMETERS);
-        }
-        mLog.debug("<--  {} {}", __FUNCTION__, getStateStr());
-        return true;
-    }
-
-    void MessageVisitor::parse_error(size_t, size_t) {
-        mLog.debug("<--> {} {}", __FUNCTION__, getStateStr());
-        return;
-    }
-
-    MessageVisitor::MessageVisitor(Message1 &pMessage, LogIface &pLog) :
-            mMessage(pMessage),
-            mLog(pLog),
-            mState(K_INITIAL),
-            mParsingError(EMessageParsingError::K_INITIAL),
-            mMapSize(0) {}
-
-    EMessageParsingError
-    MessageVisitor::getParsingError() const {
-        return mParsingError;
-    }
-
-    uint16_t
-    MessageVisitor::getState() const {
-        return mState;
-    }
-
-    void
-    MessageVisitor::setState(uint16_t pState) {
-        mState = pState;
-    }
-
-    bool MessageVisitor::notStartsWithMap() {
-        if (getState() == K_INITIAL) {
-            setState(K_ERROR);
-            setError(EMessageParsingError::K_MESSAGE_DOES_NOT_START_WITH_MAP);
-            return true;
-        }
-        return false;
-    }
-
-    void MessageVisitor::setError(EMessageParsingError pError) {
-        mParsingError = pError;
-    }
-
-    bool MessageVisitor::checkForError() {
-        return (getState() == K_ERROR) || (getParsingError() != EMessageParsingError::K_PARSE_OK);
-    }
-
     struct SmlLogger {
 
         SmlLogger(LogIface &pLog) : mLog(pLog) {}
@@ -749,11 +490,11 @@ namespace striboh::base {
     using EvtUInt64 = EvtVal<uint64_t>;
 
     struct MessageParserContext {
-        Message1 &mMessage;
+        Message &mMessage;
         std::string mKey;
         std::vector<uint8_t> mInstanceId;
 
-        MessageParserContext(Message1 &pMessage)
+        MessageParserContext(Message &pMessage)
                 : mMessage(pMessage) {}
     };
 
@@ -768,23 +509,23 @@ namespace striboh::base {
     };
 
     constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
-        return pEvt.mVal == Message1::K_PARAMETERS_KEY;
+        return pEvt.mVal == Message::K_PARAMETERS_KEY;
     };
 
     constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
-        return pEvt.mVal == Message1::K_METHOD_NAME_KEY;
+        return pEvt.mVal == Message::K_METHOD_NAME_KEY;
     };
 
     constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
-        return pEvt.mVal == Message1::K_RETURN_KEY;
+        return pEvt.mVal == Message::K_RETURN_KEY;
     };
 
     constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
-        return pEvt.mVal == Message1::K_INSTANCE_ID_KEY;
+        return pEvt.mVal == Message::K_INSTANCE_ID_KEY;
     };
 
     constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
-        return pEvt.mVal == Message1::K_MESSAGE_TYPE_KEY;
+        return pEvt.mVal == Message::K_MESSAGE_TYPE_KEY;
     };
 
     constexpr auto actionStartInstanceId = [](const EvtStringVal &, MessageParserContext &pContext) {
@@ -975,7 +716,7 @@ namespace striboh::base {
         const ReadBuffer &mBuffer;
     };
 
-    bool Message1::parse(const ReadBuffer &myBuff) {
+    bool Message::unpackFromBuffer(ReadBuffer&& myBuff) {
         MessageParserContext myContext(*this);
         MessageVisitor1 myMessageVisitor(myContext, myBuff, mLog);
         size_t myOffset = 0;
@@ -984,21 +725,21 @@ namespace striboh::base {
         return myReturn;
     }
 
-    Message1::Message1(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
+    Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
             : mMethodName(pMethodName), mParameters(std::forward<Parameters>(pParameters)),
               mType(EMessageType::K_METHOD), mLog(pLog) {
     }
 
-    Message1::Message1(Value &&pReturn, LogIface &pLog)
+    Message::Message(Value &&pReturn, LogIface &pLog)
             : mReturn(std::forward<Value>(pReturn)), mType(EMessageType::K_RETURN), mLog(pLog) {
     }
 
-    Message1::Message1(LogIface &pLog) : mLog(pLog), mType(EMessageType::K_UNKNOWN) {
+    Message::Message(LogIface &pLog) : mLog(pLog), mType(EMessageType::K_UNKNOWN) {
     }
 
 
     void
-    Message1::packToBuffer(Buffer &pBuffer) const {
+    Message::packToBuffer(Buffer &pBuffer) const {
         pBuffer.clear();
         msgpack::packer<Buffer> myPacker(pBuffer);
         if (getType() == EMessageType::K_RETURN) {
@@ -1015,7 +756,7 @@ namespace striboh::base {
         }
     }
 
-    void Message1::packParameters(msgpack::packer<Buffer> &myPacker) const {
+    void Message::packParameters(msgpack::packer<Buffer> &myPacker) const {
         packString(myPacker, string_view(K_PARAMETERS_KEY));
         const int32_t myMapSize = getParameters().size();
         myPacker.pack_map(myMapSize);
@@ -1026,26 +767,36 @@ namespace striboh::base {
         }
     }
 
-    void Message1::packReturnValue(msgpack::packer<Buffer> &myPacker) const {
+    void Message::packReturnValue(msgpack::packer<Buffer> &myPacker) const {
         packString(myPacker, std::string_view(K_RETURN_KEY));
         std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, mReturn);
     }
 
-    void Message1::packInstanceId(msgpack::packer<Buffer> &pPacker) const {
-        packString(pPacker, Message1::K_INSTANCE_ID_KEY);
+    void Message::packInstanceId(msgpack::packer<Buffer> &pPacker) const {
+        packString(pPacker, Message::K_INSTANCE_ID_KEY);
         pPacker.pack_array(mInstanceId.size());
         for (auto myC : getInstanceId())
             pPacker.pack(myC);
     }
 
-    Json Message1::toJson(const ReadBuffer &pBuffer) {
+    Json Message::toJson(const ReadBuffer &pBuffer) {
         return nlohmann::json::from_msgpack(pBuffer);
     }
 
-    std::string Message1::jsonToStr(Json pJson) {
+    std::string Message::jsonToStr(Json pJson) {
         std::ostringstream myJsonStream;
         myJsonStream << pJson;
         return myJsonStream.str();
+    }
+
+    std::string Message::asJsonString() const {
+        Buffer myBuffer;
+        packToBuffer(myBuffer);
+        return jsonToStr(toJson(ReadBuffer(myBuffer)));
+    }
+
+    Message::Message(ReadBuffer &&pBuffer, LogIface &pIface): mLog(pIface) {
+        unpackFromBuffer(std::forward<ReadBuffer>(pBuffer));
     }
 
 } // end namespace striboh::base

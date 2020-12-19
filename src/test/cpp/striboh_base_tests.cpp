@@ -423,6 +423,12 @@ using json = nlohmann::json;
 
 static striboh::base::LogBoostImpl theLog;
 
+namespace striboh::base {
+    LogIface &getLog() {
+        return theLog;
+    }
+}
+
 TEST(stribohBaseTests, testParseUrlParameters) {
     {
         string_view myUrl("");
@@ -468,11 +474,11 @@ TEST(stribohBaseTests, testStribohBrokerShutdown) {
 TEST(stribohBaseTests, testMethodParametersConstructor) {
     constexpr const char *const K_METHOD_NAME = "testMethod";
     const std::string myVal0("Test 0.");
-    Message myList(MethodName(K_METHOD_NAME), {{"p0", myVal0},
-                                               {"p1", 42}});
-    ASSERT_EQ(myVal0, myList.getParameters()["p0"].get<std::string>());
-    ASSERT_EQ(42, myList.getParameters()["p1"].get<int>());
-    ASSERT_EQ(K_METHOD_NAME, myList.getMethodName().get());
+    Message myList(K_METHOD_NAME, {{"p0", myVal0},
+                                   {"p1", 42L}}, getLog());
+    ASSERT_EQ(myVal0, std::get<std::string>(myList.getParameters()[0].getValue()));
+    ASSERT_EQ(42L, std::get<long>(myList.getParameters()[1].getValue()));
+    ASSERT_EQ(K_METHOD_NAME, myList.getMethodName());
 }
 
 TEST(stribohBaseTests, testSplit) {
@@ -528,12 +534,13 @@ Interface createTestInterface() {
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const Message &pIncoming, Context pCtx) -> Message {
-                               Message myReturn(EMessageType::K_RETURN,
-                                                {std::string("Server greats ")
-                                                           + pIncoming.getParameters()["p0"].get<std::string>()}
+                               Message myReturn(Value{std::string("Server greats ")
+                                                      + std::get<std::string>(pIncoming.getParameters()[0].getValue())},
+                                                getLog()
                                );
                                return myReturn;
-                           }
+                           },
+                           getLog()
                     }
             }
     };
@@ -589,14 +596,13 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     string myResolved = aBroker.resolvedServiceToStr(theM0M1Path, aSvc);
     EXPECT_FALSE(myResolved.empty());
     BOOST_LOG_TRIVIAL(debug) << myResolved;
-    auto aJson=json::parse(myResolved);
+    auto aJson = json::parse(myResolved);
     EXPECT_EQ(theM0M1Path, aJson[K_TAG_SVC][K_TAG_SVC_PATH]);
     EXPECT_EQ(true, aJson[K_TAG_SVC][K_TAG_SVC_RESULT]);
     EXPECT_EQ(myUuid, from_json(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]));
 }
 
-TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
-{
+TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     Broker aBroker(theLog);
     aBroker.serve();
 
@@ -607,62 +613,65 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer)
                            ParameterList{
                                    {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](const Message & pIncoming, Context pCtx) -> Message {
-                               BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.getValues().dump() ;
-                               string p0(pIncoming.getParameters()["p0"].get<std::string>());
-                               Message myRetVal(EMessageType::K_RETURN,
-                                                {{Message::K_RETURN_KEY, "Server greats " + p0}});
-                                BOOST_LOG_TRIVIAL(debug) << "Returning: " << myRetVal.getValues().dump() ;
+                           [](const Message &pIncoming, Context pCtx) -> Message {
+                               BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.asJsonString();
+                               string p0(std::get<std::string>(pIncoming.getParameters()[0].getValue()));
+                               Message myRetVal(Value{"Server greats " + p0}, getLog());
+                               BOOST_LOG_TRIVIAL(debug) << "Returning: " << myRetVal.asJsonString();
                                return myRetVal;
-                           }
+                           },
+                           getLog()
                     }
             }
     };
     InstanceId myUuid = aBroker.addServant(myInterface);
-    Message myMsg(MethodName("echo"), {{"p0", "Peter!"}});
-    BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.getValues().dump() ;
+    Message myMsg("echo", {{"p0", string("Peter!")}},getLog());
+    BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.asJsonString();
     myMsg.setInstanceId(myUuid);
-    Message myReply = aBroker.invokeMethod(std::forward<Message&&>(myMsg));
-    ASSERT_TRUE(myReply.size() == 1) << "Parameter list is empty, should have 1 element!";
-    EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturns().get<std::string>());
+    Message myReply = aBroker.invokeMethod(std::forward<Message &&>(myMsg));
+    EXPECT_EQ(0,myReply.getParameters().size()) << "Parameter list should be empty on return message!";
+    EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
+    EXPECT_EQ(std::string("Server greats Peter!"), std::get<std::string>(myReply.getReturn()));
     aBroker.shutdown();
 }
 
 static constexpr const char *const K_TEST_METHOD_NAME2 = "abrakadabra";
 
-TEST(stribohBaseTests, testSerailization)
-{
-    Message myInputValues(MethodName("testMethod"),
-                          {{"p0","Echo string."}, {"p1",42}, {"p2","end."}});
+TEST(stribohBaseTests, testSerailization) {
+    Message myInputValues("testMethod",
+                          {{"p0", string("Echo string.")},
+                           {"p1", 42L},
+                           {"p2", string("end.")}}
+                           ,getLog());
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
-    EXPECT_EQ(myIId, myInputValues.getInstanceId() );
-    EXPECT_EQ(3, myInputValues.size());
+    EXPECT_EQ(myIId, myInputValues.getInstanceId());
+    EXPECT_EQ(3, myInputValues.getParameters().size());
     Buffer myBuff;
     myInputValues.packToBuffer(myBuff);
-    Message myOutputValues(MethodName("testMethod"));
+    Message myOutputValues(getLog());
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
-    EXPECT_EQ(3, myOutputValues.size());
-    EXPECT_EQ("Echo string.", myOutputValues.getParameters()["p0"].get<string>());
-    EXPECT_EQ(42, myOutputValues.getParameters()["p1"].get<int>());
-    EXPECT_EQ("end.", myOutputValues.getParameters()["p2"].get<string>());
-    EXPECT_EQ("testMethod", myOutputValues.getMethodName().get());
+    EXPECT_EQ(3, myOutputValues.getParameters().size());
+    EXPECT_EQ("Echo string.", myOutputValues.getParameters()[0].get<string>());
+    EXPECT_EQ(42L, std::get<u_int64_t>(myOutputValues.getParameters()[1].getValue()));
+    EXPECT_EQ("end.", myOutputValues.getParameters()[2].get<string>());
+    EXPECT_EQ("testMethod", myOutputValues.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
-    myOutputValues.setMethodName(MethodName(K_TEST_METHOD_NAME2));
-    EXPECT_EQ(K_TEST_METHOD_NAME2, myOutputValues.getMethodName().get());
+    myOutputValues.setMethodName(K_TEST_METHOD_NAME2);
+    EXPECT_EQ(K_TEST_METHOD_NAME2, myOutputValues.getMethodName());
     myOutputValues.setType(EMessageType::K_RETURN);
     EXPECT_EQ(EMessageType::K_RETURN, myOutputValues.getType());
-    EXPECT_EQ(myIId, myOutputValues.getInstanceId() );
-    constexpr const char* K_HELLO_RETURNED = "Hallo returned!";
-    Message myReturnIn{Return{K_HELLO_RETURNED}};
-    BOOST_LOG_TRIVIAL(debug) << myReturnIn.getValues().dump();
-    ASSERT_EQ(K_HELLO_RETURNED,myReturnIn.getReturns());
+    EXPECT_EQ(myIId, myOutputValues.getInstanceId());
+    constexpr const char *K_HELLO_RETURNED = "Hallo returned!";
+    Message myReturnIn{Value{string(K_HELLO_RETURNED)}, getLog()};
+    BOOST_LOG_TRIVIAL(debug) << myReturnIn.asJsonString();
+    ASSERT_EQ(string(K_HELLO_RETURNED), std::get<string>(myReturnIn.getReturn()));
     ASSERT_EQ(EMessageType::K_RETURN, myReturnIn.getType());
     Buffer myBuff1;
     myReturnIn.packToBuffer(myBuff);
-    Message myReturnOut((ReadBuffer(myBuff)));
-    BOOST_LOG_TRIVIAL(debug) << myReturnOut.getValues().dump();
-    ASSERT_EQ(K_HELLO_RETURNED,myReturnOut.getReturns());
+    Message myReturnOut(ReadBuffer(myBuff), getLog());
+    BOOST_LOG_TRIVIAL(debug) << myReturnOut.asJsonString();
+    ASSERT_EQ(K_HELLO_RETURNED, std::get<string>(myReturnOut.getReturn()));
     ASSERT_EQ(EMessageType::K_RETURN, myReturnOut.getType());
 }
 
@@ -686,23 +695,26 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     EXPECT_TRUE(myProxy->isConnected());
     {
         auto myResult0 = myProxy
-                ->invokeMethod(Message(MethodName("echo"), {{"p0", "Peter"}}));
+                ->invokeMethod(Message("echo", {{"p0", string("Peter")}}, getLog()));
         Message myReply = myResult0->getReturnValue();
-        EXPECT_EQ(1, myReply.size()) << "Parameter list is empty, should have 1 element!";
-        EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturns().get<std::string>());
+        EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list is empty, should have 1 element!";
+        EXPECT_EQ(std::string("Server greats Peter!"), std::get<std::string>(myReply.getReturn()));
+        EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
     }
     {
         auto myResult2 = myProxy
-                ->invokeMethod(Message(MethodName("echo"), {{"p0", "Paul"}}));
+                ->invokeMethod(Message("echo", {{"p0", string("Paul")}}, getLog()));
         Message myReply2 = myResult2->getReturnValue();
-        EXPECT_EQ(1, myReply2.size()) << "Parameter list is empty, should have 1 element!";
-        EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getReturns().get<std::string>());
+        EXPECT_EQ(0, myReply2.getParameters().size()) << "Parameter list is empty, should have 1 element!";
+        EXPECT_EQ(std::string("Server greats Paul!"), std::get<std::string>(myReply2.getReturn()));
+        EXPECT_EQ(EMessageType::K_RETURN,myReply2.getType());
     }
     {
         auto myResult1 = myProxy
-                ->invokeMethod(Message(MethodName("shutdown")));
+                ->invokeMethod(Message("shutdown", {}, getLog()));
         Message myReply1 = myResult1->getReturnValue();
-        ASSERT_EQ(1, myReply1.size());
+        EXPECT_EQ(0, myReply1.getParameters().size());
+        EXPECT_EQ(EMessageType::K_RETURN,myReply1.getType());
     }
     if (myServerChildProcess) {
         myServerChildProcess->wait_for(30s);
@@ -714,121 +726,51 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
 TEST(stribohBaseTests, testJson) {
     Json myJson0 = R"({ "p0":"aa", "p1":"cc"})"_json;
     string_view p0(myJson0["p0"].get<string_view>());
-    EXPECT_EQ("aa",p0);
-    Json& p1= myJson0["p1"];
-    EXPECT_EQ("cc",p1.get<string_view>());
-}
-
-TEST(stribohBaseTests, testMessageParsing) {
-        Json myJson0 = 42;
-        Buffer myMsgPack(Json::to_msgpack(myJson0));
-        Message1 myMsg(theLog);
-        MessageVisitor myMessageVisitor(myMsg,theLog);
-        std::size_t myOffset = 0;
-        auto myPackedData(myMsgPack.cdata());
-        bool ret = msgpack::v2::parse(static_cast<const char*>(myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
-        EXPECT_EQ(EMessageParsingError::K_MESSAGE_DOES_NOT_START_WITH_MAP,myMessageVisitor.getParsingError());
-}
-
-constexpr static const char *const K_TEST_METHOD_NAME = "testMethodName";
-
-TEST(stribohBaseTests, testParseMethodName)
-{
-    Json myJson0 = {{Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME}};
-    Buffer myMsgPack(Json::to_msgpack(myJson0));
-    Message1 myMsg(theLog);
-    MessageVisitor myMessageVisitor(myMsg,theLog);
-    std::size_t myOffset = 0;
-    auto myPackedData(myMsgPack.cdata());
-    bool ret = msgpack::v2::parse(static_cast<const char*>(
-            myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
-    EXPECT_EQ(EMessageParsingError::K_PARSE_OK,myMessageVisitor.getParsingError());
-    EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
-}
-
-
-TEST(stribohBaseTests, testParseStringParameter)
-{
-    {
-        Json myJson0 = {
-                {Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME},
-                {Message::K_PARAMETERS_KEY,  {{"p0", "Paul"}}}
-        };
-        Buffer myMsgPack(Json::to_msgpack(myJson0));
-        Message1 myMsg(theLog);
-        MessageVisitor myMessageVisitor(myMsg, theLog);
-        std::size_t myOffset = 0;
-        auto myPackedData(myMsgPack.cdata());
-        bool ret = msgpack::v2::parse(static_cast<const char *>(
-                                              myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
-        EXPECT_EQ(EMessageParsingError::K_PARSE_OK, myMessageVisitor.getParsingError());
-        EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
-        ASSERT_EQ(1, myMsg.getParameters().size());
-        EXPECT_EQ("p0", myMsg.getParameters()[0].getName());
-        EXPECT_EQ("Paul", std::get<std::string>(myMsg.getParameters()[0].getValue()));
-    }
-    {
-        Json myJson1 = {
-                {Message::K_METHOD_NAME_KEY, K_TEST_METHOD_NAME},
-                {Message::K_PARAMETERS_KEY,  {{"p1", "Peter"},{"p2","Paul"}}
-                }
-        };
-        Buffer myMsgPack(Json::to_msgpack(myJson1));
-        Message1 myMsg(theLog);
-        MessageVisitor myMessageVisitor(myMsg, theLog);
-        std::size_t myOffset = 0;
-        auto myPackedData(myMsgPack.cdata());
-        bool ret = msgpack::v2::parse(static_cast<const char *>(
-                                              myPackedData.data()), myPackedData.size(), myOffset, myMessageVisitor);
-        EXPECT_EQ(EMessageParsingError::K_PARSE_OK, myMessageVisitor.getParsingError());
-        EXPECT_EQ(K_TEST_METHOD_NAME, myMsg.getMethodName());
-        ASSERT_EQ(2, myMsg.getParameters().size());
-        EXPECT_EQ("p1", myMsg.getParameters()[0].getName());
-        EXPECT_EQ("Peter", std::get<std::string>(myMsg.getParameters()[0].getValue()));
-        EXPECT_EQ("p2", myMsg.getParameters()[1].getName());
-        EXPECT_EQ("Paul", std::get<std::string>(myMsg.getParameters()[1].getValue()));
-    }
+    EXPECT_EQ("aa", p0);
+    Json &p1 = myJson0["p1"];
+    EXPECT_EQ("cc", p1.get<string_view>());
 }
 
 TEST(stribohBaseTests, testGenerateAndParseReturn) {
     static const string_view K_ALFONS("Alfons");
-    Message1 m0(Value(string(K_ALFONS)),theLog);
+    Message m0(Value(string(K_ALFONS)), theLog);
     InstanceId myUuid0 = Broker::generateInstanceId();
     m0.setInstanceId(myUuid0);
     Buffer myBuffer;
     m0.packToBuffer(myBuffer);
-    const Json myJson = Message1::toJson(ReadBuffer(myBuffer));
-    const string myJsonStr = Message1::jsonToStr(myJson);
-    theLog.debug("Generated: {}",myJsonStr);
-    EXPECT_EQ(K_ALFONS,myJson[Message1::K_RETURN_KEY].get<string>());
-    EXPECT_EQ(int(EMessageType::K_RETURN),myJson[Message1::K_MESSAGE_TYPE_KEY].get<int>());
-    Message1 m1(theLog);
-    m1.parse(ReadBuffer(myBuffer));
-    EXPECT_EQ(K_ALFONS,std::get<string>(m1.getReturn()));
-    EXPECT_EQ(EMessageType::K_RETURN,m1.getType());
-    EXPECT_EQ(myUuid0,m1.getInstanceId());
+    const Json myJson = Message::toJson(ReadBuffer(myBuffer));
+    const string myJsonStr = Message::jsonToStr(myJson);
+    theLog.debug("Generated: {}", myJsonStr);
+    EXPECT_EQ(K_ALFONS, myJson[Message::K_RETURN_KEY].get<string>());
+    EXPECT_EQ(int(EMessageType::K_RETURN), myJson[Message::K_MESSAGE_TYPE_KEY].get<int>());
+    Message m1(theLog);
+    m1.unpackFromBuffer(ReadBuffer(myBuffer));
+    EXPECT_EQ(K_ALFONS, std::get<string>(m1.getReturn()));
+    EXPECT_EQ(EMessageType::K_RETURN, m1.getType());
+    EXPECT_EQ(myUuid0, m1.getInstanceId());
 }
 
 TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
-    Message1 m0("helloMethod",{{"p1",42L},{"p2",string("Santa Maria")}},theLog);
+    Message m0("helloMethod", {{"p1", 42L},
+                               {"p2", string("Santa Maria")}}, theLog);
     InstanceId myUuid0 = Broker::generateInstanceId();
     m0.setInstanceId(myUuid0);
     Buffer myBuffer;
     m0.packToBuffer(myBuffer);
-    const Json myJson = Message1::toJson(ReadBuffer(myBuffer));
-    const string myJsonStr = Message1::jsonToStr(myJson);
-    theLog.debug("Generated: {}",myJsonStr);
-    EXPECT_EQ("Santa Maria",myJson[Message1::K_PARAMETERS_KEY]["p2"].get<string>());
-    EXPECT_EQ(42L,myJson[Message1::K_PARAMETERS_KEY]["p1"].get<int64_t>());
-    EXPECT_EQ("helloMethod",myJson[Message1::K_METHOD_NAME_KEY]);
-    EXPECT_EQ(int(EMessageType::K_METHOD),myJson[Message1::K_MESSAGE_TYPE_KEY].get<int>());
-    Message1 m1(theLog);
-    m1.parse(ReadBuffer(myBuffer));
-    EXPECT_EQ(myUuid0,m1.getInstanceId());
-    EXPECT_EQ("p2",m1.getParameters()[1].getName());
-    EXPECT_EQ("Santa Maria",std::get<string>(m1.getParameters()[1].getValue()));
-    EXPECT_EQ("p1",m1.getParameters()[0].getName());
-    EXPECT_EQ(42L,std::get<u_int64_t>(m1.getParameters()[0].getValue()));
-    EXPECT_EQ("helloMethod",m1.getMethodName());
-    EXPECT_EQ(EMessageType::K_METHOD,m1.getType());
+    const Json myJson = Message::toJson(ReadBuffer(myBuffer));
+    const string myJsonStr = Message::jsonToStr(myJson);
+    theLog.debug("Generated: {}", myJsonStr);
+    EXPECT_EQ("Santa Maria", myJson[Message::K_PARAMETERS_KEY]["p2"].get<string>());
+    EXPECT_EQ(42L, myJson[Message::K_PARAMETERS_KEY]["p1"].get<int64_t>());
+    EXPECT_EQ("helloMethod", myJson[Message::K_METHOD_NAME_KEY]);
+    EXPECT_EQ(int(EMessageType::K_METHOD), myJson[Message::K_MESSAGE_TYPE_KEY].get<int>());
+    Message m1(theLog);
+    m1.unpackFromBuffer(ReadBuffer(myBuffer));
+    EXPECT_EQ(myUuid0, m1.getInstanceId());
+    EXPECT_EQ("p2", m1.getParameters()[1].getName());
+    EXPECT_EQ("Santa Maria", std::get<string>(m1.getParameters()[1].getValue()));
+    EXPECT_EQ("p1", m1.getParameters()[0].getName());
+    EXPECT_EQ(42L, std::get<u_int64_t>(m1.getParameters()[0].getValue()));
+    EXPECT_EQ("helloMethod", m1.getMethodName());
+    EXPECT_EQ(EMessageType::K_METHOD, m1.getType());
 }

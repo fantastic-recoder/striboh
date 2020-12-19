@@ -18,7 +18,7 @@ namespace striboh {
         /**
          * Parse the supplied input file.
          * @param pIncludes vector of include directories.
-         * @param pInputFile file to parse.
+         * @param pInputFile file to unpackFromBuffer.
          * @return The parsed input file as AST tree.
          */
         ast::RootNode
@@ -27,7 +27,7 @@ namespace striboh {
         /**
          * Parse the supplied string.
          * @param pIncludes vector of include directories.
-         * @param pInputStr string to parse.
+         * @param pInputStr string to unpackFromBuffer.
          * @return The parsed input string as AST tree.
          */
         ast::RootNode

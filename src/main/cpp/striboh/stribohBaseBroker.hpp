@@ -454,14 +454,9 @@ namespace striboh::base {
                                                ResolvedResult &pRetVal,
                                                const ModuleListNode& pModuleListNode) const;
 
-            Instances_t
-                    mInstances;
-
-            RootNode
-                    mRoot;
-
-            std::future<void>
-                    mReceiver;
+            Instances_t /*-------*/ mInstances;
+            RootNode /*----------*/ mRoot;
+            std::future<void> /*-*/ mReceiver;
 
             void
             addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;

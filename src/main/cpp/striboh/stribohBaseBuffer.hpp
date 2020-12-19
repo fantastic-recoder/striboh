@@ -385,6 +385,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
+
+        /**
+         * Resizable buffer based on boost::beast::flat_buffer
+         * @sa https://www.boost.org/doc/libs/1_70_0/libs/beast/doc/html/beast/ref/boost__beast__flat_buffer.html
+         */
         class Buffer : public boost::beast::flat_buffer {
         public:
 

@@ -393,7 +393,7 @@ namespace striboh {
         /**
          * Parse URL parameters in form /seg1/seg2?par1=val1&par2=val2&par1=val3
          *
-         * @param pUrl the URL to parse
+         * @param pUrl the URL to unpackFromBuffer
          * @return parameter value pairs
          */
         Parameters_t

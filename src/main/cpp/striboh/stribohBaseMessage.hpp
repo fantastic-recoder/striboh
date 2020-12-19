@@ -400,175 +400,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-
     using Json = nlohmann::json;
-
-    using Return = fluent::NamedType<nlohmann::json, struct ReturnTag>;
-
-    class Message {
-        Json mValues;
-    public:
-
-        static constexpr const char *const K_METHOD_NAME_KEY /*-*/= "mthd";
-        static constexpr const char *const K_PARAMETERS_KEY /*--*/= "prms";
-        static constexpr const char *const K_RETURN_KEY /*------*/= "rtrn";
-        static constexpr const char *const K_MESSAGE_TYPE_KEY /**/= "type";
-        static constexpr const char *const K_INSTANCE_ID_KEY /*-*/= "siid";
-
-        const Json &getParameters() const {
-            return mValues[K_PARAMETERS_KEY];
-        }
-
-        Json &getParameters() {
-            return mValues[K_PARAMETERS_KEY];
-        }
-
-        const Json &getReturns() const {
-            return mValues[K_PARAMETERS_KEY][K_RETURN_KEY];
-        }
-
-        Json &getReturns() {
-            return mValues[K_PARAMETERS_KEY][K_RETURN_KEY];
-        }
-
-        Json &getValues() { return mValues; }
-
-        const Json &getValues() const { return mValues; }
-
-        MethodName
-        getMethodName() const {
-            return MethodName(mValues[K_METHOD_NAME_KEY].get<std::string>());
-        }
-
-        void setMethodName(const MethodName &pName) {
-            mValues[K_METHOD_NAME_KEY] = pName.get();
-        }
-
-        InstanceId
-        getInstanceId() const {
-            InstanceId myReturn;
-            from_json(mValues[K_INSTANCE_ID_KEY], myReturn);
-            return myReturn;
-        }
-
-        void setInstanceId(const InstanceId &pInstanceId) {
-            to_json(mValues[K_INSTANCE_ID_KEY], pInstanceId);
-        }
-
-        Message() = delete;
-
-        Message(const Message &) = default;
-
-        Message(Message &&) = default;
-
-        Message &operator=(Message &&) = default;
-
-
-        explicit
-        Message(EMessageType pType) :
-                mValues({
-                                {K_MESSAGE_TYPE_KEY, pType},
-                                {K_METHOD_NAME_KEY,  "n/a"},
-                                {K_PARAMETERS_KEY,   {}}
-                        }) {}
-
-        explicit
-        Message(EMessageType pType, Json &&pList) noexcept:
-                mValues({
-                                {K_MESSAGE_TYPE_KEY, pType},
-                                {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
-                                {K_PARAMETERS_KEY,   std::forward<Json &&>(pList)}
-                        }) {}
-
-        explicit
-        Message(const MethodName &pMethodName) noexcept:
-                mValues({
-                                {K_MESSAGE_TYPE_KEY, EMessageType::K_METHOD},
-                                {K_METHOD_NAME_KEY,  pMethodName.get()},
-                                {K_PARAMETERS_KEY,   Json{}}
-                        }) {}
-
-        explicit
-        Message(const Return &pReturns) noexcept:
-                mValues({
-                                {K_MESSAGE_TYPE_KEY, EMessageType::K_RETURN},
-                                {K_METHOD_NAME_KEY,  std::forward<std::string>("n/a")},
-                                {K_PARAMETERS_KEY,   {{K_RETURN_KEY, pReturns.get()}}}
-                        }) {}
-
-        explicit
-        Message(const MethodName &pMethodName, Json &&pList) noexcept:
-                mValues({
-                                {K_MESSAGE_TYPE_KEY, EMessageType::K_METHOD},
-                                {K_METHOD_NAME_KEY,  pMethodName.get()},
-                                {K_PARAMETERS_KEY,   std::forward<Json &&>(pList)}
-                        }) {}
-
-        explicit
-        Message(const ReadBuffer &myBuffer) {
-            unpackFromBuffer(myBuffer);
-        }
-
-        Message &
-        pack(Buffer &pBuffer, const std::string &pVal);
-
-        Message &
-        pack(Buffer &pBuffer, const MethodName &pVal) {
-            return pack(pBuffer, pVal.get());
-        }
-
-        Message &
-        pack(Buffer &pBuffer, std::string_view &&pVal);
-
-        Message &
-        pack(Buffer &pBuffer, const char *const pVal);
-
-        Message &
-        pack(Buffer &pBuffer, int pVal);
-
-        Message &
-        pack(Buffer &pBuffer, EMessageType pVal) {
-            return pack(pBuffer, int(pVal));
-        }
-
-        Message &
-        pack(Buffer &pBuffer, const InstanceId &pVal);
-
-        void
-        packToBuffer(Buffer &pBuffer) const;
-
-        void
-        unpack(const ReadBuffer &, InstanceId &pVal);
-
-        Message &
-        unpackFromBuffer(const ReadBuffer &pBuffer);
-
-        size_t
-        size() const {
-            return mValues[K_PARAMETERS_KEY].size();
-        }
-
-        EMessageType
-        getType() const {
-            return mValues[K_MESSAGE_TYPE_KEY].get<EMessageType>();
-        }
-
-        void
-        setType(EMessageType pType) {
-            mValues[K_MESSAGE_TYPE_KEY] = pType;
-        }
-
-    private:
-        void
-        unpackString(msgpack::object &pObjectHandle);
-
-        void
-        unpackInt(msgpack::object &pObjectHandle);
-
-        void
-        unpackHeader(const ReadBuffer &, const size_t myBufLength, size_t &aOff);
-
-    };
 
     class Object {
     public:
@@ -604,6 +436,8 @@ namespace striboh::base {
 
         const std::string &getName() const { return mName; }
 
+        template<typename T> T get()
+                const { return std::get<T>(getValue()); }
     private:
         Value mValue;
         std::string mName;
@@ -617,9 +451,10 @@ namespace striboh::base {
     };
 
 
-
-    class Message1 {
+    class Message {
     public:
+
+        Message(ReadBuffer &&pBuffer, LogIface &pIface);
 
         typedef msgpack::packer<Buffer> Packer_t;
 
@@ -629,27 +464,19 @@ namespace striboh::base {
         static constexpr const char *const K_MESSAGE_TYPE_KEY /**/= "type";
         static constexpr const char *const K_INSTANCE_ID_KEY /*-*/= "siid";
 
-        explicit Message1(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog);
+        explicit Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog);
 
-        explicit Message1(Value &&pReturn, LogIface &pLog);
+        explicit Message(Value &&pReturn, LogIface &pLog);
 
-        explicit Message1(LogIface &pLog);
+        explicit Message(LogIface &pLog);
 
-        bool parse(const ReadBuffer &myBuff);
+        bool unpackFromBuffer(ReadBuffer&& myBuff);
 
         const std::string &getMethodName() const {
             return mMethodName;
         }
 
-        void setMethodName(const std::string &pMethodName) {
-            mMethodName = pMethodName;
-        }
-
         void setMethodName(std::string_view &&pMethodName) {
-            mMethodName = pMethodName;
-        }
-
-        void setMethodName(const std::string_view &pMethodName) {
             mMethodName = pMethodName;
         }
 
@@ -674,7 +501,7 @@ namespace striboh::base {
         }
 
         void setReturn(Value &&pVal) {
-            mReturn=std::move(pVal);
+            mReturn = std::move(pVal);
         }
 
         void packToBuffer(Buffer &pBuffer) const;
@@ -688,13 +515,15 @@ namespace striboh::base {
             mInstanceId = pInstanceId;
         }
 
-        static Json toJson(const ReadBuffer& pBuffer);
+        static Json toJson(const ReadBuffer &pBuffer);
 
         static std::string jsonToStr(Json pJson);
 
         void setMessageType(EMessageType pType) {
-            mType=pType;
+            mType = pType;
         }
+
+        std::string asJsonString() const;
 
     private:
         std::string /*---*/ mMethodName;
@@ -704,7 +533,7 @@ namespace striboh::base {
         InstanceId /*----*/ mInstanceId;
         LogIface & /*----*/ mLog;
 
-        inline void packReturnValue(msgpack::packer<Buffer> &myPacker) const ;
+        inline void packReturnValue(msgpack::packer<Buffer> &myPacker) const;
 
         inline void packMethodName(msgpack::packer<Buffer> &myPacker) const {
             myPacker.pack(K_METHOD_NAME_KEY);
@@ -712,13 +541,13 @@ namespace striboh::base {
         }
 
         inline void packType(msgpack::packer<Buffer> &pPacker) const {
-            packString(pPacker, Message1::K_MESSAGE_TYPE_KEY);
+            packString(pPacker, Message::K_MESSAGE_TYPE_KEY);
             pPacker.pack(int32_t(getType()));
         }
 
         inline void packString(msgpack::packer<Buffer> &myPacker, std::string_view pStr) const {
             myPacker.pack_str(pStr.size());
-            myPacker.pack_str_body(pStr.begin(),pStr.size());
+            myPacker.pack_str_body(pStr.begin(), pStr.size());
         }
 
         void packInstanceId(Packer_t &pPacker) const;
@@ -726,97 +555,6 @@ namespace striboh::base {
         void packParameters(msgpack::packer<Buffer> &myPacker) const;
     };
 
-    struct MessageVisitor : msgpack::v2::null_visitor {
-        constexpr static const uint16_t K_ERROR /*...............*/  = 0;
-        constexpr static const uint16_t K_EXPECTING_METHOD /*.....*/ = 1;
-        constexpr static const uint16_t K_PARSING_RETURNS /*.....*/  = 1 << 2;
-        constexpr static const uint16_t K_PARSING_PARAMETERS  /*.*/  = 1 << 3;
-        constexpr static const uint16_t K_EXPECTING_SIID  /*.....*/  = 1 << 4;
-        constexpr static const uint16_t K_PARSING_SIID  /*.......*/  = 1 << 5;
-        constexpr static const uint16_t K_EXPECTING_PARAMETERS /**/  = 1 << 6;
-        constexpr static const uint16_t K_PARSING_PARAMETER /*...*/  = 1 << 7;
-        constexpr static const uint16_t K_FINISHED_PARAMETERS /*.*/  = 1 << 8;
-        constexpr static const uint16_t K_INSIDE_MESSAGE  /*.....*/  = 1 << 12;
-        constexpr static const uint16_t K_INITIAL  /*............*/  = 1 << 15;
-
-        constexpr const char *const getStateStr() {
-            switch (mState) {
-                case K_ERROR:
-                    return "K_ERROR state";
-                case K_EXPECTING_METHOD:
-                    return "K_EXPECTING_METHOD state";
-                case K_FINISHED_PARAMETERS:
-                    return "K_FINISHED_PARAMETERS state";
-                case K_PARSING_RETURNS:
-                    return "K_PARSING_RETURNS state";
-                case K_PARSING_PARAMETERS:
-                    return "K_PARSING_PARAMETERS state";
-                case K_EXPECTING_SIID:
-                    return "K_EXPECTING_SIID state";
-                case K_EXPECTING_PARAMETERS:
-                    return "K_EXPECTING_PARAMETERS state";
-                case K_PARSING_PARAMETER:
-                    return "K_PARSING_PARAMETER state";
-                case K_INSIDE_MESSAGE:
-                    return "K_INSIDE_MESSAGE state";
-                case K_INITIAL:
-                    return "K_INITIAL state";
-                default:
-                    return "unknown";
-            }
-        }
-
-        MessageVisitor(Message1 &pMessage, LogIface &pLog);
-
-        bool visit_nil();
-
-        bool visit_boolean(bool v);
-
-        bool visit_positive_integer(uint64_t v);
-
-        bool visit_negative_integer(int64_t v);
-
-        bool visit_str(const char *v, uint32_t pSize);
-
-        bool start_array(uint32_t /*num_elements*/);
-
-        bool end_array_item();
-
-        bool end_array();
-
-        bool start_map(uint32_t);
-
-        bool end_map_key();
-
-        bool end_map_value();
-
-        bool end_map();
-
-        void parse_error(size_t /*parsed_offset*/, size_t /*error_offset*/);
-
-        void insufficient_bytes(size_t /*parsed_offset*/, size_t /*error_offset*/);
-
-        EMessageParsingError getParsingError() const;
-
-        uint16_t getState() const;
-
-    private:
-        void setState(uint16_t pState);
-
-        bool notStartsWithMap();
-
-        void setError(EMessageParsingError pError);
-
-        bool checkForError();
-
-        uint32_t mMapSize;
-        Message1 &mMessage;
-        LogIface &mLog;
-        uint16_t mState;
-        EMessageParsingError mParsingError;
-
-        std::string mParameterName;
-    };
 
 }  // namespace striboh::base
 

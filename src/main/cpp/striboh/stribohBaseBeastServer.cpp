@@ -746,12 +746,11 @@ namespace striboh {
                     fail(pErrorCode, "onWsRead");
                 }
                 mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
-                Message myMsg(EMessageType::K_METHOD);
+                Message myMsg(mLog);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
-                mLog.debug("Unpacked, {} values, message: {}.", myMsg.size(), myMsg.getValues().dump());
+                mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
                 const Message myReply = mBroker.invokeMethod(std::forward<Message &&>(myMsg));
-                mLog.debug("Replying {} values, message: {}.", myReply.size(), myReply.getValues().dump());
                 mWriteBuffer.clear();
                 myReply.packToBuffer(mWriteBuffer);
                 doWriteBufferToWebSocket();

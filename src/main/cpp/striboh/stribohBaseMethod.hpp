@@ -407,8 +407,8 @@ namespace striboh::base {
     public:
         typedef Message(*MethodGlue_t)(const Message &, Context);
 
-        explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation)
-                : mName(pName), mImplementation(pImplementation) {}
+        explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation, LogIface& pLog)
+                : mName(pName), mImplementation(pImplementation), mLog(pLog) {}
 
         const std::string &getName() const {
             return mName;
@@ -417,12 +417,13 @@ namespace striboh::base {
         Message invoke(const Message &pIns, Context pCtx) {
             if (mImplementation)
                 return mImplementation(pIns, pCtx);
-            return Message(EMessageType::K_RETURN);
+            return Message(Value(),mLog);
         }
 
     private:
-        const std::string mName;
-        MethodGlue_t mImplementation;
+        const std::string /*-*/ mName;
+        MethodGlue_t /*------*/ mImplementation;
+        LogIface& /*---------*/ mLog;
     };
 
 }

@@ -470,20 +470,20 @@ namespace striboh::base {
     Broker::invokeMethod(const Message& pValues) {
         const InstanceId aInstanceId(pValues.getInstanceId());
         getLog().debug("Calling instance \"{}\" method \"{}\".",
-                       toString(aInstanceId), pValues.getMethodName().get());
+                       toString(aInstanceId), pValues.getMethodName());
         auto myInterfaceIt = mInstances.find(aInstanceId);
         if (myInterfaceIt != mInstances.end()) {
-            auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName().get());
+            auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
                 return myMethodIt->invoke(pValues, Context(*this));
             }
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
         }
-        Message myRetVal(EMessageType::K_ERROR);
+        Message myRetVal(Value{},getLog());
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
-                       pValues.getMethodName().get(), toString(aInstanceId));
+                       pValues.getMethodName(), toString(aInstanceId));
         return myRetVal;
     }
 

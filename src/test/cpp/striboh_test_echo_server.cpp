@@ -393,8 +393,13 @@ using namespace striboh::base;
 using namespace std::chrono_literals;
 namespace po = boost::program_options;
 
-int main( const int argc, const char* argv[]) {
+namespace striboh::base {
     LogBoostImpl myLog;
+    LogIface &getLog() {
+        return myLog;
+    }
+}
+int main( const int argc, const char* argv[]) {
     myLog.info("Server {} starting.", argv[0]);
     // Declare the supported options.
     int myTotalWorkTimeInSeconds = 45;

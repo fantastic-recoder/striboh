@@ -438,7 +438,7 @@ namespace striboh {
         , mIoContext(pIoContext)
         , mValues(pValues)
         , mLog(pLog)
-        , mReturnValues(EMessageType::K_RETURN)
+        , mReturnValues(Value(),mLog)
         {
         }
 

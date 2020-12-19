@@ -388,30 +388,36 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
+
+        LogIface &getLog();
+
         Interface theEchoServerInterface{
-                {"m0", "m1"} , InterfaceName{"Hello"},
+                {"m0", "m1"}, InterfaceName{"Hello"},
                 {
                         Method{"echo",
                                ParameterList{
                                        {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                                },
                                [](const Message &pIncoming, Context pCtx) {
-                                   std::string myWhom(std::string("Server greats ") + pIncoming.getParameters()["p0"].get<std::string>() + "!");
+                                   std::string myWhom(std::string("Server greats ")
+                                                      + std::get<std::string>(
+                                           pIncoming.getParameters()[0].getValue()) + "!");
                                    std::cout << myWhom << std::endl;
-                                   return Message(Return{myWhom});
-                               }
+                                   return Message(Value{myWhom}, getLog());
+                               },
+                               getLog()
                         },
                         Method{"shutdown",
                                ParameterList{},
                                [](const Message &pIncoming, Context pCtx) {
                                    pCtx.getBroker().shutdown();
-                                   return Message(Return{});
-                               }
+                                   return Message(Value{}, getLog());
+                               },
+                               getLog()
                         }
 
                 }
         };
-
     }
 }
 

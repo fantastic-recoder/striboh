@@ -386,7 +386,7 @@ enum class EMessageType : int8_t {
     K_RETURN = 2,
     K_ERROR = 4,
     K_CLOSE = 5,
-    K_UNKNOWN = 0 //< parse error
+    K_UNKNOWN = 0 //< unpackFromBuffer error
 };
 
 inline const EMessageType &operator<<=(EMessageType &pType, int8_t pTypeVale) {
