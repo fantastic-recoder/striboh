@@ -476,8 +476,8 @@ TEST(stribohBaseTests, testMethodParametersConstructor) {
     const std::string myVal0("Test 0.");
     Message myList(K_METHOD_NAME, {{"p0", myVal0},
                                    {"p1", 42L}}, getLog());
-    ASSERT_EQ(myVal0, std::get<std::string>(myList.getParameters()[0].getValue()));
-    ASSERT_EQ(42L, std::get<long>(myList.getParameters()[1].getValue()));
+    ASSERT_EQ(myVal0, myList.getParameters()[0].getValue().get<std::string>());
+    ASSERT_EQ(42L, myList.getParameters()[1].getValue().get<int64_t>());
     ASSERT_EQ(K_METHOD_NAME, myList.getMethodName());
 }
 
@@ -535,7 +535,7 @@ Interface createTestInterface() {
                            },
                            [](const Message &pIncoming, Context pCtx) -> Message {
                                Message myReturn(Value{std::string("Server greats ")
-                                                      + std::get<std::string>(pIncoming.getParameters()[0].getValue())},
+                                                      + pIncoming.getParameters()[0].getValue().get<std::string>()},
                                                 getLog()
                                );
                                return myReturn;
@@ -615,7 +615,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
                            },
                            [](const Message &pIncoming, Context pCtx) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.asJsonString();
-                               string p0(std::get<std::string>(pIncoming.getParameters()[0].getValue()));
+                               string p0(pIncoming.getParameters()[0].get<std::string>());
                                Message myRetVal(Value{"Server greats " + p0}, getLog());
                                BOOST_LOG_TRIVIAL(debug) << "Returning: " << myRetVal.asJsonString();
                                return myRetVal;
@@ -625,13 +625,13 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             }
     };
     InstanceId myUuid = aBroker.addServant(myInterface);
-    Message myMsg("echo", {{"p0", string("Peter!")}},getLog());
+    Message myMsg("echo", {{"p0", "Peter!"}},getLog());
     BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.asJsonString();
     myMsg.setInstanceId(myUuid);
     Message myReply = aBroker.invokeMethod(std::forward<Message &&>(myMsg));
     EXPECT_EQ(0,myReply.getParameters().size()) << "Parameter list should be empty on return message!";
     EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
-    EXPECT_EQ(std::string("Server greats Peter!"), std::get<std::string>(myReply.getReturn()));
+    EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
     aBroker.shutdown();
 }
 
@@ -639,9 +639,9 @@ static constexpr const char *const K_TEST_METHOD_NAME2 = "abrakadabra";
 
 TEST(stribohBaseTests, testSerailization) {
     Message myInputValues("testMethod",
-                          {{"p0", string("Echo string.")},
-                           {"p1", 42L},
-                           {"p2", string("end.")}}
+                          {{"p0", "Echo string."},
+                           {"p1", 42},
+                           {"p2", "end."}}
                            ,getLog());
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
@@ -653,7 +653,7 @@ TEST(stribohBaseTests, testSerailization) {
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
     EXPECT_EQ(3, myOutputValues.getParameters().size());
     EXPECT_EQ("Echo string.", myOutputValues.getParameters()[0].get<string>());
-    EXPECT_EQ(42L, std::get<u_int64_t>(myOutputValues.getParameters()[1].getValue()));
+    EXPECT_EQ(42, myOutputValues.getParameters()[1].getValue().get<uint64_t>());
     EXPECT_EQ("end.", myOutputValues.getParameters()[2].get<string>());
     EXPECT_EQ("testMethod", myOutputValues.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
@@ -663,15 +663,15 @@ TEST(stribohBaseTests, testSerailization) {
     EXPECT_EQ(EMessageType::K_RETURN, myOutputValues.getType());
     EXPECT_EQ(myIId, myOutputValues.getInstanceId());
     constexpr const char *K_HELLO_RETURNED = "Hallo returned!";
-    Message myReturnIn{Value{string(K_HELLO_RETURNED)}, getLog()};
+    Message myReturnIn{Value{K_HELLO_RETURNED}, getLog()};
     BOOST_LOG_TRIVIAL(debug) << myReturnIn.asJsonString();
-    ASSERT_EQ(string(K_HELLO_RETURNED), std::get<string>(myReturnIn.getReturn()));
+    ASSERT_EQ(string(K_HELLO_RETURNED), myReturnIn.getReturn().get<std::string>());
     ASSERT_EQ(EMessageType::K_RETURN, myReturnIn.getType());
     Buffer myBuff1;
     myReturnIn.packToBuffer(myBuff);
     Message myReturnOut(ReadBuffer(myBuff), getLog());
     BOOST_LOG_TRIVIAL(debug) << myReturnOut.asJsonString();
-    ASSERT_EQ(K_HELLO_RETURNED, std::get<string>(myReturnOut.getReturn()));
+    ASSERT_EQ(K_HELLO_RETURNED, myReturnOut.getReturn().get<std::string>());
     ASSERT_EQ(EMessageType::K_RETURN, myReturnOut.getType());
 }
 
@@ -695,18 +695,18 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     EXPECT_TRUE(myProxy->isConnected());
     {
         auto myResult0 = myProxy
-                ->invokeMethod(Message("echo", {{"p0", string("Peter")}}, getLog()));
+                ->invokeMethod(Message("echo", {{"p0", "Peter"}}, getLog()));
         Message myReply = myResult0->getReturnValue();
         EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list is empty, should have 1 element!";
-        EXPECT_EQ(std::string("Server greats Peter!"), std::get<std::string>(myReply.getReturn()));
+        EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
         EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
     }
     {
         auto myResult2 = myProxy
-                ->invokeMethod(Message("echo", {{"p0", string("Paul")}}, getLog()));
+                ->invokeMethod(Message("echo", {{"p0", "Paul"}}, getLog()));
         Message myReply2 = myResult2->getReturnValue();
         EXPECT_EQ(0, myReply2.getParameters().size()) << "Parameter list is empty, should have 1 element!";
-        EXPECT_EQ(std::string("Server greats Paul!"), std::get<std::string>(myReply2.getReturn()));
+        EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getReturn().get<std::string>());
         EXPECT_EQ(EMessageType::K_RETURN,myReply2.getType());
     }
     {
@@ -745,7 +745,7 @@ TEST(stribohBaseTests, testGenerateAndParseReturn) {
     EXPECT_EQ(int(EMessageType::K_RETURN), myJson[Message::K_MESSAGE_TYPE_KEY].get<int>());
     Message m1(theLog);
     m1.unpackFromBuffer(ReadBuffer(myBuffer));
-    EXPECT_EQ(K_ALFONS, std::get<string>(m1.getReturn()));
+    EXPECT_EQ(K_ALFONS, m1.getReturn().get<std::string>());
     EXPECT_EQ(EMessageType::K_RETURN, m1.getType());
     EXPECT_EQ(myUuid0, m1.getInstanceId());
 }
@@ -768,9 +768,9 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
     m1.unpackFromBuffer(ReadBuffer(myBuffer));
     EXPECT_EQ(myUuid0, m1.getInstanceId());
     EXPECT_EQ("p2", m1.getParameters()[1].getName());
-    EXPECT_EQ("Santa Maria", std::get<string>(m1.getParameters()[1].getValue()));
+    EXPECT_EQ("Santa Maria", m1.getParameters()[1].getValue().get<std::string>());
     EXPECT_EQ("p1", m1.getParameters()[0].getName());
-    EXPECT_EQ(42L, std::get<u_int64_t>(m1.getParameters()[0].getValue()));
+    EXPECT_EQ(42L, m1.getParameters()[0].getValue().get<uint64_t>());
     EXPECT_EQ("helloMethod", m1.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, m1.getType());
 }

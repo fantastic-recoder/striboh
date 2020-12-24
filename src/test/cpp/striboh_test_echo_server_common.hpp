@@ -399,9 +399,8 @@ namespace striboh {
                                        {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                                },
                                [](const Message &pIncoming, Context pCtx) {
-                                   std::string myWhom(std::string("Server greats ")
-                                                      + std::get<std::string>(
-                                           pIncoming.getParameters()[0].getValue()) + "!");
+                                   std::string myWhom(std::string("Server greats ")+
+                                           pIncoming.getParameters()[0].getValue().get<std::string>() + "!");
                                    std::cout << myWhom << std::endl;
                                    return Message(Value{myWhom}, getLog());
                                },

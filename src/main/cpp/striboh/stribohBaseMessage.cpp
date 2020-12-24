@@ -562,7 +562,7 @@ namespace striboh::base {
         struct ActionSetReturn {
             template<typename TEvent>
             void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
-                pContext.mMessage.setReturn(pEvent.mVal);
+                pContext.mMessage.setReturn(Value(pEvent.mVal));
             };
         };
 
@@ -763,13 +763,13 @@ namespace striboh::base {
         for (const Parameter &myPar: getParameters()) {
             string_view myName = myPar.getName();
             packString(myPacker, myName);
-            std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, myPar.getValue());
+            std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, myPar.getValue().mVal);
         }
     }
 
     void Message::packReturnValue(msgpack::packer<Buffer> &myPacker) const {
         packString(myPacker, std::string_view(K_RETURN_KEY));
-        std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, mReturn);
+        std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, mReturn.mVal);
     }
 
     void Message::packInstanceId(msgpack::packer<Buffer> &pPacker) const {

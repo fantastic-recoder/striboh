@@ -407,26 +407,45 @@ namespace striboh::base {
         ~Object() = default;
     };
 
-    using Value = std::variant
+    using ValueVariant = std::variant
             <
-                    int8_t, u_int8_t, int16_t, u_int16_t, int32_t, u_int32_t, int64_t, u_int64_t, bool, std::string,
+                    int8_t, u_int8_t, int16_t, u_int16_t, int32_t, u_int32_t, int64_t, u_int64_t, std::string,
                     std::shared_ptr<Object>
             >;
+
+    struct Value {
+        ValueVariant mVal;
+        explicit Value(const char* pStr): mVal(std::string(pStr)){}
+        explicit Value(const std::string& pStr): mVal(std::string(pStr)){}
+        explicit Value(std::string_view&& pStr): mVal(std::string(pStr)){}
+        explicit Value(int64_t pInteger): mVal(pInteger) {}
+        explicit Value(u_int64_t pInteger): mVal(pInteger) {}
+        explicit Value(int32_t pInteger): mVal(pInteger) {}
+        explicit Value(u_int32_t pInteger): mVal(pInteger) {}
+        Value() = default;
+        ~Value() = default;
+        template<typename T> T get()
+        const { return std::get<T>(mVal); }
+    };
 
     struct Parameter {
         Parameter(const std::string &pParameterName, const std::string_view &pValue)
                 : mName(pParameterName), mValue(std::string(pValue)) {
         }
 
-        Parameter(const std::string &pParameterName, const int64_t pValue)
+        Parameter(const std::string &pParameterName, int64_t pValue)
                 : mName(pParameterName), mValue(pValue) {
         }
 
-        Parameter(const std::string &pParameterName, const u_int64_t pValue)
+        Parameter(const std::string &pParameterName, u_int64_t pValue)
                 : mName(pParameterName), mValue(pValue) {
         }
 
-        Parameter(const std::string &pParameterName, const bool pValue)
+        Parameter(const std::string &pParameterName, int32_t pValue)
+                : mName(pParameterName), mValue(pValue) {
+        }
+
+        Parameter(const std::string &pParameterName, uint32_t pValue)
                 : mName(pParameterName), mValue(pValue) {
         }
 
@@ -437,7 +456,7 @@ namespace striboh::base {
         const std::string &getName() const { return mName; }
 
         template<typename T> T get()
-                const { return std::get<T>(getValue()); }
+                const { return getValue().get<T>(); }
     private:
         Value mValue;
         std::string mName;
