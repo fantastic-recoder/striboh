@@ -410,7 +410,7 @@ using std::string_view;
 using std::count;
 using striboh::base::InterfaceName;
 using striboh::base::Method;
-using striboh::base::ParameterList;
+using striboh::base::ParameterDescriptionList;
 using striboh::base::Message;
 using striboh::base::ETypes;
 using boost::process::child;
@@ -530,8 +530,8 @@ Interface createTestInterface() {
             {"m0", "m1"}, InterfaceName("Hello"),
             {
                     Method{"echo",
-                           ParameterList{
-                                   {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
+                           ParameterDescriptionList{
+                                   {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const Message &pIncoming, Context pCtx) -> Message {
                                Message myReturn(Value{std::string("Server greats ")
@@ -610,8 +610,8 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             {"m0"}, InterfaceName{"Hello"},
             {
                     Method{"echo",
-                           ParameterList{
-                                   {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
+                           ParameterDescriptionList{
+                                   {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const Message &pIncoming, Context pCtx) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.asJsonString();

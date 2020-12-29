@@ -407,7 +407,7 @@ namespace striboh::base {
     public:
         typedef Message(*MethodGlue_t)(const Message &, Context);
 
-        explicit Method(std::string pName, ParameterList pParameters, MethodGlue_t pImplementation, LogIface& pLog)
+        explicit Method(std::string pName, ParameterDescriptionList pParameters, MethodGlue_t pImplementation, LogIface& pLog)
                 : mName(pName), mImplementation(pImplementation), mLog(pLog) {}
 
         const std::string &getName() const {

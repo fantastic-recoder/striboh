@@ -395,8 +395,8 @@ namespace striboh {
                 {"m0", "m1"}, InterfaceName{"Hello"},
                 {
                         Method{"echo",
-                               ParameterList{
-                                       {ParameterDesc{EDirection::K_IN, ETypes::K_STRING, "p0"}}
+                               ParameterDescriptionList{
+                                       {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                                },
                                [](const Message &pIncoming, Context pCtx) {
                                    std::string myWhom(std::string("Server greats ")+
@@ -407,7 +407,7 @@ namespace striboh {
                                getLog()
                         },
                         Method{"shutdown",
-                               ParameterList{},
+                               ParameterDescriptionList{},
                                [](const Message &pIncoming, Context pCtx) {
                                    pCtx.getBroker().shutdown();
                                    return Message(Value{}, getLog());

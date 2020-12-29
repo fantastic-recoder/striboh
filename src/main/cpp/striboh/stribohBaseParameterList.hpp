@@ -384,21 +384,21 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-    class ParameterDesc {
+    class ParameterDescription {
         const EDirection mDir;
         const ETypes mType;
         const std::string_view mName;
     public:
-        ParameterDesc(const EDirection pDir, const ETypes pType,
-                      const std::string_view pName) : mDir(pDir), mType(pType),
+        ParameterDescription(const EDirection pDir, const ETypes pType,
+                             const std::string_view pName) : mDir(pDir), mType(pType),
                                                       mName(pName) {}
     };
 
-    class ParameterList {
+    class ParameterDescriptionList {
     public:
-        explicit ParameterList() = default;
+        explicit ParameterDescriptionList() = default;
 
-        explicit ParameterList(std::vector<ParameterDesc>);
+        explicit ParameterDescriptionList(std::vector<ParameterDescription>);
     };
 
 }

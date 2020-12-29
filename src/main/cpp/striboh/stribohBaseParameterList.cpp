@@ -384,7 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseParameterList.hpp"
 
 namespace striboh::base {
-    ParameterList::ParameterList(std::vector<ParameterDesc>) {
+    ParameterDescriptionList::ParameterDescriptionList(std::vector<ParameterDescription>) {
 
     }
 }
