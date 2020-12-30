@@ -640,7 +640,7 @@ static constexpr const char *const K_TEST_METHOD_NAME2 = "abrakadabra";
 TEST(stribohBaseTests, testSerailization) {
     Message myInputValues("testMethod",
                           {{"p0", "Echo string."},
-                           {"p1", 42},
+                           {"p1", 42L},
                            {"p2", "end."}}
                            ,getLog());
     const InstanceId myIId = Broker::generateInstanceId();

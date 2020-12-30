@@ -409,7 +409,7 @@ namespace striboh::base {
 
     using ValueVariant = std::variant
             <
-                    int8_t, u_int8_t, int16_t, u_int16_t, int32_t, u_int32_t, int64_t, u_int64_t, std::string,
+                    bool, int64_t, uint64_t, std::string,
                     std::shared_ptr<Object>
             >;
 
@@ -419,9 +419,8 @@ namespace striboh::base {
         explicit Value(const std::string& pStr): mVal(std::string(pStr)){}
         explicit Value(std::string_view&& pStr): mVal(std::string(pStr)){}
         explicit Value(int64_t pInteger): mVal(pInteger) {}
-        explicit Value(u_int64_t pInteger): mVal(pInteger) {}
-        explicit Value(int32_t pInteger): mVal(pInteger) {}
-        explicit Value(u_int32_t pInteger): mVal(pInteger) {}
+        explicit Value(uint64_t pInteger): mVal(pInteger) {}
+        explicit Value(bool pBool): mVal(pBool) {}
         Value() = default;
         ~Value() = default;
         template<typename T> T get()
@@ -433,19 +432,19 @@ namespace striboh::base {
                 : mName(pParameterName), mValue(std::string(pValue)) {
         }
 
+        Parameter(const std::string &pParameterName, const char* pValue)
+                : mName(pParameterName), mValue(std::string(pValue)) {
+        }
+
         Parameter(const std::string &pParameterName, int64_t pValue)
                 : mName(pParameterName), mValue(pValue) {
         }
 
-        Parameter(const std::string &pParameterName, u_int64_t pValue)
+        Parameter(const std::string &pParameterName, uint64_t pValue)
                 : mName(pParameterName), mValue(pValue) {
         }
 
-        Parameter(const std::string &pParameterName, int32_t pValue)
-                : mName(pParameterName), mValue(pValue) {
-        }
-
-        Parameter(const std::string &pParameterName, uint32_t pValue)
+        Parameter(const std::string &pParameterName, bool pValue)
                 : mName(pParameterName), mValue(pValue) {
         }
 
