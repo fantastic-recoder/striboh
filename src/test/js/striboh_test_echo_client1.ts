@@ -1,9 +1,7 @@
 import {encode, decode} from 'msgpack-lite';
 
 import * as http from 'http';
-import * as WebSocket from 'ws';
-
-
+import WebSocket from 'ws';
 
 const options = {
     hostname: '127.0.0.1',
@@ -24,8 +22,8 @@ const req = http.request(options, function (res) {
         theUuid = jsonParsed.svc.uuid_arr;
         console.log('UUID: ' + jsonParsed.svc.uuid);
     });
-    res.on('end', function (chunk) {
-        console.log('Response ENDED');
+    res.on('end', function (pChunk:Uint8Array) {
+        console.log('Response ENDED rest chunk:'+pChunk);
     });
 });
 
