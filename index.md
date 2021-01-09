@@ -1,6 +1,6 @@
 
 
-# Welcome to Striboh project homepage.
+# The Striboh Project.
 
 ## Introduction
 
