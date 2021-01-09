@@ -15,7 +15,7 @@ The project repository can bo found [here](https://github.com/gogoba/striboh). S
 1. Use modern tools. No legacy.
 2. Do not reinvent the wheel. Use what there is.
 3. Good documentation based on source code.
-4. Release often and early (more in [Focus])
+4. Release often and early (more in [Focus](#Focus))
 
 ## Vision / outcome ##
 
