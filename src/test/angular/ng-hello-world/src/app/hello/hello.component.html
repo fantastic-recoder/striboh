@@ -1,1 +1,4 @@
-<p>hello component</p>
+<div id="ngStribohHello">
+    <h3>Send echo to Striboh server</h3>
+    <label>Text to be send:<input type="text" #ngStribohHelloInput (keyup)="updateTextToSend(ngStribohHelloInput.value)"></label><button (click)="sendToServer()">Send</button>
+</div>
