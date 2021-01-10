@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -379,7 +379,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <gtest/gtest.h>
 
 #include <string>
-#include <iostream>
 #include <striboh/stribohIdlParser.hpp>
 #include <striboh/stribohIdlAstModuleBodyNode.hpp>
 #include <boost/log/trivial.hpp>
@@ -506,3 +505,9 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
     EXPECT_EQ(string("echo"), myMethod1.getMethodName());
 }
 
+TEST(stribohIdlTests, testHelloWorldChaiscriptAst) {
+    static const char* K_CHAI_TO_TRAVERS_TREE = R"K_CHAI_TEST_01(
+
+)K_CHAI_TEST_01";
+
+}

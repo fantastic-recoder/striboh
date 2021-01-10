@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -399,7 +399,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 
-#include <msgpack.hpp>
 #include "striboh_test_echo_server_common.hpp"
 
 using namespace striboh::base;
@@ -635,7 +634,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     aBroker.shutdown();
 }
 
-static constexpr const char *const K_TEST_METHOD_NAME2 = "abrakadabra";
+static constexpr const char *const K_TEST_METHOD_NAME2 = "abracadabra";
 
 TEST(stribohBaseTests, testSerailization) {
     Message myInputValues("testMethod",
@@ -681,8 +680,7 @@ static constexpr const char *const theTestEchoServerBinary = "./striboh_test_ech
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     std::shared_ptr<child> myServerChildProcess;
     const char *const myNoServerVariable = std::getenv("NO_SRV");
-    if (myNoServerVariable == nullptr ||
-        (myNoServerVariable != nullptr && string_view(myNoServerVariable).compare("yes"))) {
+    if (myNoServerVariable == nullptr || string_view(myNoServerVariable).compare("yes")) {
         myServerChildProcess = std::make_shared<child>(theTestEchoServerBinary, std_out > "out.txt");
         BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
         ASSERT_TRUE(myServerChildProcess->valid()) << "Failed to start " << theTestEchoServerBinary << ".";
