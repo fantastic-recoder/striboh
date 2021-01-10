@@ -384,6 +384,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/beast/core.hpp>
 
 namespace striboh {
+
+    /**
+     * The base namespace is used for Striboh runtime.
+     */
     namespace base {
 
         /**

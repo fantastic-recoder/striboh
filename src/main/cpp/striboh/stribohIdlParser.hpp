@@ -387,10 +387,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstRootNode.hpp"
 
 /**
- * The IDL (Interface Definition Language)
- * Backends
+ * Top leve Striboh namespace, all Striboh is in.
  */
 namespace striboh {
+
+    /**
+     * The IDL (Interface Definition Language) Parser API.
+     *
+     * The backends are written in ChaiScript.
+     */
     namespace idl {
 
         using Includes = std::vector<std::string>;
