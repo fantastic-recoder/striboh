@@ -398,7 +398,10 @@ namespace striboh {
      */
     namespace idl {
 
+        class IdlContext;
+
         using Includes = std::vector<std::string>;
+        using IdlContextPtr  = std::shared_ptr<IdlContext>;
 
         /**
          * Parse the supplied input file.
@@ -418,13 +421,66 @@ namespace striboh {
         ast::RootNode
         parseIdlStr(const Includes &pIncludes, const std::string &pInputStr) noexcept;
 
-        /**
-         * Execute ChaiScript
-         */
-        chaiscript::Boxed_Value
-        evalChaiscript(const std::string &pInput,
-             const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
-             const std::string &pReport = "__EVAL__") noexcept;
+        class IdlContext : public std::enable_shared_from_this<IdlContext> {
+        public:
+            /**
+             * Create a unique named context.
+             *
+             * @param pCtxName a uniq name for this context.
+             */
+            IdlContext(std::string_view pCtxName);
+
+            /**
+             * Used to exchange infos between Chaiscript and C++
+             * @return the value the backend writes sets in Chaiscript.
+             */
+            bool isOk() { return mIsOk; }
+
+            /**
+             * @see IdlContext::isOk()
+             *
+             * @param pIsOk sets the isOk() value.
+             */
+            void setOk(bool pIsOk) { mIsOk = pIsOk; }
+
+            /**
+             * Run some Chaiscript backend script.
+             *
+             * @see https://chaiscript.com
+             *
+             * @param pInput the script to be interpreted.
+             * @param pExceptionHandler see Chaiscript.
+             * @param pReport see Chaiscript.
+             *
+             * @return the result of the interpreter run.
+             */
+            chaiscript::Boxed_Value
+            evalChaiscript(const std::string &pInput,
+                           const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
+                           const std::string &pReport = "__EVAL__") noexcept;
+
+            /**
+             * @return The name of this instance given when constructing.
+             */
+            const std::string& getName() const { return mName; }
+
+            /**
+             *
+             * @param pName Instances name.
+             * @return found instance or empty pointer.
+             */
+            static IdlContext& findInstance(std::string_view pName);
+
+        private:
+            using ChaiScriptPtr = std::unique_ptr<chaiscript::ChaiScript>;
+            using IdlContextList = std::vector<IdlContextPtr>;
+
+            bool mIsOk = false;
+            std::string mName;
+            ChaiScriptPtr mInterpreter;
+            static IdlContextList theirInstances;
+        };
+
     }
 } // end namespace striboh
 

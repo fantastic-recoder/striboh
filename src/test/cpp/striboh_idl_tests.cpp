@@ -505,9 +505,24 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
     EXPECT_EQ(string("echo"), myMethod1.getMethodName());
 }
 
-TEST(stribohIdlTests, testHelloWorldChaiscriptAst) {
-    static const char* K_CHAI_TO_TRAVERS_TREE = R"K_CHAI_TEST_01(
-
+/*
+ *  mod0 {\
+   module mod1 {\
+      interface HelloWorld {\
+         string echo( string p0 );\
+      };\
+   };\
+};\
+"
+ */
+TEST(stribohIdlTests, testChaiscriptBasics) {
+    static const char* K_CHAI_TO_PRINT = R"K_CHAI_TEST_01(
+   print("Chaiscript Test001")
+   setOk(true)
+   return true;
 )K_CHAI_TEST_01";
-
+    striboh::idl::IdlContext myIdlCtx("001");
+    auto myRet=myIdlCtx.evalChaiscript(K_CHAI_TO_PRINT);
+    ASSERT_EQ(true,chaiscript::boxed_cast<bool>(myRet));
+    ASSERT_EQ(true,myIdlCtx.isOk());
 }

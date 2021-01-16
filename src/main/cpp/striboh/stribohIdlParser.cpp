@@ -443,7 +443,7 @@ namespace striboh {
             typedef qi::error_handler_result result_type;
 
             template<typename T1, typename T2, typename T3, typename T4>
-            qi::error_handler_result operator()(T1 b, T2 e, T3 where, T4 const& what) const {
+            qi::error_handler_result operator()(T1 b, T2 e, T3 where, T4 const &what) const {
                 BOOST_LOG_TRIVIAL(error) << "Error: expecting " << what << " in line " << get_line(where) << ": \n"
                                          << std::string(b, e) << "\n"
                                          << std::setw(std::distance(b, where)) << '^' << "---- here\n";
@@ -459,18 +459,18 @@ namespace striboh {
                 throw std::runtime_error("annotation_f() is not defined!");
             }
 
-            constexpr annotation_f(const It& pFirst) : mFirst(pFirst) {}
+            constexpr annotation_f(const It &pFirst) : mFirst(pFirst) {}
 
             It const mFirst;
 
             template<typename Val, typename First, typename Last>
-            void operator()(Val& v, First f, Last l) const {
+            void operator()(Val &v, First f, Last l) const {
                 BOOST_LOG_TRIVIAL(trace) << "annotating " << typeid(v).name() << " '" << std::string(f, l) << "'";
                 do_annotate(v, f, l, mFirst);
             }
 
         private:
-            void static do_annotate(ast::BaseNode& pNode, It pIt, It pLast, It pFirst) {
+            void static do_annotate(ast::BaseNode &pNode, It pIt, It pLast, It pFirst) {
                 using std::distance;
                 pNode.line = get_line(pIt);
                 pNode.column = get_column(pFirst, pIt);
@@ -506,7 +506,7 @@ namespace striboh {
 
                 import = keywordImport >> quoted_file_name[_val += _1] >> semiColon;
 
-                importList = *import[ _val += _1 ];
+                importList = *import[_val += _1];
 
                 type = keywordString[_val = ast::EBuildinTypes::STRING] | keywordInt[_val = ast::EBuildinTypes::INT];
 
@@ -577,7 +577,7 @@ namespace striboh {
 
         }; // end IdlGrammar
 
-        std::string readFile(const Includes& pIncludes, const fs::path& pInputFile, ast::RootNode& pIdlDoc) {
+        std::string readFile(const Includes &pIncludes, const fs::path &pInputFile, ast::RootNode &pIdlDoc) {
             auto myFilename = fs::absolute(pInputFile);
             if (!fs::exists(myFilename)) {
                 pIdlDoc.pushBackError(str(format("File %s does not exists.") % myFilename));
@@ -596,8 +596,8 @@ namespace striboh {
             return "";
         }
 
-        bool doParse(const Includes& pIncludes, string::const_iterator& pIter, string::const_iterator& pEnd,
-                     ast::RootNode& pIdlDoc) {
+        bool doParse(const Includes &pIncludes, string::const_iterator &pIter, string::const_iterator &pEnd,
+                     ast::RootNode &pIdlDoc) {
             using boost::spirit::ascii::space;
             const IdlGrammar<string::const_iterator> theIdlGrammar(pIter);
             const bool myParsedSuccess
@@ -614,7 +614,7 @@ namespace striboh {
         }
 
         ast::RootNode
-        parseIdlStr(const Includes& pIncludes, const string& pInputStr) noexcept {
+        parseIdlStr(const Includes &pIncludes, const string &pInputStr) noexcept {
             string::const_iterator myIter = pInputStr.begin();
             string::const_iterator myEnd = pInputStr.end();
             ast::RootNode myIdlDoc;
@@ -623,7 +623,7 @@ namespace striboh {
         }
 
         ast::RootNode
-        parseIdlFile(const Includes& pIncludes, const fs::path& pInputFile) noexcept {
+        parseIdlFile(const Includes &pIncludes, const fs::path &pInputFile) noexcept {
             ast::RootNode myIdlDoc;
             string myInputFileContent = readFile(pIncludes, pInputFile, myIdlDoc);
             string::const_iterator myIter = myInputFileContent.begin();
@@ -639,5 +639,34 @@ namespace striboh {
             }
             return myIdlDoc;
         }
-    }
+
+        IdlContext::IdlContextList IdlContext::theirInstances;
+
+        IdlContext::IdlContext(std::string_view pName) : mName(pName) {
+            //auto myInstance=shared_from_this();
+            mInterpreter = std::make_unique<chaiscript::ChaiScript>();
+            mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
+            mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
+            mInterpreter->add(chaiscript::var(this),"theIdlContext");
+            //theirInstances.push_back(myInstance);
+        }
+
+        IdlContext& IdlContext::findInstance(std::string_view pName) {
+            auto myRetVal = std::find_if(theirInstances.begin(),theirInstances.end(),[pName](IdlContextPtr pIdlCtx)->bool{
+                return pIdlCtx->getName()==pName;
+            });
+            if(myRetVal==theirInstances.end()) {
+                throw std::range_error("Bad!");
+            }
+            return **myRetVal;
+        }
+
+        chaiscript::Boxed_Value
+        IdlContext::evalChaiscript(const std::string &pInput,
+                                   const chaiscript::Exception_Handler &pExceptionHandler,
+                                   const std::string &pReport) noexcept {
+            return mInterpreter->eval(pInput, pExceptionHandler, pReport);
+        }
+
+    } // end namespace idl
 } // end namespace striboh
