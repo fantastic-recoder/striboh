@@ -516,13 +516,26 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
 "
  */
 TEST(stribohIdlTests, testChaiscriptBasics) {
-    static const char* K_CHAI_TO_PRINT = R"K_CHAI_TEST_01(
-   print("Chaiscript Test001")
-   setOk(true)
-   return true;
-)K_CHAI_TEST_01";
+
+    static const char *K_CHAI_TO_PRINT = R"K_CHAI_TEST_01(
+    print("Chaiscript Test001")
+    setOk(true)
+    return true;
+    )K_CHAI_TEST_01";
     striboh::idl::IdlContext myIdlCtx("001");
-    auto myRet=myIdlCtx.evalChaiscript(K_CHAI_TO_PRINT);
-    ASSERT_EQ(true,chaiscript::boxed_cast<bool>(myRet));
-    ASSERT_EQ(true,myIdlCtx.isOk());
+    auto myRet = myIdlCtx.getInterpreter()->eval(K_CHAI_TO_PRINT);
+    ASSERT_EQ(true, chaiscript::boxed_cast<bool>(myRet));
+    ASSERT_EQ(true, myIdlCtx.isOk());
+}
+
+TEST(stribohIdlTests, testChaiscriptCallback) {
+    static const char* K_CHAI_MOD_BABE = R"K_CHAI_CALLBACK(
+    def beginModule(pBabe) {
+        return "--> ${pBabe}"
+    }
+    return beginModule("Babe")
+    )K_CHAI_CALLBACK";
+    striboh::idl::IdlContext myIdlCtx("001");
+    auto myStartModule = chaiscript::boxed_cast<std::string>(myIdlCtx.getInterpreter()->eval(K_CHAI_MOD_BABE));
+    ASSERT_EQ("--> Babe",myStartModule);
 }

@@ -647,15 +647,16 @@ namespace striboh {
             mInterpreter = std::make_unique<chaiscript::ChaiScript>();
             mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
-            mInterpreter->add(chaiscript::var(this),"theIdlContext");
+            mInterpreter->add(chaiscript::var(this), "theIdlContext");
             //theirInstances.push_back(myInstance);
         }
 
-        IdlContext& IdlContext::findInstance(std::string_view pName) {
-            auto myRetVal = std::find_if(theirInstances.begin(),theirInstances.end(),[pName](IdlContextPtr pIdlCtx)->bool{
-                return pIdlCtx->getName()==pName;
-            });
-            if(myRetVal==theirInstances.end()) {
+        IdlContext &IdlContext::findInstance(std::string_view pName) {
+            auto myRetVal = std::find_if(theirInstances.begin(), theirInstances.end(),
+                                         [pName](IdlContextPtr pIdlCtx) -> bool {
+                                             return pIdlCtx->getName() == pName;
+                                         });
+            if (myRetVal == theirInstances.end()) {
                 throw std::range_error("Bad!");
             }
             return **myRetVal;

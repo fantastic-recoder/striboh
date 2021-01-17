@@ -402,6 +402,7 @@ namespace striboh {
 
         using Includes = std::vector<std::string>;
         using IdlContextPtr  = std::shared_ptr<IdlContext>;
+        using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
 
         /**
          * Parse the supplied input file.
@@ -471,8 +472,14 @@ namespace striboh {
              */
             static IdlContext& findInstance(std::string_view pName);
 
+            /**
+             * Get the Chaiscript interpreter.
+             * @begin
+             */
+            ChaiScriptPtr getInterpreter() { return mInterpreter; }
+            const ChaiScriptPtr getInterpreter() const { return mInterpreter; }
+            /// @end
         private:
-            using ChaiScriptPtr = std::unique_ptr<chaiscript::ChaiScript>;
             using IdlContextList = std::vector<IdlContextPtr>;
 
             bool mIsOk = false;
