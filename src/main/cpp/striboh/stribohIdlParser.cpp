@@ -401,6 +401,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
+#include <fmt/format.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -642,15 +644,6 @@ namespace striboh {
 
         IdlContext::IdlContextList IdlContext::theirInstances;
 
-        IdlContext::IdlContext(std::string_view pName) : mName(pName) {
-            //auto myInstance=shared_from_this();
-            mInterpreter = std::make_unique<chaiscript::ChaiScript>();
-            mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
-            mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
-            mInterpreter->add(chaiscript::var(this), "theIdlContext");
-            //theirInstances.push_back(myInstance);
-        }
-
         IdlContext &IdlContext::findInstance(std::string_view pName) {
             auto myRetVal = std::find_if(theirInstances.begin(), theirInstances.end(),
                                          [pName](IdlContextPtr pIdlCtx) -> bool {
@@ -662,11 +655,36 @@ namespace striboh {
             return **myRetVal;
         }
 
+        IdlContext::IdlContext(std::string_view pName) : mName(pName) {
+            //auto myInstance=shared_from_this();
+            mInterpreter = std::make_unique<chaiscript::ChaiScript>();
+            mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
+            mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
+            mInterpreter->add(chaiscript::var(this), "theIdlContext");
+            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlSetRuns,this),"stribohIdlSetRuns");
+            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlAddGenerated, this),"stribohIdlAddGenerated");
+            //theirInstances.push_back(myInstance);
+        }
+
         chaiscript::Boxed_Value
         IdlContext::evalChaiscript(const std::string &pInput,
                                    const chaiscript::Exception_Handler &pExceptionHandler,
                                    const std::string &pReport) noexcept {
             return mInterpreter->eval(pInput, pExceptionHandler, pReport);
+        }
+
+        std::vector<std::string> IdlContext::generateCode(const Includes& pIncludes,
+                                                          const string &pIdl2Parse, const string &pBackend,
+                                                          const chaiscript::Exception_Handler &pExceptionHandler,
+                                                          const string &pReport) noexcept {
+            auto myAstTree=parseIdlStr(pIncludes,pIdl2Parse);
+            std::string myChaiBackend = pBackend+"\nstribohIdlInit()";
+            evalChaiscript(myChaiBackend,pExceptionHandler,pReport);
+            for(int myRun=1; myRun<=mRunCount; myRun++) {
+                myChaiBackend = fmt::format("stribohIdlBeginRun({})",myRun);
+                evalChaiscript(myChaiBackend,pExceptionHandler,pReport);
+            }
+            return mGenerated;
         }
 
     } // end namespace idl

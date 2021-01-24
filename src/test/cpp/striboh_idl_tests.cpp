@@ -539,3 +539,39 @@ TEST(stribohIdlTests, testChaiscriptCallback) {
     auto myStartModule = chaiscript::boxed_cast<std::string>(myIdlCtx.getInterpreter()->eval(K_CHAI_MOD_BABE));
     ASSERT_EQ("--> Babe",myStartModule);
 }
+
+TEST(stribohIdlTests, testIdlChaiscriptCallback) {
+    static const char* K_IDL_BACKEND = R"K_IDL_COMP_BACK(
+
+    def stribohIdlInit() {
+       stribohIdlSetRuns(3);// set three runs
+    }
+
+    def stribohIdlBeginRun(pRun){
+       stribohIdlAddGenerated("Run${pRun}");
+    }
+
+    def striboh_idl_begin_module(pModuleName) {
+    }
+
+    def striboh_idl_module(pModuleName) {
+    }
+
+    def striboh_idl_end_module(pModuleName) {
+    }
+    )K_IDL_COMP_BACK";
+    static const char* K_TEST_IDL_0 = R"K_TEST_IDL_0(
+    nodule mod0 {
+        interface TestI00 {
+        };
+    };
+    )K_TEST_IDL_0";
+
+    striboh::idl::IdlContext myIdlCtx("001");
+    Includes myIncludes;
+    auto myGeneratedSnippets=myIdlCtx.generateCode(myIncludes,K_TEST_IDL_0,K_IDL_BACKEND);
+    ASSERT_EQ(3,myGeneratedSnippets.size());
+    ASSERT_EQ("Run1",myGeneratedSnippets[0]);
+    ASSERT_EQ("Run2",myGeneratedSnippets[1]);
+    ASSERT_EQ("Run3",myGeneratedSnippets[2]);
+}

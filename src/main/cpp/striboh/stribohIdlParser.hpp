@@ -460,6 +460,14 @@ namespace striboh {
                            const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
                            const std::string &pReport = "__EVAL__") noexcept;
 
+
+            std::vector<std::string>
+            generateCode(const Includes &pIncludes,
+                         const std::string &pIdl2Parse,
+                         const std::string &pBackend,
+                         const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
+                         const std::string &pReport = "__EVAL__") noexcept;
+
             /**
              * @return The name of this instance given when constructing.
              */
@@ -482,10 +490,20 @@ namespace striboh {
         private:
             using IdlContextList = std::vector<IdlContextPtr>;
 
+            void stribohIdlSetRuns(int pRunCount) {
+                mRunCount = pRunCount;
+            }
+
+            void stribohIdlAddGenerated( std::string pGenerated ) {
+                mGenerated.emplace_back(pGenerated);
+            }
+
             bool mIsOk = false;
+            int mRunCount=1;
             std::string mName;
             ChaiScriptPtr mInterpreter;
             static IdlContextList theirInstances;
+            std::vector<std::string> mGenerated;
         };
 
     }
