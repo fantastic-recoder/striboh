@@ -543,11 +543,11 @@ TEST(stribohIdlTests, testChaiscriptCallback) {
 TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     static const char* K_IDL_BACKEND = R"K_IDL_COMP_BACK(
 
-    def stribohIdlInit() {
+    def stribohIdlServantInit() {
        stribohIdlSetRuns(3);// set three runs
     }
 
-    def stribohIdlBeginRun(pRun){
+    def stribohIdlServantBeginRun(pRun){
        stribohIdlAddGenerated("Run${pRun}");
     }
 
@@ -569,7 +569,11 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
 
     striboh::idl::IdlContext myIdlCtx("001");
     Includes myIncludes;
-    auto myGeneratedSnippets=myIdlCtx.generateCode(myIncludes,K_TEST_IDL_0,K_IDL_BACKEND);
+    auto myGeneratedSnippets=myIdlCtx.generateCode(
+            myIncludes,
+            EGenerateParts::EBoth,
+            K_TEST_IDL_0,
+            K_IDL_BACKEND);
     ASSERT_EQ(3,myGeneratedSnippets.size());
     ASSERT_EQ("Run1",myGeneratedSnippets[0]);
     ASSERT_EQ("Run2",myGeneratedSnippets[1]);

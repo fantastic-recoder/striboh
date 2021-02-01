@@ -401,7 +401,7 @@ namespace striboh {
         class IdlContext;
 
         using Includes = std::vector<std::string>;
-        using IdlContextPtr  = std::shared_ptr<IdlContext>;
+        using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
 
         /**
@@ -421,6 +421,18 @@ namespace striboh {
          */
         ast::RootNode
         parseIdlStr(const Includes &pIncludes, const std::string &pInputStr) noexcept;
+
+        /**
+         * What parts should be generated.
+         * EGeneratedParts.EClient generate only client part.
+         * EGeneratedParts.EServant generate only servant part
+         * EGeneratedParts.EBoth generate both parts.
+         */
+        enum class EGenerateParts {
+            EClient /*   001 */ = 1,
+            EServant /*  010 */ = 2,
+            EBoth /*     011 */ = 3
+        };
 
         class IdlContext : public std::enable_shared_from_this<IdlContext> {
         public:
@@ -463,6 +475,7 @@ namespace striboh {
 
             std::vector<std::string>
             generateCode(const Includes &pIncludes,
+                         const EGenerateParts pWhichParts2Generate,
                          const std::string &pIdl2Parse,
                          const std::string &pBackend,
                          const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
@@ -471,20 +484,21 @@ namespace striboh {
             /**
              * @return The name of this instance given when constructing.
              */
-            const std::string& getName() const { return mName; }
+            const std::string &getName() const { return mName; }
 
             /**
              *
              * @param pName Instances name.
              * @return found instance or empty pointer.
              */
-            static IdlContext& findInstance(std::string_view pName);
+            static IdlContext &findInstance(std::string_view pName);
 
             /**
              * Get the Chaiscript interpreter.
              * @begin
              */
             ChaiScriptPtr getInterpreter() { return mInterpreter; }
+
             const ChaiScriptPtr getInterpreter() const { return mInterpreter; }
             /// @end
         private:
@@ -494,12 +508,12 @@ namespace striboh {
                 mRunCount = pRunCount;
             }
 
-            void stribohIdlAddGenerated( std::string pGenerated ) {
+            void stribohIdlAddGenerated(std::string pGenerated) {
                 mGenerated.emplace_back(pGenerated);
             }
 
             bool mIsOk = false;
-            int mRunCount=1;
+            int mRunCount = 1;
             std::string mName;
             ChaiScriptPtr mInterpreter;
             static IdlContextList theirInstances;
