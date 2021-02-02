@@ -20,6 +20,8 @@
 #include "stribohIdlParser.hpp"
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
+#include "stribohIdlAstVisitor.hpp"
+#include "stribohIdlAstModuleBodyNode.hpp"
 
 namespace {
     static const std::string K_ROOT_VAL = "<root>";
@@ -51,6 +53,20 @@ namespace striboh {
 
             std::string RootNode::getValueStr() const {
                 return K_ROOT_VAL;
+            }
+
+            void RootNode::visit(striboh::idl::AstVisitor &pVisitor) {
+                auto& myModules=getModules();
+                visitModules(pVisitor, myModules);
+            }
+
+            void RootNode::visitModules(AstVisitor &pVisitor, ModuleListNode &pModules) const {
+                for( auto& pModule: pModules ) {
+                    auto myModuleName = pModule.getIdentifierStr();
+                    pVisitor.beginModule(myModuleName);
+                    visitModules(pVisitor,pModule.getModuleBody().getModules());
+                    pVisitor.endModule(myModuleName);
+                };
             }
 
         }

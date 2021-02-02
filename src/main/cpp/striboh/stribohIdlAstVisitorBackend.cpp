@@ -376,24 +376,58 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_IDL_AST_VISITOR_HPP
-#define STRIBOH_IDL_AST_VISITOR_HPP
 
-#include <string>
+#include <vector>
+
+#include <fmt/format.h>
+
+#include "stribohIdlAstVisitorBackend.hpp"
+#include "stribohIdlParser.hpp"
+
+using std::string;
+using fmt::format;
+
 namespace striboh::idl {
 
-    class TypedIdentifierNode;
+    AstVisitorBackend::AstVisitorBackend
+            (
+                    IdlContext &pIdlCtx,
+                    const chaiscript::Exception_Handler &pExceptionHandler,
+                    const string &pReport
+            ) : mExceptionHandler(pExceptionHandler),
+                mReport(pReport),
+                mIdlCtx(pIdlCtx) {
+    }
 
-    struct AstVisitor {
-        AstVisitor() = default;
-        virtual ~AstVisitor() = default;
-        virtual void beginModule( std::string_view pModuleName ) = 0;
-        virtual void endModule( std::string_view pModuleName ) = 0;
-        virtual void beginInterface( std::string_view pInterfaceName ) = 0;
-        virtual void endInterface( std::string_view pInterfaceName ) = 0;
-        virtual void beginMethod( std::string_view pMethodName ) = 0;
-        virtual void endMethod( std::string_view pMethodName ) = 0;
-        virtual void beginParameter( const TypedIdentifierNode& pPar ) = 0;
-    };
+    void AstVisitorBackend::beginModule(std::string_view pModuleName) {
+        mStack.emplace_back(pModuleName);
+        string myChaiBackendCallback = format("stribohIdlServantBeginModule(\"{}\")", mStack.back());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorBackend::endModule(std::string_view pModuleName) {
+        string myChaiBackendCallback = format("stribohIdlServantEndModule(\"{}\")", mStack.back());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+        mStack.pop_back();
+    }
+
+    void AstVisitorBackend::beginInterface(std::string_view pInterfaceName) {
+
+    }
+
+    void AstVisitorBackend::endInterface(std::string_view pInterfaceName) {
+
+    }
+
+    void AstVisitorBackend::beginMethod(std::string_view pMethodName) {
+
+    }
+
+    void AstVisitorBackend::endMethod(std::string_view pMethodName) {
+
+    }
+
+    void AstVisitorBackend::beginParameter(const TypedIdentifierNode &pPar) {
+    }
+
 }
-#endif //STRIBOH_IDL_AST_VISITOR_HPP

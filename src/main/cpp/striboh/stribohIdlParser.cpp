@@ -387,6 +387,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstMethodNode.hpp"
 #include "stribohIdlAstTypeNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
+#include "stribohIdlAstVisitorBackend.hpp"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -680,11 +681,13 @@ namespace striboh {
                                  const chaiscript::Exception_Handler &pExceptionHandler,
                                  const string &pReport) noexcept {
             auto myAstTree=parseIdlStr(pIncludes,pIdl2Parse);
-            std::string myChaiBackend = pBackend+"\nstribohIdlServantInit()";
-            evalChaiscript(myChaiBackend,pExceptionHandler,pReport);
+            std::string myChaiBackendCallback = pBackend + "\nstribohIdlServantInit()";
+            evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
             for(int myRun=1; myRun<=mRunCount; myRun++) {
-                myChaiBackend = fmt::format("stribohIdlServantBeginRun({})",myRun);
-                evalChaiscript(myChaiBackend,pExceptionHandler,pReport);
+                myChaiBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
+                evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
+                AstVisitorBackend myVisitor(*this,pExceptionHandler,pReport);
+                myAstTree.visit(myVisitor);
             }
             return mGenerated;
         }

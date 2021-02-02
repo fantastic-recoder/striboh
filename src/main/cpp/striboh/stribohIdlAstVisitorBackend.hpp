@@ -376,24 +376,47 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_IDL_AST_VISITOR_HPP
-#define STRIBOH_IDL_AST_VISITOR_HPP
 
-#include <string>
+#ifndef STRIBOH_IDL_AST_VISITOR_BACKEND_HPP
+#define STRIBOH_IDL_AST_VISITOR_BACKEND_HPP
+
+#include <chaiscript/chaiscript.hpp>
+
+#include "stribohIdlAstVisitor.hpp"
+
 namespace striboh::idl {
 
-    class TypedIdentifierNode;
+    class IdlContext;
 
-    struct AstVisitor {
-        AstVisitor() = default;
-        virtual ~AstVisitor() = default;
-        virtual void beginModule( std::string_view pModuleName ) = 0;
-        virtual void endModule( std::string_view pModuleName ) = 0;
-        virtual void beginInterface( std::string_view pInterfaceName ) = 0;
-        virtual void endInterface( std::string_view pInterfaceName ) = 0;
-        virtual void beginMethod( std::string_view pMethodName ) = 0;
-        virtual void endMethod( std::string_view pMethodName ) = 0;
-        virtual void beginParameter( const TypedIdentifierNode& pPar ) = 0;
+    class AstVisitorBackend : public AstVisitor {
+    public:
+        /// @TODO move pExceptionHandler and pReport to IdlContext
+        AstVisitorBackend(IdlContext &pIdlCtx,
+                          const chaiscript::Exception_Handler &pExceptionHandler,
+                          const std::string &pReport);
+
+        ~AstVisitorBackend() override = default;
+
+        void beginModule(std::string_view pModuleName) override;
+
+        void endModule(std::string_view pModuleName) override;
+
+        void beginInterface(std::string_view pInterfaceName) override;
+
+        void endInterface(std::string_view pInterfaceName) override;
+
+        void beginMethod(std::string_view pMethodName) override;
+
+        void endMethod(std::string_view pMethodName) override;
+
+        void beginParameter(const TypedIdentifierNode &pPar) override;
+
+    private:
+
+        IdlContext& mIdlCtx;
+        const chaiscript::Exception_Handler &mExceptionHandler;
+        const std::string &mReport;
+        std::vector<std::string> mStack;
     };
 }
-#endif //STRIBOH_IDL_AST_VISITOR_HPP
+#endif //STRIBOH_IDL_AST_VISITOR_BACKEND_HPP
