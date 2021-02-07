@@ -409,7 +409,7 @@ namespace striboh::idl {
 
         void endMethod(std::string_view pMethodName) override;
 
-        void beginParameter(const TypedIdentifierNode &pPar) override;
+        void beginParameter(const ast::TypedIdentifierNode &pPar) override;
 
     private:
 

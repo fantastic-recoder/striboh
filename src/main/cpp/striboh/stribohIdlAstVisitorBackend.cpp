@@ -383,6 +383,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohIdlAstVisitorBackend.hpp"
 #include "stribohIdlParser.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
 
 using std::string;
 using fmt::format;
@@ -412,22 +413,33 @@ namespace striboh::idl {
     }
 
     void AstVisitorBackend::beginInterface(std::string_view pInterfaceName) {
-
+        mStack.emplace_back(pInterfaceName);
+        string myChaiBackendCallback = format("stribohIdlServantBeginInterface(\"{}\")", mStack.back());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
     void AstVisitorBackend::endInterface(std::string_view pInterfaceName) {
-
+        string myChaiBackendCallback = format("stribohIdlServantEndInterface(\"{}\")", mStack.back());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+        mStack.pop_back();
     }
 
     void AstVisitorBackend::beginMethod(std::string_view pMethodName) {
-
+        mStack.emplace_back(pMethodName);
+        string myChaiBackendCallback = format("stribohIdlServantBeginMethod(\"{}\")", mStack.back());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
     void AstVisitorBackend::endMethod(std::string_view pMethodName) {
-
+        string myChaiBackendCallback = format("stribohIdlServantEndMethod(\"{}\")", mStack.back());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+        mStack.pop_back();
     }
 
-    void AstVisitorBackend::beginParameter(const TypedIdentifierNode &pPar) {
+    void AstVisitorBackend::beginParameter(const ast::TypedIdentifierNode &pPar) {
+        string myChaiBackendCallback = format("stribohIdlServantBeginParameter(\"{}\",\"{}\")",
+                                              pPar.getTypeString(),pPar.getIdentifierName());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
 }

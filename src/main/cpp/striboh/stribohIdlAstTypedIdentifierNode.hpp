@@ -32,6 +32,14 @@ namespace striboh {
                     return boost::fusion::at_c<1>(*this).getValue();
                 }
 
+                EBuildinTypes getType() const {
+                    return boost::fusion::at_c<0>(*this);
+                }
+
+                const std::string& getTypeString() const {
+                    return toString(boost::fusion::at_c<0>(*this));
+                }
+
                 virtual std::string
                 getValueStr() const override {
                     return getIdentifierName();

@@ -382,7 +382,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 namespace striboh::idl {
 
-    class TypedIdentifierNode;
+    namespace ast {
+        class TypedIdentifierNode;
+    }
 
     struct AstVisitor {
         AstVisitor() = default;
@@ -393,7 +395,7 @@ namespace striboh::idl {
         virtual void endInterface( std::string_view pInterfaceName ) = 0;
         virtual void beginMethod( std::string_view pMethodName ) = 0;
         virtual void endMethod( std::string_view pMethodName ) = 0;
-        virtual void beginParameter( const TypedIdentifierNode& pPar ) = 0;
+        virtual void beginParameter( const ast::TypedIdentifierNode& pPar ) = 0;
     };
 }
 #endif //STRIBOH_IDL_AST_VISITOR_HPP

@@ -65,7 +65,7 @@ namespace striboh {
 
                 void visit(striboh::idl::AstVisitor &pVisitor);
 
-                void visitModules(AstVisitor &pVisitor, ModuleListNode &pModules) const;
+                void visitModules(AstVisitor &pVisitor, const ModuleListNode &pModules) const;
             };
 
             std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) ;

@@ -549,16 +549,14 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
        stribohIdlAddGenerated("MOD_END_${pModuleName}");
     }
 
-    def striboh_idl_end_module(pModuleName) {
+    def stribohIdlServantBeginInterface(pName) {
+       stribohIdlAddGenerated("INTERFACE_BEGIN_${pName}");
+    }
+
+    def stribohIdlServantEndInterface(pName) {
+       stribohIdlAddGenerated("INTERFACE_END_${pName}");
     }
     )K_IDL_COMP_BACK";
-    static const char* K_TEST_IDL_0 = R"K_TEST_IDL_0(
-    nodule mod0 {
-        interface TestI00 {
-         string echo( string p0 );
-        };
-    };
-    )K_TEST_IDL_0";
 
     striboh::idl::IdlContext myIdlCtx("001");
     Includes myIncludes;
@@ -567,15 +565,18 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
             EGenerateParts::EBoth,
             K_TST_IDL_INT00,
             K_IDL_BACKEND);
-    ASSERT_EQ(15,myGeneratedSnippets.size());
+    ASSERT_EQ(21,myGeneratedSnippets.size());
     ASSERT_EQ("Run_1",myGeneratedSnippets[0]);
     ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[1]);
     ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[2]);
-    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[3]);
-    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[4]);
-    ASSERT_EQ("Run_3",myGeneratedSnippets[10]);
-    ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[11]);
-    ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[12]);
-    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[13]);
-    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[14]);
+    ASSERT_EQ("INTERFACE_BEGIN_HelloWorld",myGeneratedSnippets[3]);
+    ASSERT_EQ("INTERFACE_END_HelloWorld",myGeneratedSnippets[4]);
+    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[5]);
+    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[6]);
+    // run 3 follows
+    ASSERT_EQ("Run_3",myGeneratedSnippets[14]);
+    ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[15]);
+    ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[16]);
+    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[19]);
+    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[20]);
 }

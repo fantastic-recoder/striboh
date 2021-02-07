@@ -60,10 +60,21 @@ namespace striboh {
                 visitModules(pVisitor, myModules);
             }
 
-            void RootNode::visitModules(AstVisitor &pVisitor, ModuleListNode &pModules) const {
-                for( auto& pModule: pModules ) {
-                    auto myModuleName = pModule.getIdentifierStr();
+            void RootNode::visitModules(AstVisitor &pVisitor, const ModuleListNode &pModules) const {
+                for( const auto& pModule: pModules ) {
+                    const auto& myModuleName = pModule.getIdentifierStr();
                     pVisitor.beginModule(myModuleName);
+                    auto& myInterfaces = pModule.getModuleBody().getInterfaces();
+                    for( const auto& myInterface : myInterfaces ) {
+                        const string& myInterfaceName = myInterface.getName();
+                        pVisitor.beginInterface(myInterfaceName);
+                        const auto& myMethods=myInterface.getMethods();
+                        for( const auto& myMethod : myMethods ) {
+                            pVisitor.beginMethod(myMethod.getMethodName());
+                            pVisitor.endMethod(myMethod.getMethodName());
+                        }
+                        pVisitor.endInterface(myInterfaceName);
+                    }
                     visitModules(pVisitor,pModule.getModuleBody().getModules());
                     pVisitor.endModule(myModuleName);
                 };
