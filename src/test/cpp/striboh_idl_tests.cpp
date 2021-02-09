@@ -556,6 +556,23 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     def stribohIdlServantEndInterface(pName) {
        stribohIdlAddGenerated("INTERFACE_END_${pName}");
     }
+
+    global pParNo = -1;
+
+    def stribohIdlServantBeginMethod(pName,pReturnType) {
+       pParNo = 0;
+       stribohIdlAddGenerated("METHOD_BEGIN_${pName}:${pReturnType}");
+    }
+
+    def stribohIdlServantEndMethod(pName) {
+       stribohIdlAddGenerated("METHOD_END_${pName}");
+    }
+
+    def stribohIdlServantBeginParameter(pName,pType) {
+       stribohIdlAddGenerated("PARAMETER_${pParNo}_${pName}:${pType}");
+       pParNo = pParNo+1;
+    }
+
     )K_IDL_COMP_BACK";
 
     striboh::idl::IdlContext myIdlCtx("001");
@@ -565,18 +582,21 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
             EGenerateParts::EBoth,
             K_TST_IDL_INT00,
             K_IDL_BACKEND);
-    ASSERT_EQ(21,myGeneratedSnippets.size());
+    ASSERT_EQ(30,myGeneratedSnippets.size());
     ASSERT_EQ("Run_1",myGeneratedSnippets[0]);
     ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[1]);
     ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[2]);
     ASSERT_EQ("INTERFACE_BEGIN_HelloWorld",myGeneratedSnippets[3]);
-    ASSERT_EQ("INTERFACE_END_HelloWorld",myGeneratedSnippets[4]);
-    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[5]);
-    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[6]);
+    ASSERT_EQ("METHOD_BEGIN_echo:STRING",myGeneratedSnippets[4]);
+    ASSERT_EQ("PARAMETER_0_p0:STRING",myGeneratedSnippets[5]);
+    ASSERT_EQ("METHOD_END_echo",myGeneratedSnippets[6]);
+    ASSERT_EQ("INTERFACE_END_HelloWorld",myGeneratedSnippets[7]);
+    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[8]);
+    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[9]);
     // run 3 follows
-    ASSERT_EQ("Run_3",myGeneratedSnippets[14]);
-    ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[15]);
-    ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[16]);
-    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[19]);
-    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[20]);
+    ASSERT_EQ("Run_3",myGeneratedSnippets[20]);
+    ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[21]);
+    ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[22]);
+    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[28]);
+    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[29]);
 }

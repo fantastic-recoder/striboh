@@ -391,10 +391,12 @@ namespace striboh {
             constexpr const char *const K_METHOD_NODE = "MethodNode";
 
             struct MethodNode : BaseListNode<TypedIdentifierNode> {
+
                 MethodNode() : BaseListNode<TypedIdentifierNode>(K_METHOD_NODE) {}
 
                 const std::string& getMethodName() const;
 
+                const EBuildinTypes getMethodReturnType() const;
             };
 
         }

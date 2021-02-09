@@ -424,9 +424,10 @@ namespace striboh::idl {
         mStack.pop_back();
     }
 
-    void AstVisitorBackend::beginMethod(std::string_view pMethodName) {
-        mStack.emplace_back(pMethodName);
-        string myChaiBackendCallback = format("stribohIdlServantBeginMethod(\"{}\")", mStack.back());
+    void AstVisitorBackend::beginMethod(const ast::TypedIdentifierNode &pMethod) {
+        mStack.emplace_back(string(pMethod.getIdentifierName()));
+        string myChaiBackendCallback = format("stribohIdlServantBeginMethod(\"{}\",\"{}\")",
+                                              mStack.back(), pMethod.getTypeString());
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
@@ -438,7 +439,7 @@ namespace striboh::idl {
 
     void AstVisitorBackend::beginParameter(const ast::TypedIdentifierNode &pPar) {
         string myChaiBackendCallback = format("stribohIdlServantBeginParameter(\"{}\",\"{}\")",
-                                              pPar.getTypeString(),pPar.getIdentifierName());
+                                              pPar.getIdentifierName(), pPar.getTypeString());
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
