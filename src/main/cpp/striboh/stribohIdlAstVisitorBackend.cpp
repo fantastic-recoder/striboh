@@ -401,45 +401,39 @@ namespace striboh::idl {
     }
 
     void AstVisitorBackend::beginModule(std::string_view pModuleName) {
-        mStack.emplace_back(pModuleName);
-        string myChaiBackendCallback = format("stribohIdlServantBeginModule(\"{}\")", mStack.back());
+        string myChaiBackendCallback = format("stribohIdlServantBeginModule(\"{}\")", pModuleName);
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
     void AstVisitorBackend::endModule(std::string_view pModuleName) {
-        string myChaiBackendCallback = format("stribohIdlServantEndModule(\"{}\")", mStack.back());
+        string myChaiBackendCallback = format("stribohIdlServantEndModule(\"{}\")", pModuleName);
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
-        mStack.pop_back();
     }
 
     void AstVisitorBackend::beginInterface(std::string_view pInterfaceName) {
-        mStack.emplace_back(pInterfaceName);
-        string myChaiBackendCallback = format("stribohIdlServantBeginInterface(\"{}\")", mStack.back());
+        string myChaiBackendCallback = format("stribohIdlServantBeginInterface(\"{}\")", pInterfaceName);
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
     void AstVisitorBackend::endInterface(std::string_view pInterfaceName) {
-        string myChaiBackendCallback = format("stribohIdlServantEndInterface(\"{}\")", mStack.back());
+        string myChaiBackendCallback = format("stribohIdlServantEndInterface(\"{}\")", pInterfaceName);
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
-        mStack.pop_back();
     }
 
     void AstVisitorBackend::beginMethod(const ast::TypedIdentifierNode &pMethod) {
-        mStack.emplace_back(string(pMethod.getIdentifierName()));
         string myChaiBackendCallback = format("stribohIdlServantBeginMethod(\"{}\",\"{}\")",
-                                              mStack.back(), pMethod.getTypeString());
+                                              pMethod.getName(), pMethod.getTypeString());
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
     void AstVisitorBackend::endMethod(std::string_view pMethodName) {
-        string myChaiBackendCallback = format("stribohIdlServantEndMethod(\"{}\")", mStack.back());
+        string myChaiBackendCallback = format("stribohIdlServantEndMethod(\"{}\")", pMethodName);
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
-        mStack.pop_back();
     }
 
     void AstVisitorBackend::beginParameter(const ast::TypedIdentifierNode &pPar) {
         string myChaiBackendCallback = format("stribohIdlServantBeginParameter(\"{}\",\"{}\")",
-                                              pPar.getIdentifierName(), pPar.getTypeString());
+                                              pPar.getName(), pPar.getTypeString());
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 

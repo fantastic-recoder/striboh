@@ -28,7 +28,7 @@ namespace striboh {
                     return boost::fusion::at_c<1>(*this);
                 }
 
-                const std::string& getIdentifierName() const {
+                const std::string& getName() const {
                     return boost::fusion::at_c<1>(*this).getValue();
                 }
 
@@ -42,7 +42,7 @@ namespace striboh {
 
                 virtual std::string
                 getValueStr() const override {
-                    return getIdentifierName();
+                    return getName();
                 }
 
             };

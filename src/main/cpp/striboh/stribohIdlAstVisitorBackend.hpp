@@ -416,7 +416,6 @@ namespace striboh::idl {
         IdlContext& mIdlCtx;
         const chaiscript::Exception_Handler &mExceptionHandler;
         const std::string &mReport;
-        std::vector<std::string> mStack;
     };
 }
 #endif //STRIBOH_IDL_AST_VISITOR_BACKEND_HPP
