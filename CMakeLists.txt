@@ -49,5 +49,6 @@ set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
+add_subdirectory(src/test/echo)
 # and this adds the doxygen folder as a CMake subdirectory.
 add_subdirectory(doxygen)
