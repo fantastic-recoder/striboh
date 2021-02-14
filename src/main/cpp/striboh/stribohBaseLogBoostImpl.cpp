@@ -384,12 +384,20 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh {
     namespace base {
 
+        void LogBoostImpl::doTrace(const std::string pMsg) {
+            BOOST_LOG_TRIVIAL(trace) << pMsg;
+        }
+
         void LogBoostImpl::doDebug(const std::string pMsg) {
             BOOST_LOG_TRIVIAL(debug) << pMsg;
         }
 
         void LogBoostImpl::doError(const std::string pMsg) {
             BOOST_LOG_TRIVIAL(error) << pMsg;
+        }
+
+        void LogBoostImpl::doFatal(const std::string pMsg) {
+            BOOST_LOG_TRIVIAL(fatal) << pMsg;
         }
 
         void LogBoostImpl::doWarn(const std::string pMsg) {
