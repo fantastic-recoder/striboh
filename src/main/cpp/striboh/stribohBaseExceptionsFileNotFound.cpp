@@ -376,22 +376,24 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_EXCEPTION_IN_MESSAGE_PARSER_HPP
-#define STRIBOH_BASE_EXCEPTION_IN_MESSAGE_PARSER_HPP
 
-#include <fmt/format.h>
+#include <filesystem>
 
-#include <stdexcept>
+#include "stribohBaseExceptionsFileNotFound.hpp"
 
-namespace striboh {
-    namespace base {
-        class ExceptionInMessageParser : public std::runtime_error {
-            std::string mMsg;
-        public:
-            ExceptionInMessageParser(std::string_view pCause, size_t pOffset, std::string_view pWrongPart, std::string_view pRest);
-        };
+namespace {
+    constexpr static const char* K_MSG_FMT = "File not found: \"{}\". Additional information: {}.";
+
+    inline std::string composeMessage(const std::filesystem::path& pPath, std::string_view pMessage) {
+        std::string myMessage=fmt::format(K_MSG_FMT,pPath.string(),pMessage);
+        return myMessage;
     }
+
 }
 
+namespace striboh::base::exceptions {
+    FileNotFound::FileNotFound(const std::filesystem::path &pPath, std::string_view pMessage)
+            : mPath(pPath), mMessage(composeMessage(pPath, pMessage)), std::runtime_error("FileNotfound")
+            {}
 
-#endif //STRIBOH_BASE_EXCEPTION_IN_MESSAGE_PARSER_HPP
+}

@@ -395,6 +395,7 @@ using striboh::idl::ast::RootNode;
 using striboh::base::LogBoostImpl;
 using striboh::base::LogIface;
 using striboh::base::ELogLevel;
+using striboh::idl::EGenerateParts;
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
@@ -464,7 +465,18 @@ int main(int pArgc, char *pArgv[]) {
         myBackend = myVarMap["backend"].as<string>();
     }
     aLog.info("Backend specified:{}.", myBackend);
-    throw std::runtime_error("Not yet implemented.");
+    EGenerateParts myGeneratedParts= EGenerateParts::ENone;
+    if(myVarMap.count("servant")) {
+        myGeneratedParts=EGenerateParts::EServant;
+    }
+    if(myVarMap.count("client")) {
+        if(myGeneratedParts == EGenerateParts::EServant) {
+            myGeneratedParts = EGenerateParts::EBoth;
+        } else {
+            myGeneratedParts = EGenerateParts::EClient;
+        }
+    }
+    striboh::idl::IdlContext myIdlContext();
     return 0;
 }
 

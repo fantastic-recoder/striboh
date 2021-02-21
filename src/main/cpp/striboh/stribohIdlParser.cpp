@@ -388,6 +388,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstTypeNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
 #include "stribohIdlAstVisitorBackend.hpp"
+#include "stribohBaseExceptionsFileNotFound.hpp"
+
+#include <filesystem>
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -436,6 +439,8 @@ namespace striboh {
         using ascii::char_;
         using boost::spirit::get_line;
         using boost::spirit::get_column;
+        using ::striboh::base::exceptions::FileNotFound;
+
         using namespace qi::labels;
 
         using phx::at_c;
@@ -643,28 +648,13 @@ namespace striboh {
             return myIdlDoc;
         }
 
-        IdlContext::IdlContextList IdlContext::theirInstances;
-
-        IdlContext &IdlContext::findInstance(std::string_view pName) {
-            auto myRetVal = std::find_if(theirInstances.begin(), theirInstances.end(),
-                                         [pName](IdlContextPtr pIdlCtx) -> bool {
-                                             return pIdlCtx->getName() == pName;
-                                         });
-            if (myRetVal == theirInstances.end()) {
-                throw std::range_error(fmt::format("Instance {} not found.",pName));
-            }
-            return **myRetVal;
-        }
-
-        IdlContext::IdlContext(std::string_view pName) : mName(pName) {
-            //auto myInstance=shared_from_this();
+        IdlContext::IdlContext(::striboh::base::LogIface& pLog) : mLog(pLog) {
             mInterpreter = std::make_unique<chaiscript::ChaiScript>();
             mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
             mInterpreter->add(chaiscript::var(this), "theIdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlSetRuns,this),"stribohIdlSetRuns");
             mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlAddGenerated, this),"stribohIdlAddGenerated");
-            //theirInstances.push_back(myInstance);
         }
 
         chaiscript::Boxed_Value
@@ -677,11 +667,11 @@ namespace striboh {
         std::vector<std::string>
         IdlContext::generateCode(const Includes& pIncludes,
                                  const EGenerateParts pWhichParts2Generate,
-                                 const string &pIdl2Parse, const string &pBackend,
+                                 const string &pIdl2Parse,
                                  const chaiscript::Exception_Handler &pExceptionHandler,
                                  const string &pReport) noexcept {
             auto myAstTree=parseIdlStr(pIncludes,pIdl2Parse);
-            std::string myChaiBackendCallback = pBackend + "\nstribohIdlServantInit()";
+            std::string myChaiBackendCallback = mBackendScript + "\nstribohIdlServantInit()";
             evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
             for(int myRun=1; myRun<=mRunCount; myRun++) {
                 myChaiBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
@@ -690,6 +680,29 @@ namespace striboh {
                 myAstTree.visit(myVisitor);
             }
             return mGenerated;
+        }
+
+        std::string&
+        IdlContext::loadBackend( std::string_view pBackendName) {
+            std::filesystem::path myFilename(fmt::format("../share/striboh/striboh_backend.{}.chai",
+                                                         pBackendName));
+            mBackendScript.clear();
+            if(!std::filesystem::exists(myFilename)) {
+                static FileNotFound myExcept(myFilename,"Backend script not be loaded.");
+                throw myExcept;
+            }
+            return doLoadBackend(myFilename);
+        }
+
+        std::string &
+        IdlContext::doLoadBackend(const std::filesystem::path &myFilename) {
+            std::ifstream myScript(myFilename);
+            std::string myLine(1024,'\0');
+            while(myScript && myScript.getline(&myLine[0],1024)) {
+                mBackendScript += myLine;
+            }
+            myScript.close();
+            return mBackendScript;
         }
 
     } // end namespace idl

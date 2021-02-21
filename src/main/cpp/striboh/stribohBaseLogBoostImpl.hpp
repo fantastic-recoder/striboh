@@ -376,8 +376,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_STRIBOHBASELOGBOOSTIMPL_HPP
-#define STRIBOH_STRIBOHBASELOGBOOSTIMPL_HPP
+#ifndef STRIBOH_BASE_LOG_BOOST_IMPL_HPP
+#define STRIBOH_BASE_LOG_BOOST_IMPL_HPP
 
 #include "stribohBaseLogIface.hpp"
 
@@ -401,4 +401,4 @@ namespace striboh {
     }
 }
 
-#endif //STRIBOH_STRIBOHBASELOGBOOSTIMPL_HPP
+#endif //STRIBOH_BASE_LOG_BOOST_IMPL_HPP

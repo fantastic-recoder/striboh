@@ -376,21 +376,39 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include "stribohBaseExceptionInMessageParser.hpp"
 
-namespace striboh::base {
-    ExceptionInMessageParser::ExceptionInMessageParser(
-            std::string_view pCause,
-            size_t pOffset, std::string_view pWrongPart, std::string_view pRest)
-    : mMsg
-    (
-            std::forward<std::string>
-            (
-                    fmt::format(
-                            "{} at offset {} while parsing >>{}<<{}.",
-                            pCause, pOffset, pWrongPart, pRest
-                    )
-            )
-    ), std::runtime_error(mMsg) {}
+#ifndef STRIBOH_BASE_FILE_NOT_FOUND_EXCEPTION_HPP
+#define STRIBOH_BASE_FILE_NOT_FOUND_EXCEPTION_HPP
 
-}
+#include <stdexcept>
+#include <filesystem>
+
+#include <fmt/format.h>
+
+namespace striboh::base::exceptions {
+
+    class FileNotFound : public std::runtime_error {
+    public:
+        FileNotFound(const std::filesystem::path& pPath, std::string_view pMessage);
+
+        const char* what() {
+            return mMessage.c_str();
+        }
+
+        std::filesystem::path &getPath() {
+            return mPath;
+        }
+
+        const std::filesystem::path &getPath() const {
+            return mPath;
+        }
+
+    private:
+        std::filesystem::path mPath;
+        std::string mMessage;
+    };
+
+} // end namespace
+
+
+#endif //STRIBOH_BASE_FILE_NOT_FOUND_EXCEPTION_HPP

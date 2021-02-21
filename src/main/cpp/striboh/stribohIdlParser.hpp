@@ -384,12 +384,21 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <chaiscript/chaiscript.hpp>
+#include <filesystem>
 #include "stribohIdlAstRootNode.hpp"
 
 /**
  * Top leve Striboh namespace, all Striboh is in.
  */
 namespace striboh {
+
+    namespace base {
+        class LogIface;
+
+        namespace exceptions {
+            class FileNotFound;
+        }
+    }
 
     /**
      * The IDL (Interface Definition Language) Parser API.
@@ -431,7 +440,8 @@ namespace striboh {
         enum class EGenerateParts {
             EClient /*   001 */ = 1,
             EServant /*  010 */ = 2,
-            EBoth /*     011 */ = 3
+            EBoth /*     011 */ = 3,
+            ENone /*         */ = 0
         };
 
         class IdlContext : public std::enable_shared_from_this<IdlContext> {
@@ -441,7 +451,7 @@ namespace striboh {
              *
              * @param pCtxName a uniq name for this context.
              */
-            IdlContext(std::string_view pCtxName);
+            IdlContext(::striboh::base::LogIface& pLog);
 
             /**
              * Used to exchange infos between Chaiscript and C++
@@ -477,14 +487,8 @@ namespace striboh {
             generateCode(const Includes &pIncludes,
                          const EGenerateParts pWhichParts2Generate,
                          const std::string &pIdl2Parse,
-                         const std::string &pBackend,
                          const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
                          const std::string &pReport = "__EVAL__") noexcept;
-
-            /**
-             * @return The name of this instance given when constructing.
-             */
-            const std::string &getName() const { return mName; }
 
             /**
              *
@@ -501,6 +505,23 @@ namespace striboh {
 
             const ChaiScriptPtr getInterpreter() const { return mInterpreter; }
             /// @end
+
+            /**
+             * @param pBackendName The name of the backend generator script like for example "cpp".
+             *
+             * @return the loaded backend script
+             */
+            std::string& loadBackend( std::string_view pBackendName);
+
+            /**
+             * Sets the backend script content alternative to loadBackend.
+             *
+             * @param pNewBackend the new content - script to be called by IdlContext::generateCode()
+             */
+             void setBackend( std::string_view pNewBackend) {
+                 mBackendScript = pNewBackend;
+             }
+
         private:
             using IdlContextList = std::vector<IdlContextPtr>;
 
@@ -514,10 +535,12 @@ namespace striboh {
 
             bool mIsOk = false;
             int mRunCount = 1;
-            std::string mName;
             ChaiScriptPtr mInterpreter;
-            static IdlContextList theirInstances;
             std::vector<std::string> mGenerated;
+            ::striboh::base::LogIface& mLog;
+            std::string mBackendScript;
+
+            std::string &doLoadBackend(const std::filesystem::path &myFilename);
         };
 
     }

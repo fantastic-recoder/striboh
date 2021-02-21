@@ -382,8 +382,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohIdlParser.hpp>
 #include <striboh/stribohIdlAstModuleBodyNode.hpp>
 #include <boost/log/trivial.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
+#include <striboh/stribohBaseExceptionsFileNotFound.hpp>
 
 using namespace striboh::idl;
+using striboh::base::exceptions::FileNotFound;
 using std::endl;
 using std::string;
 
@@ -404,12 +407,17 @@ module m0 {
 )K_TST_IDL";
 
 
-    void printErrors(const ast::RootNode& myIdlAst) {
+    void printErrors(const ast::RootNode &myIdlAst) {
         for (int myCnt = 0; myCnt < myIdlAst.getErrors().size(); myCnt++) {
             BOOST_LOG_TRIVIAL(error) << myIdlAst.getErrors()[myCnt];
         }
     }
 
+    static striboh::base::LogBoostImpl theLog;
+
+   striboh::base::LogIface &getLog() {
+        return theLog;
+    }
 }
 
 TEST(stribohIdlTests, testModule) {
@@ -428,12 +436,12 @@ TEST(stribohIdlTests, testNestedModules) {
     printErrors(myIdlAst);
     EXPECT_EQ(0, myIdlAst.getErrors().size());
     ASSERT_EQ(1, myIdlAst.getModules().size());
-    const ast::ModuleNode& myM0ModuleNode = myIdlAst.getModules()[0];
+    const ast::ModuleNode &myM0ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("m0"), myM0ModuleNode.getIdentifierStr());
     ASSERT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
-    const ast::ModuleNode& myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
+    const ast::ModuleNode &myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("m1"), myM1ModuleNode.getIdentifierStr());
-    const ast::ModuleNode& myM2ModuleNode = myM1ModuleNode.getModuleBody().getModules()[0];
+    const ast::ModuleNode &myM2ModuleNode = myM1ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("m2"), myM2ModuleNode.getIdentifierStr());
 }
 
@@ -457,15 +465,15 @@ TEST(stribohIdlTests, testSerialModules) {
     unsigned const long mySize = myIdlAst.getModules().size();
     ASSERT_EQ(2, mySize);
 
-    const ast::ModuleNode& myM00ModuleNode = myIdlAst.getModules()[0];
+    const ast::ModuleNode &myM00ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("m001"), myM00ModuleNode.getIdentifierStr());
     EXPECT_EQ(0, myM00ModuleNode.getModuleBody().getModules().size());
 
-    const ast::ModuleNode& myM01ModuleNode = myIdlAst.getModules()[1];
+    const ast::ModuleNode &myM01ModuleNode = myIdlAst.getModules()[1];
     EXPECT_EQ(string("m002"), myM01ModuleNode.getIdentifierStr());
     ASSERT_EQ(1, myM01ModuleNode.getModuleBody().getModules().size());
 
-    const ast::ModuleNode& myM10ModuleNode = myM01ModuleNode.getModuleBody().getModules()[0];
+    const ast::ModuleNode &myM10ModuleNode = myM01ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("m10"), myM10ModuleNode.getIdentifierStr());
 }
 
@@ -490,14 +498,14 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
     unsigned const long mySize = myIdlAst.getModules().size();
     ASSERT_EQ(1, mySize);
 
-    const ast::ModuleNode& myM0ModuleNode = myIdlAst.getModules()[0];
+    const ast::ModuleNode &myM0ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("mod0"), myM0ModuleNode.getIdentifierStr());
     EXPECT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
 
-    const ast::ModuleNode& myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
+    const ast::ModuleNode &myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("mod1"), myM1ModuleNode.getIdentifierStr());
     EXPECT_EQ(1UL, myM1ModuleNode.getModuleBody().getInterfaces().size());
-    const ast::InterfaceNode& myHelloWorldIFace = myM1ModuleNode.getModuleBody().getInterfaces()[0];
+    const ast::InterfaceNode &myHelloWorldIFace = myM1ModuleNode.getModuleBody().getInterfaces()[0];
     EXPECT_EQ(string("HelloWorld"), myHelloWorldIFace.getIdentifierStr());
     ASSERT_EQ(1UL, myHelloWorldIFace.getMethods().size());
 
@@ -512,26 +520,26 @@ TEST(stribohIdlTests, testChaiscriptBasics) {
     setOk(true)
     return true;
     )K_CHAI_TEST_01";
-    striboh::idl::IdlContext myIdlCtx("001");
+    striboh::idl::IdlContext myIdlCtx(getLog());
     auto myRet = myIdlCtx.getInterpreter()->eval(K_CHAI_TO_PRINT);
     ASSERT_EQ(true, chaiscript::boxed_cast<bool>(myRet));
     ASSERT_EQ(true, myIdlCtx.isOk());
 }
 
 TEST(stribohIdlTests, testChaiscriptCallback) {
-    static const char* K_CHAI_MOD_BABE = R"K_CHAI_CALLBACK(
+    static const char *K_CHAI_MOD_BABE = R"K_CHAI_CALLBACK(
     def beginModule(pBabe) {
         return "--> ${pBabe}"
     }
     return beginModule("Babe")
     )K_CHAI_CALLBACK";
-    striboh::idl::IdlContext myIdlCtx("001");
+    striboh::idl::IdlContext myIdlCtx(getLog());
     auto myStartModule = chaiscript::boxed_cast<std::string>(myIdlCtx.getInterpreter()->eval(K_CHAI_MOD_BABE));
-    ASSERT_EQ("--> Babe",myStartModule);
+    ASSERT_EQ("--> Babe", myStartModule);
 }
 
 TEST(stribohIdlTests, testIdlChaiscriptCallback) {
-    static const char* K_IDL_BACKEND = R"K_IDL_COMP_BACK(
+    static const char *K_IDL_BACKEND = R"K_IDL_COMP_BACK(
 
     def stribohIdlServantInit() {
        stribohIdlSetRuns(3);// set three runs
@@ -575,28 +583,41 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
 
     )K_IDL_COMP_BACK";
 
-    striboh::idl::IdlContext myIdlCtx("001");
+    striboh::idl::IdlContext myIdlCtx(getLog());
     Includes myIncludes;
-    auto myGeneratedSnippets=myIdlCtx.generateCode(
+    myIdlCtx.setBackend(K_IDL_BACKEND);
+    auto myGeneratedSnippets = myIdlCtx.generateCode(
             myIncludes,
             EGenerateParts::EBoth,
-            K_TST_IDL_INT00,
-            K_IDL_BACKEND);
-    ASSERT_EQ(30,myGeneratedSnippets.size());
-    ASSERT_EQ("Run_1",myGeneratedSnippets[0]);
-    ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[1]);
-    ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[2]);
-    ASSERT_EQ("INTERFACE_BEGIN_HelloWorld",myGeneratedSnippets[3]);
-    ASSERT_EQ("METHOD_BEGIN_echo:STRING",myGeneratedSnippets[4]);
-    ASSERT_EQ("PARAMETER_0_p0:STRING",myGeneratedSnippets[5]);
-    ASSERT_EQ("METHOD_END_echo",myGeneratedSnippets[6]);
-    ASSERT_EQ("INTERFACE_END_HelloWorld",myGeneratedSnippets[7]);
-    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[8]);
-    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[9]);
+            K_TST_IDL_INT00);
+    ASSERT_EQ(30, myGeneratedSnippets.size());
+    ASSERT_EQ("Run_1", myGeneratedSnippets[0]);
+    ASSERT_EQ("MOD_BEGIN_mod0", myGeneratedSnippets[1]);
+    ASSERT_EQ("MOD_BEGIN_mod1", myGeneratedSnippets[2]);
+    ASSERT_EQ("INTERFACE_BEGIN_HelloWorld", myGeneratedSnippets[3]);
+    ASSERT_EQ("METHOD_BEGIN_echo:STRING", myGeneratedSnippets[4]);
+    ASSERT_EQ("PARAMETER_0_p0:STRING", myGeneratedSnippets[5]);
+    ASSERT_EQ("METHOD_END_echo", myGeneratedSnippets[6]);
+    ASSERT_EQ("INTERFACE_END_HelloWorld", myGeneratedSnippets[7]);
+    ASSERT_EQ("MOD_END_mod1", myGeneratedSnippets[8]);
+    ASSERT_EQ("MOD_END_mod0", myGeneratedSnippets[9]);
     // run 3 follows
-    ASSERT_EQ("Run_3",myGeneratedSnippets[20]);
-    ASSERT_EQ("MOD_BEGIN_mod0",myGeneratedSnippets[21]);
-    ASSERT_EQ("MOD_BEGIN_mod1",myGeneratedSnippets[22]);
-    ASSERT_EQ("MOD_END_mod1",myGeneratedSnippets[28]);
-    ASSERT_EQ("MOD_END_mod0",myGeneratedSnippets[29]);
+    ASSERT_EQ("Run_3", myGeneratedSnippets[20]);
+    ASSERT_EQ("MOD_BEGIN_mod0", myGeneratedSnippets[21]);
+    ASSERT_EQ("MOD_BEGIN_mod1", myGeneratedSnippets[22]);
+    ASSERT_EQ("MOD_END_mod1", myGeneratedSnippets[28]);
+    ASSERT_EQ("MOD_END_mod0", myGeneratedSnippets[29]);
+}
+
+TEST(stribohIdlTests, testNotExistentBackend) {
+    IdlContext myCtx(getLog());
+    try {
+        myCtx.loadBackend("not-existent");
+    } catch(FileNotFound& pExc) {
+        ASSERT_EQ(std::filesystem::path("../share/striboh/striboh_backend.not-existent.chai"),pExc.getPath());
+        ASSERT_EQ(string("File not found: \"../share/striboh/striboh_backend.not-existent.chai\". Additional information: Backend script not be loaded.."),
+                  string(pExc.what()));
+        return;
+    }
+    FAIL() << "Expected file not found exceptions.";
 }

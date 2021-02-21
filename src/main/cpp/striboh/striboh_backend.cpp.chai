@@ -1,0 +1,48 @@
+global theModulesPath;
+
+def stribohIdlServantInit() {
+   stribohIdlSetRuns(1);// set tree visitor runs
+}
+
+def stribohIdlServantBeginRun(pRun){
+}
+
+def stribohIdlServantBeginModule(pModuleName) {
+   stribohIdlAddGenerated("namespace ${pModuleName} {");
+}
+
+def stribohIdlServantEndModule(pModuleName) {
+   stribohIdlAddGenerated("}");
+}
+
+def stribohIdlServantBeginInterface(pName) {
+   stribohIdlAddGenerated("\t class ${pName} {");
+}
+
+def stribohIdlServantEndInterface(pName) {
+   stribohIdlAddGenerated("};");
+}
+
+global pParNo = -1;
+
+def stribohTypeToCpp(pStribohType) {
+    if(pStribohType == "STRING") {
+        return "std::string"
+    }
+    throw runtime_error("Unknown striboh type ${pStribohType}");
+}
+
+def stribohIdlServantBeginMethod(pName,pReturnType) {
+   pParNo = 0;
+   stribohIdlAddGenerated("METHOD_BEGIN_${pName}:${pReturnType}");
+}
+
+def stribohIdlServantEndMethod(pName) {
+   stribohIdlAddGenerated("METHOD_END_${pName}");
+}
+
+def stribohIdlServantBeginParameter(pName,pType) {
+   stribohIdlAddGenerated("PARAMETER_${pParNo}_${pName}:${pType}");
+   pParNo = pParNo+1;
+}
+
