@@ -8,7 +8,6 @@ target_include_directories(striboh_idl_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST}
 target_link_libraries(striboh_idl_tests striboh_base_library striboh_idl_library gmock gtest_main gtest ${STRIBOH_LIBS})
 add_test(NAME striboh_idl_tests COMMAND striboh_idl_tests)
 
-
 add_executable(striboh_test_echo_server striboh_test_echo_server.cpp striboh_test_echo_server_common.hpp)
 target_include_directories(striboh_test_echo_server PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
 target_link_libraries(striboh_test_echo_server striboh_base_library striboh_idl_library ${STRIBOH_LIBS})

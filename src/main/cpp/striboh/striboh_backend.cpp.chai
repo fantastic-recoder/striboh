@@ -26,10 +26,10 @@ def stribohIdlServantEndInterface(pName) {
 global pParNo = -1;
 
 def stribohTypeToCpp(pStribohType) {
-//    if(pStribohType == "STRING") {
-//        return "std::string";
-//    }
-//    throw runtime_error("Unknown striboh type ${pStribohType}");
+    if(pStribohType == "STRING") {
+        return "std::string";
+    }
+    throw (runtime_error("Unknown striboh type ${pStribohType}"));
 }
 
 def stribohIdlServantBeginMethod(pName,pReturnType) {

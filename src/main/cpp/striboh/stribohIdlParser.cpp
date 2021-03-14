@@ -690,7 +690,7 @@ namespace striboh {
             return myRetVal;
         }
 
-        std::string&
+        std::string &
         IdlContext::loadBackend( std::string_view pBackendName) {
             std::filesystem::path myFilename(fmt::format("../share/striboh/striboh_backend.{}.chai",
                                                          pBackendName));
@@ -711,7 +711,8 @@ namespace striboh {
             return mBackendScript;
         }
 
-        vector<std::string> IdlContext::getGeneratedSnippets() {
+        vector<std::string>
+        IdlContext::getGeneratedSnippets() {
             return mGenerated;
         }
 
