@@ -583,13 +583,18 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
 
     )K_IDL_COMP_BACK";
 
-    striboh::idl::IdlContext myIdlCtx(getLog());
     Includes myIncludes;
+    auto aRootNode = parseIdlStr(myIncludes,K_TST_IDL_INT00);
+
+    striboh::idl::IdlContext myIdlCtx(getLog());
+
     myIdlCtx.setBackend(K_IDL_BACKEND);
-    auto myGeneratedSnippets = myIdlCtx.generateCode(
+    myIdlCtx.generateCode(
             myIncludes,
             EGenerateParts::EBoth,
-            K_TST_IDL_INT00);
+            std::vector<ast::RootNode>{aRootNode}
+            );
+    auto myGeneratedSnippets = myIdlCtx.getSnippets();
     ASSERT_EQ(30, myGeneratedSnippets.size());
     ASSERT_EQ("Run_1", myGeneratedSnippets[0]);
     ASSERT_EQ("MOD_BEGIN_mod0", myGeneratedSnippets[1]);
@@ -621,3 +626,4 @@ TEST(stribohIdlTests, testNotExistentBackend) {
     }
     FAIL() << "Expected file not found exceptions.";
 }
+

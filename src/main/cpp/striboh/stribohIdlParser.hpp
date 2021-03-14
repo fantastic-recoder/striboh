@@ -412,6 +412,9 @@ namespace striboh {
         using Includes = std::vector<std::string>;
         using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
+        using IdlGeneratedSnippet = std::pair<std::string, std::string>;
+        using IdlGeneratedSnippets = std::vector<IdlGeneratedSnippet>;
+
 
         /**
          * Parse the supplied input file.
@@ -446,6 +449,7 @@ namespace striboh {
 
         class IdlContext : public std::enable_shared_from_this<IdlContext> {
         public:
+
             /**
              * Create a unique named context.
              *
@@ -482,11 +486,21 @@ namespace striboh {
                            const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
                            const std::string &pReport = "__EVAL__") noexcept;
 
-
-            std::vector<std::string>
+            /**
+             * Generate code with the specified backend.
+             *
+             * @param pIncludes the IDL include paths.
+             *
+             * @param pWhichParts2Generate servant, client or both.
+             * @param pParsedIdls Interface Definition Files the ASTs to be processed/visited.
+             * @param pExceptionHandler Chaiscript exception handler.
+             * @param pReport Chaiscript error report.
+             * @return the generated code, pairs filename and code
+             */
+            std::vector<std::pair<std::string,std::string>>
             generateCode(const Includes &pIncludes,
                          const EGenerateParts pWhichParts2Generate,
-                         const std::string &pIdl2Parse,
+                         const std::vector<ast::RootNode> &pParsedIdls,
                          const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
                          const std::string &pReport = "__EVAL__") noexcept;
 
@@ -521,6 +535,8 @@ namespace striboh {
              void setBackend( std::string_view pNewBackend) {
                  mBackendScript = pNewBackend;
              }
+
+            std::vector<std::string> getSnippets();
 
         private:
             using IdlContextList = std::vector<IdlContextPtr>;

@@ -413,6 +413,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <vector>
 #include <algorithm>
 #include <fstream>
+#include <array>
+#include <algorithm>
 
 namespace striboh {
     namespace idl {
@@ -664,22 +666,28 @@ namespace striboh {
             return mInterpreter->eval(pInput, pExceptionHandler, pReport);
         }
 
-        std::vector<std::string>
+        IdlGeneratedSnippets
         IdlContext::generateCode(const Includes& pIncludes,
                                  const EGenerateParts pWhichParts2Generate,
-                                 const string &pIdl2Parse,
+                                 const std::vector<ast::RootNode> &pParsedIdls,
                                  const chaiscript::Exception_Handler &pExceptionHandler,
                                  const string &pReport) noexcept {
-            auto myAstTree=parseIdlStr(pIncludes,pIdl2Parse);
+            static const string myInit("\n");
+            IdlGeneratedSnippets myRetVal;
             std::string myChaiBackendCallback = mBackendScript + "\nstribohIdlServantInit()";
-            evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
-            for(int myRun=1; myRun<=mRunCount; myRun++) {
-                myChaiBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
+            for( auto myAstTree: pParsedIdls) {
+                mGenerated.clear();
                 evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
-                AstVisitorBackend myVisitor(*this,pExceptionHandler,pReport);
-                myAstTree.visit(myVisitor);
+                for (int myRun = 1; myRun <= mRunCount; myRun++) {
+                    myChaiBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
+                    evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
+                    AstVisitorBackend myVisitor(*this, pExceptionHandler, pReport);
+                    myAstTree.visit(myVisitor);
+                }
+                string mySnippet=std::accumulate(mGenerated.begin(),mGenerated.end(),myInit);
+                myRetVal.push_back(IdlGeneratedSnippet("file", mySnippet));
             }
-            return mGenerated;
+            return myRetVal;
         }
 
         std::string&
@@ -697,12 +705,14 @@ namespace striboh {
         std::string &
         IdlContext::doLoadBackend(const std::filesystem::path &myFilename) {
             std::ifstream myScript(myFilename);
-            std::string myLine(1024,'\0');
-            while(myScript && myScript.getline(&myLine[0],1024)) {
-                mBackendScript += myLine;
-            }
+            mBackendScript.assign( (std::istreambuf_iterator<char>(myScript) ),
+                     (std::istreambuf_iterator<char>()) );
             myScript.close();
             return mBackendScript;
+        }
+
+        vector<std::string> IdlContext::getSnippets() {
+            return mGenerated;
         }
 
     } // end namespace idl

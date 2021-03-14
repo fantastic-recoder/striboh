@@ -391,6 +391,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 using std::string;
 using std::vector;
+using std::cout;
+using std::endl;
 using striboh::idl::ast::RootNode;
 using striboh::base::LogBoostImpl;
 using striboh::base::LogIface;
@@ -410,6 +412,15 @@ int processInputIdlFiles(const po::variables_map &pVariablesMap, const striboh::
 
 void dumpTree(LogBoostImpl &aLog, vector<RootNode> &myParsedIdls);
 
+int processVerbose(LogBoostImpl &pLog, const po::variables_map &pVarMap);
+
+int processHelp(const po::variables_map &pVarMap, const po::options_description &pOptDesc);
+
+vector<string> processIncludes(const po::variables_map &pVarMap, LogBoostImpl &pLog);
+
+int parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogBoostImpl &pLog,
+                      vector<RootNode> &pParsedInputFiles);
+
 int main(int pArgc, char *pArgv[]) {
 
     LogBoostImpl aLog;
@@ -427,44 +438,35 @@ int main(int pArgc, char *pArgv[]) {
             ("input-file", po::value<vector<string>>(), "input file")
             ("dump-tree,d", "dump the resulting AST tree.")
             ("verbose,v", po::value<int>(),
-             "verbose logging 0..5, 0 - show trace messages, 5 - show error messages");
+             "verbose logging 0..5, 0 - show trace messages, 5 - show error messages")
+            ("stdout,r","output to standard out");
     po::variables_map myVarMap;
     po::store(po::command_line_parser(pArgc, pArgv).options(myOptDesc).positional(myPosOpt).run(), myVarMap);
     po::notify(myVarMap);
 
-    if (myVarMap.count("verbose")) {
-        auto myVerbose = myVarMap["verbose"].as<int>();
-        if (!aLog.setThreshold(myVerbose)) {
-            aLog.error("Verbose value {}  is out of range 0-5!", myVerbose);
-            return K_RET_VAL_BAD_VERBOSE_VALUE;
-        }
-    } else {
-        aLog.setThreshold(ELogLevel::INFO);
-    }
-    if (myVarMap.count("help")) {
-        std::cout << myOptDesc;
-        return K_RET_VAL_HELP;
-    }
-    vector<string> myIncludes;
-    if (myVarMap.count("include-path")) {
-        myIncludes = myVarMap["include-path"].as<vector<string> >();
-        aLog.info("Include paths are:");
-        for (auto myInclude: myIncludes) {
-            aLog.info("\t\t{}", myInclude);
-        }
-    }
+    int myRetVal = 0;
+    myRetVal = processVerbose(aLog, myVarMap);
+    if(myRetVal != 0) return myRetVal;
+
+    myRetVal = processHelp(myVarMap, myOptDesc);
+    if(myRetVal != 0) return myRetVal;
+
+    vector<string> myIncludes = processIncludes(myVarMap, aLog);
+
     vector<RootNode> myParsedInputFiles;
-    if (myVarMap.count("input-file")) {
-        int myRetVal = processInputIdlFiles(myVarMap, myIncludes, myParsedInputFiles, aLog);
-        if (myRetVal != 0) return myRetVal;
-    }
-    if (myVarMap.count("dump-tree"))
+    myRetVal = parseInputFiles(myVarMap, myIncludes, aLog, myParsedInputFiles);
+    if (myRetVal != 0) return myRetVal;
+
+    if (myVarMap.count("dump-tree")) {
         dumpTree(aLog, myParsedInputFiles);
+    }
+
     string myBackend;
     if (myVarMap.count("backend") > 0) {
         myBackend = myVarMap["backend"].as<string>();
     }
     aLog.info("Backend specified:{}.", myBackend);
+
     EGenerateParts myGeneratedParts= EGenerateParts::ENone;
     if(myVarMap.count("servant")) {
         myGeneratedParts=EGenerateParts::EServant;
@@ -476,8 +478,71 @@ int main(int pArgc, char *pArgv[]) {
             myGeneratedParts = EGenerateParts::EClient;
         }
     }
-    striboh::idl::IdlContext myIdlContext();
+    striboh::idl::IdlContext myIdlContext(aLog);
+    myIdlContext.loadBackend(myBackend);
+
+    chaiscript::Exception_Handler myReport;
+    auto myIdlGenerated=myIdlContext.generateCode( myIncludes, myGeneratedParts, myParsedInputFiles, myReport );
+    if(myVarMap.count("stdout")) {
+        for(auto mySnipped: myIdlGenerated) {
+            cout << mySnipped.first << endl;
+            cout << mySnipped.second << endl;
+        }
+    }
     return 0;
+}
+
+int parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogBoostImpl &pLog,
+                      vector<RootNode> &pParsedInputFiles) {
+    int myRetVal = 0;
+    if (pVarMap.count("input-file")) {
+        myRetVal = processInputIdlFiles(pVarMap, pIncludes, pParsedInputFiles, pLog);
+    }
+    return myRetVal;
+}
+
+int processInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogBoostImpl &pLog,
+                      vector<string> &pInputFiles) {
+    int myRetVal = 0;
+    if (pVarMap.count("input-file")) {
+        pInputFiles= pVarMap["input-file"].as<std::vector<string> >();
+    }
+    return myRetVal;
+}
+
+vector<string> processIncludes(const po::variables_map &pVarMap, LogBoostImpl &pLog) {
+    std::vector<string> myIncludes;
+    if (pVarMap.count("include-path")) {
+        myIncludes = pVarMap["include-path"].as<std::vector<string> >();
+        pLog.info("Include paths are:");
+        for (auto myInclude: myIncludes) {
+            pLog.info("\t\t{}", myInclude);
+        }
+    }
+    return myIncludes;
+}
+
+int processHelp(const po::variables_map &pVarMap, const po::options_description &pOptDesc) {
+    int myRetVal=0;
+    if (pVarMap.count("help")) {
+        std::cout << pOptDesc;
+        myRetVal = K_RET_VAL_HELP;
+    }
+    return myRetVal;
+}
+
+int processVerbose(LogBoostImpl &pLog, const po::variables_map &pVarMap) {
+    int myRetVal=0;
+    if (pVarMap.count("verbose")) {
+        auto myVerbose = pVarMap["verbose"].as<int>();
+        if (!pLog.setThreshold(myVerbose)) {
+            pLog.error("Verbose value {}  is out of range 0-5!", myVerbose);
+            myRetVal = K_RET_VAL_BAD_VERBOSE_VALUE;
+        }
+    } else {
+        pLog.setThreshold(ELogLevel::INFO);
+    }
+    return myRetVal;
 }
 
 void dumpTree(LogBoostImpl &aLog, vector<RootNode> &myParsedIdls) {
