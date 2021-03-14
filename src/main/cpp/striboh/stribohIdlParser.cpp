@@ -678,10 +678,10 @@ namespace striboh {
             for( auto myAstTree: pParsedIdls) {
                 mGenerated.clear();
                 evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
+                AstVisitorBackend myVisitor(*this, pExceptionHandler, pReport);
                 for (int myRun = 1; myRun <= mRunCount; myRun++) {
                     myChaiBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
                     evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
-                    AstVisitorBackend myVisitor(*this, pExceptionHandler, pReport);
                     myAstTree.visit(myVisitor);
                 }
                 string mySnippet=std::accumulate(mGenerated.begin(),mGenerated.end(),myInit);

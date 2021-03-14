@@ -381,6 +381,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <fmt/format.h>
 
+#include "stribohBaseLogIface.hpp"
 #include "stribohIdlAstVisitorBackend.hpp"
 #include "stribohIdlParser.hpp"
 #include "stribohIdlAstTypedIdentifierNode.hpp"
@@ -401,8 +402,9 @@ namespace striboh::idl {
     }
 
     void AstVisitorBackend::beginModule(std::string_view pModuleName) {
-        string myChaiBackendCallback = format("stribohIdlServantBeginModule(\"{}\")", pModuleName);
-        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+        mModuleBeginScript = format("stribohIdlServantBeginModule(\"{}\")", pModuleName);
+        mIdlCtx.getLog().trace("Calling {}", mModuleBeginScript);
+        mIdlCtx.evalChaiscript(mModuleBeginScript, mExceptionHandler, mReport);
     }
 
     void AstVisitorBackend::endModule(std::string_view pModuleName) {

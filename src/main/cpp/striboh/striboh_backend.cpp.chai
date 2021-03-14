@@ -8,7 +8,7 @@ def stribohIdlServantBeginRun(pRun){
 }
 
 def stribohIdlServantBeginModule(pModuleName) {
-   stribohIdlAddGenerated("namespace ${pModuleName} {");
+   stribohIdlAddGenerated("namespace ${pModuleName} {\n");
 }
 
 def stribohIdlServantEndModule(pModuleName) {

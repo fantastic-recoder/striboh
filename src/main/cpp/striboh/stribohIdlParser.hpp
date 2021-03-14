@@ -538,6 +538,8 @@ namespace striboh {
 
             std::vector<std::string> getGeneratedSnippets();
 
+            ::striboh::base::LogIface& getLog() { return mLog; }
+            const ::striboh::base::LogIface& getLog() const { return mLog; }
         private:
             using IdlContextList = std::vector<IdlContextPtr>;
 

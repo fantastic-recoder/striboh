@@ -12,4 +12,4 @@ target_include_directories(striboh_base_library PUBLIC ..)
 add_executable(striboh_idl_compiler stribohIdlCompiler_main.cpp)
 target_link_libraries(striboh_idl_compiler striboh_base_library striboh_idl_library boost_program_options boost_log boost_filesystem boost_system boost_thread pthread fmt ${CMAKE_DL_LIBS})
 
-configure_file(striboh_backend.cpp.chai ${striboh_BINARY_DIR}/share/striboh/striboh_backend.cpp.chai)
+configure_file(striboh_backend.cpp.chai ${striboh_BINARY_DIR}/share/striboh/striboh_backend.cpp.chai COPYONLY)
