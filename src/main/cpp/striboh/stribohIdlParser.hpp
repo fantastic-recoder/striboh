@@ -536,7 +536,7 @@ namespace striboh {
                  mBackendScript = pNewBackend;
              }
 
-            std::vector<std::string> getSnippets();
+            std::vector<std::string> getGeneratedSnippets();
 
         private:
             using IdlContextList = std::vector<IdlContextPtr>;

@@ -711,7 +711,7 @@ namespace striboh {
             return mBackendScript;
         }
 
-        vector<std::string> IdlContext::getSnippets() {
+        vector<std::string> IdlContext::getGeneratedSnippets() {
             return mGenerated;
         }
 

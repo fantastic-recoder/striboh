@@ -594,7 +594,7 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
             EGenerateParts::EBoth,
             std::vector<ast::RootNode>{aRootNode}
             );
-    auto myGeneratedSnippets = myIdlCtx.getSnippets();
+    auto myGeneratedSnippets = myIdlCtx.getGeneratedSnippets();
     ASSERT_EQ(30, myGeneratedSnippets.size());
     ASSERT_EQ("Run_1", myGeneratedSnippets[0]);
     ASSERT_EQ("MOD_BEGIN_mod0", myGeneratedSnippets[1]);
