@@ -393,7 +393,7 @@ namespace {
 
 namespace striboh::base::exceptions {
     FileNotFound::FileNotFound(const std::filesystem::path &pPath, std::string_view pMessage)
-            : mPath(pPath), mMessage(composeMessage(pPath, pMessage)), std::runtime_error("FileNotfound")
+            : mPath(pPath), mMessage(composeMessage(pPath, pMessage)), std::runtime_error(std::string(pMessage)+" - "+pPath.string()+".")
             {}
 
 }

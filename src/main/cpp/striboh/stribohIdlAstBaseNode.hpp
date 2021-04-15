@@ -377,8 +377,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHIDLASTBASENODE_HPP
-#define STRIBOH_STRIBOHIDLASTBASENODE_HPP
+#ifndef STRIBOH_IDL_AST_BASE_NODE_HPP
+#define STRIBOH_IDL_AST_BASE_NODE_HPP
 
 #include <string>
 #include <vector>
@@ -395,6 +395,8 @@ namespace manip {
 namespace striboh {
     namespace idl {
         namespace ast {
+
+            class ErrorNode;
 
             /**
              * Ann AST nodes derives from here.
@@ -423,6 +425,8 @@ namespace striboh {
 
                 void
                 printAstNode(const int pIndent, std::ostream& pOstream) const;
+
+                BaseNode& operator += (const ErrorNode& pErrorNode);
             private:
                 std::string mNodeTypeName;
             };
@@ -578,4 +582,4 @@ namespace striboh {
 } // striboh
 
 
-#endif //STRIBOH_STRIBOHIDLASTBASENODE_HPP
+#endif //STRIBOH_IDL_AST_BASE_NODE_HPP

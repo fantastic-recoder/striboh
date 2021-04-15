@@ -41,3 +41,4 @@ CMakeLists.txt.user
 /venv/
 /**/*.bak
 /.settings/language.settings.xml
+/src/test/echo/Echo.hpp

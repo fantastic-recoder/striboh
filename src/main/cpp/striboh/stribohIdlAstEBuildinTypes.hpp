@@ -13,6 +13,7 @@ namespace striboh {
             enum struct EBuildinTypes {
                 INT,
                 STRING,
+                VOID,
                 NONE
             };
 

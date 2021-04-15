@@ -382,6 +382,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <boost/fusion/tuple.hpp>
 
+#include <NamedType/named_type.hpp>
+
 #include "stribohIdlAstBaseNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
 #include "stribohIdlAstIdentifierNode.hpp"
@@ -421,6 +423,10 @@ namespace striboh {
                 }
 
             };
+
+            using ParameterList = std::vector<TypedIdentifierNode>;
+
+            ParameterList& operator += (ParameterList& pList, const TypedIdentifierNode& pTypedIdentifier);
         }
     }
 }

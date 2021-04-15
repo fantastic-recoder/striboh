@@ -386,9 +386,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstModuleBodyNode.hpp"
 #include "stribohIdlAstMethodNode.hpp"
 #include "stribohIdlAstTypeNode.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
 #include "stribohIdlAstVisitorBackend.hpp"
+#include "stribohIdlAstErrorNode.hpp"
 #include "stribohBaseExceptionsFileNotFound.hpp"
+#include "stribohBaseLogIface.hpp"
 
 #include <filesystem>
 
@@ -501,56 +504,47 @@ namespace striboh {
             IdlGrammar(Iterator pFirst) : IdlGrammar::base_type(idl),
                                           annotate(pFirst) {
 
-                keywordInterface = lit("interface");
-                keywordModule = lit("module");
-                semiColon = lit(';');
-                openBlock = lit('{');
-                closeBlock = lit('}');
-                keywordImport = lit("import");
-                keywordString = lit("string");
-                keywordInt = lit("int");
-
                 identifier %= as_string[alpha >> *(alnum | char_("_"))];
 
                 quoted_file_name %= lexeme['"' >> (+(char_ - '"')) >> '"'];
 
-                import = keywordImport >> quoted_file_name[_val += _1] >> semiColon;
+                import = lit("import") >> quoted_file_name[_val += _1] >> ';';
 
                 importList = *import[_val += _1];
 
-                type = keywordString[_val = ast::EBuildinTypes::STRING] | keywordInt[_val = ast::EBuildinTypes::INT];
+                type %= (
+                        lit("string")[_val = ast::EBuildinTypes::STRING]
+                        |
+                        lit("int")[_val = ast::EBuildinTypes::INT]
+                        |
+                        lit("void")[_val = ast::EBuildinTypes::VOID]
+                );
 
                 typedIdentifier = type >> identifier;
 
-                method = typedIdentifier
-                        >> lit('(')
-                        >> typedIdentifier >> *(lit(',') >> typedIdentifier)
-                        >> lit(')')
-                        >> semiColon;
+                methodParameters  = typedIdentifier[_val += _1] >> *(',' >> typedIdentifier[_val += _1]) ;
 
-                interface = keywordInterface
-                        >> identifier[_val += _1]
-                        >> openBlock
-                        >> +(method[_val += _1])
-                        >> closeBlock
-                        >> semiColon;
+                method = typedIdentifier[_val += _1] >> '(' >> *methodParameters[_val += _1] >> ')' >> ';';
 
-                interfaceList %= *(interface);
+                interface = lit("interface")
+                        >> identifier[_val += _1] >> '{' >> +(method[_val += _1]) >> '}' >> ';';
 
-                moduleBody = moduleList >> interfaceList;
+                interfaceList %= *interface;
 
-                module %= keywordModule >> identifier
-                                        >> openBlock
-                                        >> moduleBody[_val += _1]
-                                        >> closeBlock >> semiColon;
+                moduleList = *module[_val += _1];
 
-                moduleList %= *module;
+                moduleBody = moduleList[_val += _1] >> interfaceList[_val += _1];
 
-                idl %= importList >> moduleList;
+                module = lit("module") >> identifier[_val += _1] >> '{'
+                        >> moduleBody[_val += _1]
+                        >> '}' >> ';';
+
+                idl = moduleBody[_val += _1];
 
                 on_error<fail>(idl, handler(_1, _2, _3, _4));
                 on_error<fail>(import, handler(_1, _2, _3, _4));
                 on_error<fail>(module, handler(_1, _2, _3, _4));
+                on_error<fail>(interface, handler(_1, _2, _3, _4));
                 on_error<fail>(method, handler(_1, _2, _3, _4));
                 on_error<fail>(type, handler(_1, _2, _3, _4));
 
@@ -558,10 +552,10 @@ namespace striboh {
                 on_success(identifier, set_location_info);
                 on_success(import, set_location_info);
                 on_success(module, set_location_info);
+                on_success(interface, set_location_info);
                 on_success(method, set_location_info);
                 on_success(type, set_location_info);
-
-                BOOST_SPIRIT_DEBUG_NODES((keywordInterface)(keywordModule)(semiColon)(identifier)(module)(import))
+                BOOST_SPIRIT_DEBUG_NODES((idl)(import)(type)(identifier)(module)(import))
 
             }
 
@@ -573,18 +567,15 @@ namespace striboh {
             qi::rule<Iterator, std::string(), ascii::space_type> quoted_file_name;
             qi::rule<Iterator, ast::IdentifierNode(), ascii::space_type> identifier;
             qi::rule<Iterator, ast::ModuleNode(), ascii::space_type> module;
-            qi::rule<Iterator, ast::ModuleBodyNode(), ascii::space_type> moduleBody;
             qi::rule<Iterator, ast::MethodNode(), ascii::space_type> method;
             qi::rule<Iterator, ast::TypeNode(), ascii::space_type> type;
             qi::rule<Iterator, ast::TypedIdentifierNode(), ascii::space_type> typedIdentifier;
+            qi::rule<Iterator, ast::ModuleBodyNode(), ascii::space_type> moduleBody;
             qi::rule<Iterator, ast::ImportListNode(), ascii::space_type> importList;
             qi::rule<Iterator, ast::ModuleListNode(), ascii::space_type> moduleList;
             qi::rule<Iterator, ast::InterfaceListNode(), ascii::space_type> interfaceList;
             qi::rule<Iterator, ast::InterfaceNode(), ascii::space_type> interface;
-            qi::rule<Iterator> keywordInterface, keywordModule, semiColon, openBlock, closeBlock, keywordImport,
-                    keywordString, keywordInt;
-
-
+            qi::rule<Iterator, ast::ParameterList(),ascii::space_type> methodParameters;
         }; // end IdlGrammar
 
         std::string readFile(const Includes &pIncludes, const fs::path &pInputFile, ast::RootNode &pIdlDoc) {
@@ -628,7 +619,10 @@ namespace striboh {
             string::const_iterator myIter = pInputStr.begin();
             string::const_iterator myEnd = pInputStr.end();
             ast::RootNode myIdlDoc;
-            doParse(pIncludes, myIter, myEnd, myIdlDoc);
+            bool isSuccess=doParse(pIncludes, myIter, myEnd, myIdlDoc);
+            if(!isSuccess) {
+                myIdlDoc.getErrors().push_back("Parsing failed near: \""+string(myIter,myEnd)+"\n.");
+            }
             return myIdlDoc;
         }
 
@@ -650,13 +644,13 @@ namespace striboh {
             return myIdlDoc;
         }
 
-        IdlContext::IdlContext(::striboh::base::LogIface& pLog) : mLog(pLog) {
+        IdlContext::IdlContext(::striboh::base::LogIface &pLog) : mLog(pLog) {
             mInterpreter = std::make_unique<chaiscript::ChaiScript>();
             mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
             mInterpreter->add(chaiscript::var(this), "theIdlContext");
-            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlSetRuns,this),"stribohIdlSetRuns");
-            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlAddGenerated, this),"stribohIdlAddGenerated");
+            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlSetRuns, this), "stribohIdlSetRuns");
+            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlAddGenerated, this), "stribohIdlAddGenerated");
         }
 
         chaiscript::Boxed_Value
@@ -667,7 +661,7 @@ namespace striboh {
         }
 
         IdlGeneratedSnippets
-        IdlContext::generateCode(const Includes& pIncludes,
+        IdlContext::generateCode(const Includes &pIncludes,
                                  const EGenerateParts pWhichParts2Generate,
                                  const std::vector<ast::RootNode> &pParsedIdls,
                                  const chaiscript::Exception_Handler &pExceptionHandler,
@@ -675,7 +669,7 @@ namespace striboh {
             static const string myInit("\n");
             IdlGeneratedSnippets myRetVal;
             std::string myChaiBackendCallback = mBackendScript + "\nstribohIdlServantInit()";
-            for( auto myAstTree: pParsedIdls) {
+            for (auto myAstTree: pParsedIdls) {
                 mGenerated.clear();
                 evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
                 AstVisitorBackend myVisitor(*this, pExceptionHandler, pReport);
@@ -684,29 +678,30 @@ namespace striboh {
                     evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
                     myAstTree.visit(myVisitor);
                 }
-                string mySnippet=std::accumulate(mGenerated.begin(),mGenerated.end(),myInit);
-                myRetVal.push_back(IdlGeneratedSnippet("file", mySnippet));
+                string mySnippet = std::accumulate(mGenerated.begin(), mGenerated.end(), myInit);
+                myRetVal.emplace_back(IdlGeneratedSnippet(mySnippet));
             }
             return myRetVal;
         }
 
         std::string &
-        IdlContext::loadBackend( std::string_view pBackendName) {
+        IdlContext::loadBackend(std::string_view pBackendName) {
             std::filesystem::path myFilename(fmt::format("../share/striboh/striboh_backend.{}.chai",
                                                          pBackendName));
             mBackendScript.clear();
-            if(!std::filesystem::exists(myFilename)) {
-                static FileNotFound myExcept(myFilename,"Backend script not be loaded.");
+            if (!std::filesystem::exists(myFilename)) {
+                static FileNotFound myExcept(myFilename, "Backend script not be loaded.");
                 throw myExcept;
             }
+            mLog.debug("Going to open backend: {}.", myFilename.c_str());
             return doLoadBackend(myFilename);
         }
 
         std::string &
         IdlContext::doLoadBackend(const std::filesystem::path &myFilename) {
             std::ifstream myScript(myFilename);
-            mBackendScript.assign( (std::istreambuf_iterator<char>(myScript) ),
-                     (std::istreambuf_iterator<char>()) );
+            mBackendScript.assign((std::istreambuf_iterator<char>(myScript)),
+                                  (std::istreambuf_iterator<char>()));
             myScript.close();
             return mBackendScript;
         }

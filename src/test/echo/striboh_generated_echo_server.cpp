@@ -377,7 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "striboh_generated_echo_server/Echo.hpp"
+#include "Echo.hpp"
 
 namespace striboh_generated_echo_server {
 

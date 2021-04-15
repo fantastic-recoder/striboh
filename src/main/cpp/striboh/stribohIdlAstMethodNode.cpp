@@ -398,6 +398,11 @@ namespace striboh {
                 }
                 return (*this)[0].getType();
             }
+
+            MethodNode &MethodNode::operator+=(const std::vector<TypedIdentifierNode>& pParameterList) {
+                std::copy(pParameterList.begin(),pParameterList.end(),std::back_inserter(*this));
+                return *this;
+            }
         }
     }
 }

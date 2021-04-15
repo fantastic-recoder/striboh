@@ -83,6 +83,15 @@ namespace striboh {
                 };
             }
 
+            RootNode& RootNode::operator += (const ModuleBodyNode& pModuleBodyNode) {
+                copy(pModuleBodyNode.getModules().begin(),pModuleBodyNode.getModules().end(),
+                     std::back_inserter(getModules()));
+                //this->getModules().push_back(pModuleBodyNode);
+                BOOST_LOG_TRIVIAL(trace) << "Add module to root ("<< this <<") new size=" << pModuleBodyNode.getModules().size() <<".";
+                return *this;
+            }
+
+
         }
     } // end idl
 } // end striboh

@@ -385,6 +385,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/filesystem.hpp>
 #include <chaiscript/chaiscript.hpp>
 #include <filesystem>
+#include <NamedType/named_type.hpp>
 #include "stribohIdlAstRootNode.hpp"
 
 /**
@@ -412,7 +413,7 @@ namespace striboh {
         using Includes = std::vector<std::string>;
         using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
-        using IdlGeneratedSnippet = std::pair<std::string, std::string>;
+        using IdlGeneratedSnippet = fluent::NamedType<std::string,struct IdlGeneratedSnippetTag>;
         using IdlGeneratedSnippets = std::vector<IdlGeneratedSnippet>;
 
 
@@ -497,7 +498,7 @@ namespace striboh {
              * @param pReport Chaiscript error report.
              * @return the generated code, pairs filename and code
              */
-            std::vector<std::pair<std::string,std::string>>
+            IdlGeneratedSnippets
             generateCode(const Includes &pIncludes,
                          const EGenerateParts pWhichParts2Generate,
                          const std::vector<ast::RootNode> &pParsedIdls,

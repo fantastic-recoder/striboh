@@ -376,41 +376,29 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#ifndef STRIBOH_IDL_AST_ERROR_NODE_HPP
+#define STRIBOH_IDL_AST_ERROR_NODE_HPP
 
-#include <boost/fusion/tuple.hpp>
+#include <string>
 
-#include "stribohIdlAstTypedIdentifierNode.hpp"
 
-namespace {
-    static const std::string K_INT("INT");
-    static const std::string K_STRING("STRING");
-    static const std::string K_NONE("NONE");
-
-}
 namespace striboh {
     namespace idl {
         namespace ast {
-            using std::vector;
-            using std::string;
-            using boost::fusion::at_c;
+            class ErrorNode {
+            private:
+                std::string mMessage;
 
-            const std::string& toString(const EBuildinTypes pType) {
-                switch (pType) {
-                    case EBuildinTypes::INT:
-                        return K_INT;
-                    case EBuildinTypes::STRING:
-                        return K_STRING;
-                    default:
-                    case EBuildinTypes::NONE:
-                        return K_NONE;
+            public:
+                ErrorNode() = default;
+                ErrorNode(const std::string& pMessage): mMessage(pMessage) {}
+
+                const std::string &getMessage() const {
+                    return mMessage;
                 }
-            }
 
-            ParameterList& operator += (ParameterList& pList, const TypedIdentifierNode& pTypedIdentifier) {
-                pList.push_back(pTypedIdentifier);
-                return pList;
-            }
-
+            };
         }
     }
 }
+#endif //STRIBOH_IDL_AST_ERROR_NODE_HPP

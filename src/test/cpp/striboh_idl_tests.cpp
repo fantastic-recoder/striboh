@@ -389,14 +389,9 @@ using namespace striboh::idl;
 using striboh::base::exceptions::FileNotFound;
 using std::endl;
 using std::string;
-
+using striboh::idl::ast::EBuildinTypes;
 
 namespace {
-    static const char *K_TST_IDL_MOD00 = R"K_TST_IDL(
-module myFirstModule {
-};
-)K_TST_IDL";
-
     static const char *K_TST_IDL_MOD01 = R"K_TST_IDL(
 module m0 {
    module m1 {
@@ -408,9 +403,17 @@ module m0 {
 
 
     void printErrors(const ast::RootNode &myIdlAst) {
-        for (int myCnt = 0; myCnt < myIdlAst.getErrors().size(); myCnt++) {
-            BOOST_LOG_TRIVIAL(error) << myIdlAst.getErrors()[myCnt];
+        const unsigned long myErrorCount = myIdlAst.getErrors().size();
+        string myConcateatedErrors;
+        for (int myCnt = 0; myCnt < myErrorCount; myCnt++) {
+            string myErrorTxt(myIdlAst.getErrors()[myCnt]);
+            myConcateatedErrors += myErrorTxt;
+            if(myCnt>0) {
+                myConcateatedErrors += "; ";
+            }
+            BOOST_LOG_TRIVIAL(error) << myErrorTxt;
         }
+        EXPECT_EQ(0,myErrorCount) << "There are IDL parsing errors:[ " << myConcateatedErrors << " ].";
     }
 
     static striboh::base::LogBoostImpl theLog;
@@ -420,9 +423,17 @@ module m0 {
     }
 }
 
+TEST(stribohIdlTests, testInvalid) {
+    Includes myIncludes;
+    auto myIdlAst = parseIdlStr(myIncludes, " Wahnsinn! ");
+    EXPECT_EQ(1, myIdlAst.getErrors().size()) << "Parsed successfully wrong IDL!";
+    myIdlAst = parseIdlStr(myIncludes, " module myFirstModule { }};");
+    EXPECT_EQ(1, myIdlAst.getErrors().size()) << "Parsed successfully wrong module!";
+}
+
 TEST(stribohIdlTests, testModule) {
     Includes myIncludes;
-    auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_MOD00);
+    auto myIdlAst = parseIdlStr(myIncludes, " module myFirstModule { interface Test{ string hello(); }; };");
     printErrors(myIdlAst);
     EXPECT_EQ(0, myIdlAst.getErrors().size());
     ASSERT_EQ(1, myIdlAst.getModules().size());
@@ -448,6 +459,7 @@ TEST(stribohIdlTests, testNestedModules) {
 namespace {
     static const char *K_TST_IDL_MOD02 = R"K_TST_IDL(
 module m001 {
+ interface I001 { string echo(); };
 };
 
 module m002 {
@@ -487,9 +499,7 @@ module mod0 {
    };
 };
 )K_TST_IDL";
-
 }
-
 TEST(stribohIdlTests, testHelloWorldInterface) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_INT00);
@@ -511,6 +521,63 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
 
     const auto myMethod1 = myHelloWorldIFace.getMethods()[0];
     EXPECT_EQ(string("echo"), myMethod1.getMethodName());
+}
+
+namespace {
+    static const char *K_TST_IDL_INT01 = R"K_TST_IDL(
+module mod02 {
+        module mod12 {
+            interface HelloWorld2Times {
+                    string echo( string p0 );
+                    void shutdown();
+            };
+        };
+};
+)K_TST_IDL";
+}
+TEST(stribohIdlTests, test2MethodInterface) {
+    Includes myIncludes;
+    auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_INT01);
+    printErrors(myIdlAst);
+    EXPECT_EQ(0, myIdlAst.getErrors().size());
+    unsigned const long mySize = myIdlAst.getModules().size();
+    ASSERT_EQ(1, mySize);
+
+    const ast::ModuleNode &myM0ModuleNode = myIdlAst.getModules()[0];
+    EXPECT_EQ(string("mod02"), myM0ModuleNode.getIdentifierStr());
+    EXPECT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
+
+    const ast::ModuleNode &myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
+    EXPECT_EQ(string("mod12"), myM1ModuleNode.getIdentifierStr());
+    EXPECT_EQ(1UL, myM1ModuleNode.getModuleBody().getInterfaces().size());
+    const ast::InterfaceNode &myHelloWorldIFace = myM1ModuleNode.getModuleBody().getInterfaces()[0];
+    EXPECT_EQ(string("HelloWorld2Times"), myHelloWorldIFace.getIdentifierStr());
+    ASSERT_EQ(2UL, myHelloWorldIFace.getMethods().size());
+
+    const auto myMethod1 = myHelloWorldIFace.getMethods()[0];
+    ASSERT_EQ(2,myMethod1.size()) << "Method parameter list parsing is wrong.";
+    EXPECT_EQ(string("echo"), myMethod1.getMethodName());
+    EXPECT_EQ( string("p0"), myMethod1[1].getName());
+    EXPECT_EQ( EBuildinTypes::STRING, myMethod1[1].getType());
+    const auto myMethod2 = myHelloWorldIFace.getMethods()[1];
+    EXPECT_EQ(string("shutdown"), myMethod2.getMethodName());
+}
+
+namespace {
+    static const char *K_TST_IDL_INT02 = R"K_TST_IDL(
+module mod02 {
+        module mod12 {
+            interface HelloWorldUnknownType {
+                    unknown_type_01 echo( string p0 );
+            };
+        };
+};
+)K_TST_IDL";
+}
+TEST(stribohIdlTests, testUnknownType) {
+    Includes myIncludes;
+    auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_INT02);
+    EXPECT_EQ(1, myIdlAst.getErrors().size());
 }
 
 TEST(stribohIdlTests, testChaiscriptBasics) {
