@@ -395,13 +395,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <filesystem>
 
-#include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_fusion.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/spirit/include/qi_eol.hpp>
 #include <boost/spirit/include/support_line_pos_iterator.hpp>
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/foreach.hpp>
@@ -417,7 +416,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <algorithm>
 #include <fstream>
 #include <array>
-#include <algorithm>
 
 namespace striboh {
     namespace idl {
@@ -512,7 +510,7 @@ namespace striboh {
 
                 importList = *import[_val += _1];
 
-                type %= (
+                type = (
                         lit("string")[_val = ast::EBuildinTypes::STRING]
                         |
                         lit("int")[_val = ast::EBuildinTypes::INT]
@@ -576,6 +574,7 @@ namespace striboh {
             qi::rule<Iterator, ast::InterfaceListNode(), ascii::space_type> interfaceList;
             qi::rule<Iterator, ast::InterfaceNode(), ascii::space_type> interface;
             qi::rule<Iterator, ast::ParameterList(),ascii::space_type> methodParameters;
+            qi::rule<Iterator, ascii::space_type> unknownType;
         }; // end IdlGrammar
 
         std::string readFile(const Includes &pIncludes, const fs::path &pInputFile, ast::RootNode &pIdlDoc) {
