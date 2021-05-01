@@ -397,15 +397,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseEMessageType.hpp"
 #include "stribohBaseEMessageParsingError.hpp"
 #include "stribohBaseLogIface.hpp"
+#include "stribohBaseObject.hpp"
 
 namespace striboh::base {
 
     using Json = nlohmann::json;
-
-    class Object {
-    public:
-        ~Object() = default;
-    };
 
     using ValueVariant = std::variant
             <

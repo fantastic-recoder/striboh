@@ -390,8 +390,12 @@ namespace striboh {
     namespace base {
 
         LogIface &getLog();
+        struct EchoServantObject : public Object {
+
+        } theDummyServantObject;
 
         Interface theEchoServerInterface{
+                theDummyServantObject,
                 {"m0", "m1"}, InterfaceName{"Hello"},
                 {
                         Method{"echo",

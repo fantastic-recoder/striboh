@@ -377,10 +377,58 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "Echo.hpp"
+#include <striboh/stribohBaseLogBoostImpl.hpp>
+//#include "Echo.hpp"
+
+#include <string>
+#include <striboh/stribohBaseInterface.hpp>
+#include <striboh/stribohBaseEMessageType.hpp>
+#include <striboh/stribohBaseParameterList.hpp>
+#include <striboh/stribohBaseBroker.hpp>
 
 namespace striboh_generated_echo_server {
+    class Test : public striboh::base::Object {
 
+        std::string doEcho(const std::string &p0) {
+            std::string myWhom(std::string("Server greats ") + p0 + "!");
+            std::cout << myWhom << std::endl;
+            return myWhom;
+        }
+
+        striboh::base::Interface mInterface{
+                *this,
+                {"m0", "m1"}, striboh::base::InterfaceName{"Hello"},
+                {
+                        striboh::base::Method{"echo",
+                                              striboh::base::ParameterDescriptionList{
+                                                      {striboh::base::ParameterDescription{
+                                                              striboh::base::EDirection::K_IN,
+                                                              striboh::base::ETypes::K_STRING, "p0"}}
+                                              },
+                                              [this](const striboh::base::Message &pIncoming,
+                                                     striboh::base::Context pCtx) {
+                                                  return striboh::base::Message(striboh::base::Value{
+                                                                                        doEcho(pIncoming.getParameters()[0].getValue().get<std::string>())},
+                                                                                getLog());
+                                              },
+                                              getLog()
+                        },
+                        striboh::base::Method{"shutdown",
+                                              striboh::base::ParameterDescriptionList{},
+                                              [this](const striboh::base::Message &pIncoming,
+                                                     striboh::base::Context pCtx) {
+                                                  pCtx.getBroker().shutdown();
+                                                  return striboh::base::Message(striboh::base::Value{}, getLog());
+                                              },
+                                              getLog()
+                        }
+                }
+        };
+
+        Test() {
+
+        }
+    };
 }
 
 int main() {

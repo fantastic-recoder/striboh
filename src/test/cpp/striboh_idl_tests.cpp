@@ -401,7 +401,6 @@ module m0 {
 };
 )K_TST_IDL";
 
-
     void printErrors(const ast::RootNode &myIdlAst) {
         const unsigned long myErrorCount = myIdlAst.getErrors().size();
         string myConcateatedErrors;

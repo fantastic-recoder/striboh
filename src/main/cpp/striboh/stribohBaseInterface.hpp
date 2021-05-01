@@ -387,6 +387,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <NamedType/named_type.hpp>
 
 #include "stribohBaseMethod.hpp"
+#include "stribohBaseObject.hpp"
 
 namespace striboh::base {
 
@@ -407,6 +408,7 @@ namespace striboh::base {
 
         explicit Interface
                 (
+                        Object& pObject,
                         std::initializer_list<std::string> pPath,
                         InterfaceName pName,
                         std::initializer_list<Method>
@@ -427,10 +429,13 @@ namespace striboh::base {
         }
 
 
+        Object &getObject();
+
     private:
         Methods_t mMethods;
         Path_t mPath;
         InterfaceName mName;
+        Object& mObject;
     };
 
     static const constexpr char *const K_TAG_SVC = "svc";

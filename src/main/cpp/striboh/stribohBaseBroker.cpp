@@ -475,7 +475,7 @@ namespace striboh::base {
         if (myInterfaceIt != mInstances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
-                return myMethodIt->invoke(pValues, Context(*this));
+                return myMethodIt->invoke(myInterfaceIt->second.getObject(), pValues, Context(*this));
             }
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));

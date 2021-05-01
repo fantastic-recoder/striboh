@@ -376,59 +376,16 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_METHOD_HPP
-#define STRIBOH_BASE_METHOD_HPP
 
-#include <string>
-
-#include "stribohBaseEMessageType.hpp"
-#include "stribohBaseMessage.hpp"
-#include "stribohBaseParameterList.hpp"
 #include "stribohBaseObject.hpp"
+#include "stribohBaseLogBoostImpl.hpp"
 
 namespace striboh::base {
 
-    class Broker;
+    static striboh::base::LogBoostImpl theLog;
 
-    class Context {
-    public:
-        Context(Broker &pBroker) : mBroker(pBroker) {}
-
-        Broker &getBroker() { return mBroker; }
-
-        const Broker &getBroker() const { return mBroker; }
-
-    private:
-        Broker &mBroker;
-    };
-
-    class Message;
-
-    class Method {
-    public:
-        //typedef Message(Object::*MethodGlue_t)(const Message &, Context);
-        using MethodGlue_t = std::function<Message(const striboh::base::Message&, striboh::base::Context)>;
-
-        explicit Method(std::string pName, ParameterDescriptionList pParameters, MethodGlue_t pImplementation, LogIface& pLog)
-                : mName(pName), mImplementation(pImplementation), mLog(pLog) {}
-
-        const std::string &getName() const {
-            return mName;
-        }
-
-        Message invoke(Object& pObject, const Message &pIns, Context pCtx) {
-            if (mImplementation)
-                return mImplementation(pIns, pCtx);
-            return Message(Value(),mLog);
-        }
-
-    private:
-        const std::string /*-*/ mName;
-        MethodGlue_t /*------*/ mImplementation;
-        LogIface& /*---------*/ mLog;
-    };
+    LogIface& Object::getLog() {
+        return theLog;
+    }
 
 }
-
-
-#endif //STRIBOH_BASE_METHOD_HPP

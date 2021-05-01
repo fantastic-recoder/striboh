@@ -526,6 +526,7 @@ TEST(stribohBaseTests, testUuidGeneration) {
 
 Interface createTestInterface() {
     return Interface{
+            theDummyServantObject,
             {"m0", "m1"}, InterfaceName("Hello"),
             {
                     Method{"echo",
@@ -606,6 +607,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     aBroker.serve();
 
     Interface myInterface{
+            theDummyServantObject,
             {"m0"}, InterfaceName{"Hello"},
             {
                     Method{"echo",
@@ -624,12 +626,12 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             }
     };
     InstanceId myUuid = aBroker.addServant(myInterface);
-    Message myMsg("echo", {{"p0", "Peter!"}},getLog());
+    Message myMsg("echo", {{"p0", "Peter!"}}, getLog());
     BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.asJsonString();
     myMsg.setInstanceId(myUuid);
     Message myReply = aBroker.invokeMethod(std::forward<Message &&>(myMsg));
-    EXPECT_EQ(0,myReply.getParameters().size()) << "Parameter list should be empty on return message!";
-    EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
+    EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list should be empty on return message!";
+    EXPECT_EQ(EMessageType::K_RETURN, myReply.getType());
     EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
     aBroker.shutdown();
 }
@@ -640,8 +642,7 @@ TEST(stribohBaseTests, testSerailization) {
     Message myInputValues("testMethod",
                           {{"p0", "Echo string."},
                            {"p1", 42L},
-                           {"p2", "end."}}
-                           ,getLog());
+                           {"p2", "end."}}, getLog());
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
     EXPECT_EQ(myIId, myInputValues.getInstanceId());
@@ -697,7 +698,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         Message myReply = myResult0->getReturnValue();
         EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list is empty, should have 1 element!";
         EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
-        EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
+        EXPECT_EQ(EMessageType::K_RETURN, myReply.getType());
     }
     {
         auto myResult2 = myProxy
@@ -705,14 +706,14 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         Message myReply2 = myResult2->getReturnValue();
         EXPECT_EQ(0, myReply2.getParameters().size()) << "Parameter list is empty, should have 1 element!";
         EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getReturn().get<std::string>());
-        EXPECT_EQ(EMessageType::K_RETURN,myReply2.getType());
+        EXPECT_EQ(EMessageType::K_RETURN, myReply2.getType());
     }
     {
         auto myResult1 = myProxy
                 ->invokeMethod(Message("shutdown", {}, getLog()));
         Message myReply1 = myResult1->getReturnValue();
         EXPECT_EQ(0, myReply1.getParameters().size());
-        EXPECT_EQ(EMessageType::K_RETURN,myReply1.getType());
+        EXPECT_EQ(EMessageType::K_RETURN, myReply1.getType());
     }
     if (myServerChildProcess) {
         myServerChildProcess->wait_for(30s);

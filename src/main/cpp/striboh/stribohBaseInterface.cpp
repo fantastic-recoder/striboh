@@ -383,11 +383,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh::base {
         Interface::Interface
         (
+                Object& pObject,
                 std::initializer_list<std::string> pPath,
                 InterfaceName pName,
                 std::initializer_list<Method> pMethodList
         )
         :
+        mObject(pObject),
         mPath{pPath},
         mName{pName},
         mMethods{pMethodList}
@@ -415,4 +417,8 @@ namespace striboh::base {
             return mPath;
         }
 
+    Object &Interface::getObject() {
+        return mObject;
     }
+
+}
