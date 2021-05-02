@@ -68,6 +68,8 @@ namespace striboh {
                 void visitModules(AstVisitor &pVisitor, const ModuleListNode &pModules) const;
 
                 RootNode& operator += (const ModuleBodyNode& );
+
+                RootNode& operator += (const std::vector<std::string>& );
             };
 
             std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) ;

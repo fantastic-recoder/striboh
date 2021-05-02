@@ -405,7 +405,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
 
 #include <fmt/format.h>
 
@@ -439,6 +438,8 @@ namespace striboh {
         using qi::on_success;
         using qi::fail;
         using qi::error_handler;
+        using qi::attr;
+        using qi::eps;
         using ascii::char_;
         using boost::spirit::get_line;
         using boost::spirit::get_column;
@@ -491,6 +492,7 @@ namespace striboh {
             static void do_annotate(...) { std::cerr << "(not having LocationInfo)\n"; }
         };
 
+
         /**
          * @see http://coliru.stacked-crooked.com/a/b69dcdf4c5a81715
          *
@@ -498,6 +500,8 @@ namespace striboh {
          */
         template<typename Iterator>
         struct IdlGrammar : qi::grammar<Iterator, ast::RootNode(), ascii::space_type> {
+
+            std::vector<std::string> mErrorMessages;
 
             IdlGrammar(Iterator pFirst) : IdlGrammar::base_type(idl),
                                           annotate(pFirst) {
@@ -537,9 +541,14 @@ namespace striboh {
                         >> moduleBody[_val += _1]
                         >> '}' >> ';';
 
-                idl = moduleBody[_val += _1];
+                idl = moduleBody[_val += _1][ _val += mErrorMessages];
 
                 on_error<fail>(idl, handler(_1, _2, _3, _4));
+                on_error<fail>(moduleBody, handler(_1, _2, _3, _4));
+                on_error<fail>(identifier, handler(_1, _2, _3, _4));
+                on_error<fail>(typedIdentifier, handler(_1, _2, _3, _4));
+                on_error<fail>(interface, handler(_1, _2, _3, _4));
+                on_error<fail>(method, handler(_1, _2, _3, _4));
                 on_error<fail>(import, handler(_1, _2, _3, _4));
                 on_error<fail>(module, handler(_1, _2, _3, _4));
                 on_error<fail>(interface, handler(_1, _2, _3, _4));
@@ -547,7 +556,11 @@ namespace striboh {
                 on_error<fail>(type, handler(_1, _2, _3, _4));
 
                 auto set_location_info = annotate(_val, _1, _3);
+                on_success(idl, set_location_info);
+                on_success(moduleBody, set_location_info);
                 on_success(identifier, set_location_info);
+                on_success(typedIdentifier, set_location_info);
+                on_success(interface, set_location_info);
                 on_success(import, set_location_info);
                 on_success(module, set_location_info);
                 on_success(interface, set_location_info);
@@ -649,7 +662,7 @@ namespace striboh {
             mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
             mInterpreter->add(chaiscript::var(this), "theIdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlSetRuns, this), "stribohIdlSetRuns");
-            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlAddGenerated, this), "stribohIdlAddGenerated");
+            mInterpreter->add(chaiscript::fun(&IdlContext::addCode, this), "addCode");
         }
 
         chaiscript::Boxed_Value

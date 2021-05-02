@@ -7,11 +7,11 @@ def stribohIdlServantInit() {
 def stribohIdlServantBeginRun(pRun){
    ++theRunNo;
    if(theRunNo==1) {
-      stribohIdlAddGenerated("#include <string>\n");
-      stribohIdlAddGenerated("#include <striboh/stribohBaseInterface.hpp>\n");
-      stribohIdlAddGenerated("#include <striboh/stribohBaseEMessageType.hpp>\n");
-      stribohIdlAddGenerated("#include <striboh/stribohBaseParameterList.hpp>\n");
-      stribohIdlAddGenerated("\n");
+      addCode("#include <string>\n");
+      addCode("#include <striboh/stribohBaseInterface.hpp>\n");
+      addCode("#include <striboh/stribohBaseEMessageType.hpp>\n");
+      addCode("#include <striboh/stribohBaseParameterList.hpp>\n");
+      addCode("\n");
    }
 }
 
@@ -23,12 +23,25 @@ def concatPrefix(pDepth) {
    return myPrefix;
 }
 
+def concatStringList(pList) {
+   var myRetVal="";
+   for(var ii=0; ii<pList.size(); ++ii){
+      if(ii>0){
+          myRetVal=myRetVal+",";
+      }
+      myRetVal=myRetVal+"\""+pList[ii]+"\"";
+   }
+   return myRetVal;
+}
+
 global theModuleDepth = 0;
+global theModuleNames = [];
 
 def stribohIdlServantBeginModule(pModuleName) {
-   if(theRunNo==2) {
+   if(theRunNo==1) {
        var myPrefix=concatPrefix(theModuleDepth);
-       stribohIdlAddGenerated("${myPrefix}namespace ${pModuleName} {\n\n");
+       addCode("${myPrefix}namespace ${pModuleName} {\n\n");
+       theModuleNames.push_back(pModuleName);
    }
    ++theModuleDepth;
 }
@@ -37,34 +50,34 @@ def stribohIdlServantEndModule(pModuleName) {
    --theModuleDepth;
    if(theRunNo==2) {
        var myPrefix=concatPrefix(theModuleDepth);
-       stribohIdlAddGenerated("\n${myPrefix}}\n");
+       addCode("\n${myPrefix}}\n");
    }
 }
 
-global theCurrentConstructor;
-
-def stribohIdlServantBeginInterface(pName) {
+def stribohIdlServantBeginInterface(pInterfaceName) {
    var myPrefix=concatPrefix(theModuleDepth);
    if(theRunNo==1) {
-       theCurrentConstructor =  "${myPrefix}\t${pName}(){\n";
-       theCurrentConstructor += "${myPrefix}\t\t striboh::base::Interface m${pName}ServerInterface{\n";
+       addCode("${myPrefix}class ${pInterfaceName} : public striboh::base::Object {\n");
    }
    if(theRunNo==2) {
-       stribohIdlAddGenerated("${myPrefix}class ${pName} {\n");
-       stribohIdlAddGenerated("${theCurrentConstructor}\n");
+       var myModuleList = concatStringList(theModuleNames);
+       addCode("${myPrefix}\t striboh::base::Interface mInterface{\n");
+       addCode("${myPrefix}\t\t *this,\n");
+       print("Module list:${myModuleList}");
+       addCode("${myPrefix}\t\t {${myModuleList}},\n");
+       addCode("${myPrefix}\t\t striboh::base::InterfaceName{\"${pInterfaceName}\"},\n");
+       addCode("${myPrefix}\t\t {\n");
    }
    ++theModuleDepth;
 }
 
-def stribohIdlServantEndInterface(pName) {
+def stribohIdlServantEndInterface(pInterfaceName) {
    --theModuleDepth;
    var myPrefix=concatPrefix(theModuleDepth);
-   if(theRunNo==1) {
-       theCurrentConstructor += "${myPrefix}\t\t }; // end striboh::base::Interface the$[pName}ServerInterface\n";
-       theCurrentConstructor += "${myPrefix}\t} // end ${pName}\n";
-   }
    if(theRunNo==2) {
-       stribohIdlAddGenerated("\n${myPrefix}};\n");
+       addCode("${myPrefix}\t\t }\n");
+       addCode("${myPrefix}\t };\n");
+       addCode("\n${myPrefix}};\n");
    }
 }
 
@@ -76,29 +89,47 @@ def stribohTypeToCpp(pStribohType) {
 }
 
 global pParNo = -1;
+global theCurrentMethodCall="";
 
-def stribohIdlServantBeginMethod(pName,pReturnType) {
+def stribohIdlServantBeginMethod(pMethodName,pReturnType) {
    pParNo = 0;
-   if(theRunNo==2) {
-       var myCppType=stribohTypeToCpp(pReturnType);
+   if(theRunNo==1) {
        var myPrefix=concatPrefix(theModuleDepth);
-       stribohIdlAddGenerated("\n${myPrefix}virtual ${myCppType} ${pName}(");
+       var myCppType=stribohTypeToCpp(pReturnType);
+       addCode("\n${myPrefix}virtual ${myCppType} ${pMethodName}(");
+       theCurrentMethodCall="${pMethodName}(";
+   }
+   if(theRunNo==2) {
+       var myPrefix=concatPrefix(theModuleDepth+1);
+       addCode("${myPrefix}\t striboh::base::Method{\"${pMethodName}\",\n");
+       addCode("${myPrefix}\t\t striboh::base::ParameterDescriptionList{\n");
    }
 }
 
-def stribohIdlServantEndMethod(pName) {
+def stribohIdlServantEndMethod(pMethodName) {
+   if(theRunNo==1) {
+      addCode(" ) = 0;\n");
+   }
    if(theRunNo==2) {
-      stribohIdlAddGenerated(" ) = 0;\n");
+      var myPrefix=concatPrefix(theModuleDepth+1);
+      addCode("${myPrefix}\t\t },\n");
+      addCode("${myPrefix}\t\t [this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {\n");
+      addCode("${myPrefix}\t\t\t auto myRetVal=${theCurrentMethodCall}\n");
+      addCode("${myPrefix}\t\t\t \"Bla!\");\n");
+      addCode("${myPrefix}\t\t\t return striboh::base::Message(striboh::base::Value{myRetVal},getLog());\n");
+      addCode("${myPrefix}\t\t },\n");
+      addCode("${myPrefix}\t\t getLog()\n");
+      addCode("${myPrefix}\t }\n");
    }
 }
 
-def stribohIdlServantBeginParameter(pName,pType) {
-   if(theRunNo==2) {
+def stribohIdlServantBeginParameter(pParameterName,pType) {
+   if(theRunNo==1) {
        var myCppType=stribohTypeToCpp(pType);
        if(pParNo==0) {
-          stribohIdlAddGenerated(" const ${myCppType} & ${pName}");
+          addCode(" const ${myCppType} & ${pParameterName}");
        } else {
-          stribohIdlAddGenerated(", const ${myCppType} & ${pName}");
+          addCode(", const ${myCppType} & ${pParameterName}");
        }
    }
    pParNo = pParNo+1;

@@ -378,7 +378,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include <striboh/stribohBaseLogBoostImpl.hpp>
-//#include "Echo.hpp"
+#include "Echo.hpp"
 
 #include <string>
 #include <striboh/stribohBaseInterface.hpp>

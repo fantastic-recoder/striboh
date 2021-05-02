@@ -548,7 +548,7 @@ namespace striboh {
                 mRunCount = pRunCount;
             }
 
-            void stribohIdlAddGenerated(std::string pGenerated) {
+            void addCode(std::string pGenerated) {
                 mGenerated.emplace_back(pGenerated);
             }
 

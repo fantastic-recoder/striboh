@@ -91,6 +91,10 @@ namespace striboh {
                 return *this;
             }
 
+            RootNode &RootNode::operator+=(const vector<std::string> &) {
+                return *this;
+            }
+
 
         }
     } // end idl

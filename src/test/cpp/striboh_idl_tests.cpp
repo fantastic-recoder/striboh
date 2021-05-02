@@ -612,38 +612,38 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     }
 
     def stribohIdlServantBeginRun(pRun){
-       stribohIdlAddGenerated("Run_${pRun}");
+       addCode("Run_${pRun}");
     }
 
     def stribohIdlServantBeginModule(pModuleName) {
-       stribohIdlAddGenerated("MOD_BEGIN_${pModuleName}");
+       addCode("MOD_BEGIN_${pModuleName}");
     }
 
     def stribohIdlServantEndModule(pModuleName) {
-       stribohIdlAddGenerated("MOD_END_${pModuleName}");
+       addCode("MOD_END_${pModuleName}");
     }
 
     def stribohIdlServantBeginInterface(pName) {
-       stribohIdlAddGenerated("INTERFACE_BEGIN_${pName}");
+       addCode("INTERFACE_BEGIN_${pName}");
     }
 
     def stribohIdlServantEndInterface(pName) {
-       stribohIdlAddGenerated("INTERFACE_END_${pName}");
+       addCode("INTERFACE_END_${pName}");
     }
 
     global pParNo = -1;
 
     def stribohIdlServantBeginMethod(pName,pReturnType) {
        pParNo = 0;
-       stribohIdlAddGenerated("METHOD_BEGIN_${pName}:${pReturnType}");
+       addCode("METHOD_BEGIN_${pName}:${pReturnType}");
     }
 
     def stribohIdlServantEndMethod(pName) {
-       stribohIdlAddGenerated("METHOD_END_${pName}");
+       addCode("METHOD_END_${pName}");
     }
 
     def stribohIdlServantBeginParameter(pName,pType) {
-       stribohIdlAddGenerated("PARAMETER_${pParNo}_${pName}:${pType}");
+       addCode("PARAMETER_${pParNo}_${pName}:${pType}");
        pParNo = pParNo+1;
     }
 
