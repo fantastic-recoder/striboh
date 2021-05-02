@@ -554,20 +554,19 @@ namespace striboh {
                 on_error<fail>(interface, handler(_1, _2, _3, _4));
                 on_error<fail>(method, handler(_1, _2, _3, _4));
                 on_error<fail>(type, handler(_1, _2, _3, _4));
-
-                auto set_location_info = annotate(_val, _1, _3);
-                on_success(idl, set_location_info);
+                /*auto set_location_info = annotate(_val, _1, _3);
                 on_success(moduleBody, set_location_info);
                 on_success(identifier, set_location_info);
                 on_success(typedIdentifier, set_location_info);
+                on_success(moduleBody, set_location_info);
                 on_success(interface, set_location_info);
                 on_success(import, set_location_info);
                 on_success(module, set_location_info);
                 on_success(interface, set_location_info);
                 on_success(method, set_location_info);
-                on_success(type, set_location_info);
-                BOOST_SPIRIT_DEBUG_NODES((idl)(import)(type)(identifier)(module)(import))
-
+                on_success(type, set_location_info);*/
+                BOOST_SPIRIT_DEBUG_NODES((idl)(import)(quoted_file_name)(identifier)(module)
+                (method)(type)(typedIdentifier)(importList))
             }
 
             phx::function<error_handler_f> handler;

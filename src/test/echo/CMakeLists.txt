@@ -9,4 +9,4 @@ add_custom_command(
 
 add_executable(striboh_generated_echo_server striboh_generated_echo_server.cpp EchoServant.hpp)
 target_include_directories(striboh_generated_echo_server PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
-target_link_libraries(striboh_generated_echo_server striboh_base_library striboh_idl_library ${STRIBOH_LIBS})
+target_link_libraries(striboh_generated_echo_server striboh_base_library striboh_idl_library pthread ${STRIBOH_LIBS})
