@@ -54,7 +54,10 @@ def stribohIdlServantEndModule(pModuleName) {
    }
 }
 
+global theMethodNo;
+
 def stribohIdlServantBeginInterface(pInterfaceName) {
+   theMethodNo = 0;
    var myPrefix=concatPrefix(theModuleDepth);
    if(theRunNo==1) {
        addCode("${myPrefix}class ${pInterfaceName} : public striboh::base::Object {\n");
@@ -85,24 +88,41 @@ def stribohTypeToCpp(pStribohType) {
     if(pStribohType == "STRING") {
         return "std::string";
     }
+    if(pStribohType == "INT") {
+        return "int64_t";
+    }
     throw (runtime_error("Unknown striboh type ${pStribohType}"));
 }
 
-global pParNo = -1;
-global theCurrentMethodCall="";
+def stribohTypeToTypeName(pStribohType) {
+    if(pStribohType == "STRING") {
+        return "striboh::base::ETypes::K_STRING";
+    }
+    if(pStribohType == "INT") {
+        return "striboh::base::ETypes::K_INT";
+    }
+    throw (runtime_error("Unknown striboh type ${pStribohType}"));
+}
+
+global theParNo = -1;
+global theLambdaParameterList;
 
 def stribohIdlServantBeginMethod(pMethodName,pReturnType) {
-   pParNo = 0;
+   theParNo = 0;
+   theLambdaParameterList = "";
    if(theRunNo==1) {
        var myPrefix=concatPrefix(theModuleDepth);
        var myCppType=stribohTypeToCpp(pReturnType);
        addCode("\n${myPrefix}virtual ${myCppType} ${pMethodName}(");
-       theCurrentMethodCall="${pMethodName}(";
    }
    if(theRunNo==2) {
        var myPrefix=concatPrefix(theModuleDepth+1);
+       if(theMethodNo>0) {
+           addCode("${myPrefix}\t ,\n");
+       }
        addCode("${myPrefix}\t striboh::base::Method{\"${pMethodName}\",\n");
        addCode("${myPrefix}\t\t striboh::base::ParameterDescriptionList{\n");
+       addCode("${myPrefix}\t\t\t {\n");
    }
 }
 
@@ -112,26 +132,38 @@ def stribohIdlServantEndMethod(pMethodName) {
    }
    if(theRunNo==2) {
       var myPrefix=concatPrefix(theModuleDepth+1);
+      addCode("${myPrefix}\t\t\t }\n");
       addCode("${myPrefix}\t\t },\n");
       addCode("${myPrefix}\t\t [this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {\n");
-      addCode("${myPrefix}\t\t\t auto myRetVal=${theCurrentMethodCall}\n");
-      addCode("${myPrefix}\t\t\t \"Bla!\");\n");
+      addCode("${myPrefix}\t\t\t auto myRetVal=${pMethodName}(\n");
+      addCode(theLambdaParameterList);
+      addCode("${myPrefix}\t\t\t );\n");
       addCode("${myPrefix}\t\t\t return striboh::base::Message(striboh::base::Value{myRetVal},getLog());\n");
       addCode("${myPrefix}\t\t },\n");
       addCode("${myPrefix}\t\t getLog()\n");
       addCode("${myPrefix}\t }\n");
    }
+   theMethodNo += 1;
 }
 
 def stribohIdlServantBeginParameter(pParameterName,pType) {
+   var myCppType=stribohTypeToCpp(pType);
    if(theRunNo==1) {
-       var myCppType=stribohTypeToCpp(pType);
-       if(pParNo==0) {
-          addCode(" const ${myCppType} & ${pParameterName}");
-       } else {
-          addCode(", const ${myCppType} & ${pParameterName}");
+       if(theParNo>0) {
+          addCode(",\n");
        }
+      addCode("const ${myCppType} & ${pParameterName}");
    }
-   pParNo = pParNo+1;
+   if(theRunNo==2) {
+       var myPrefix = concatPrefix(theModuleDepth+1);
+       var myParameterTypeName = stribohTypeToTypeName(pType);
+       if(theParNo>0) {
+          theLambdaParameterList += "${myPrefix}\t\t\t ,\n";
+          addCode("${myPrefix}\t\t\t\t\t ,\n");
+       }
+      theLambdaParameterList += "${myPrefix}\t\t\t pIncoming.getParameters()[${theParNo}].getValue().get<${myCppType}>()\n";
+      addCode("${myPrefix}\t\t\t\t\t striboh::base::ParameterDescription{striboh::base::EDirection::K_IN, ${myParameterTypeName}, \"${pParameterName}\"}\n");
+   }
+   theParNo = theParNo+1;
 }
 

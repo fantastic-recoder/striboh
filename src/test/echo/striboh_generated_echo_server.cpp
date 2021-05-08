@@ -399,29 +399,29 @@ namespace striboh_generated_echo_server {
                 *this,
                 {"m0", "m1"}, striboh::base::InterfaceName{"Hello"},
                 {
-                        striboh::base::Method{"echo",
-                                              striboh::base::ParameterDescriptionList{
-                                                      {striboh::base::ParameterDescription{
-                                                              striboh::base::EDirection::K_IN,
-                                                              striboh::base::ETypes::K_STRING, "p0"}}
-                                              },
-                                              [this](const striboh::base::Message &pIncoming,
-                                                     striboh::base::Context pCtx) {
-                                                  return striboh::base::Message(striboh::base::Value{
-                                                                                        doEcho(pIncoming.getParameters()[0].getValue().get<std::string>())},
-                                                                                getLog());
-                                              },
-                                              getLog()
-                        },
-                        striboh::base::Method{"shutdown",
-                                              striboh::base::ParameterDescriptionList{},
-                                              [this](const striboh::base::Message &pIncoming,
-                                                     striboh::base::Context pCtx) {
-                                                  pCtx.getBroker().shutdown();
-                                                  return striboh::base::Message(striboh::base::Value{}, getLog());
-                                              },
-                                              getLog()
-                        }
+                    striboh::base::Method{"echo",
+                      striboh::base::ParameterDescriptionList{
+                              {
+                                      striboh::base::ParameterDescription{striboh::base::EDirection::K_IN,striboh::base::ETypes::K_STRING, "p0"}
+                              }
+                      },
+                      [this](const striboh::base::Message &pIncoming,
+                             striboh::base::Context pCtx) {
+                          return striboh::base::Message(striboh::base::Value{
+                                                                doEcho(pIncoming.getParameters()[0].getValue().get<std::string>())},
+                                                        getLog());
+                      },
+                      getLog()
+                    },
+                    striboh::base::Method{"shutdown",
+                                          striboh::base::ParameterDescriptionList{},
+                                          [this](const striboh::base::Message &pIncoming,
+                                                 striboh::base::Context pCtx) {
+                                              pCtx.getBroker().shutdown();
+                                              return striboh::base::Message(striboh::base::Value{}, getLog());
+                                          },
+                                          getLog()
+                    }
                 }
         };
 
