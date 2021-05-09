@@ -406,6 +406,8 @@ namespace striboh::base {
 
         class Broker : public BrokerIface {
         public:
+            Broker(striboh::base::ServantBase &pServant);
+
             typedef std::map<InstanceId ,Interface> Instances_t;
 
             explicit Broker( LogIface& pLogIface ):
@@ -415,7 +417,7 @@ namespace striboh::base {
             initialize() override;
 
             const std::atomic<EServerState>&
-            serve() override;
+            serveOnce() override;
 
             std::future<void>
             shutdown() override;

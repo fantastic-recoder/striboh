@@ -381,11 +381,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <thread>
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <future>
 
 #include "stribohBaseClient.hpp"
 #include "stribohBaseLogIface.hpp"
+#include "stribohBaseMethod.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseEMessageType.hpp"

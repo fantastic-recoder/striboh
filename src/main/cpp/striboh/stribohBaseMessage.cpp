@@ -400,12 +400,12 @@ namespace msgpack {
         namespace adaptor {
 
             template<>
-            struct pack<striboh::base::Object> {
+            struct pack<striboh::base::ServantBase> {
                 template<typename Stream>
                 msgpack::packer<Stream> &operator()
                         (
                                 msgpack::packer<Stream> &pStream,
-                                striboh::base::Object const &
+                                striboh::base::ServantBase const &
                         )
                 const {
                     // your implementation

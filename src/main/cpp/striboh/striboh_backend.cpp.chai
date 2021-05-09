@@ -8,9 +8,13 @@ def stribohIdlServantBeginRun(pRun){
    ++theRunNo;
    if(theRunNo==1) {
       addCode("#include <string>\n");
-      addCode("#include <striboh/stribohBaseInterface.hpp>\n");
+      addCode("#include <vector>\n");
       addCode("#include <striboh/stribohBaseEMessageType.hpp>\n");
       addCode("#include <striboh/stribohBaseParameterList.hpp>\n");
+      addCode("#include <striboh/stribohBaseMethod.hpp>\n");
+      addCode("#include <striboh/stribohBaseMessage.hpp>\n");
+      addCode("#include <striboh/stribohBaseInterface.hpp>\n");
+      addCode("#include <striboh/stribohBaseServantBase.hpp>\n");
       addCode("\n");
    }
 }
@@ -60,10 +64,14 @@ def stribohIdlServantBeginInterface(pInterfaceName) {
    theMethodNo = 0;
    var myPrefix=concatPrefix(theModuleDepth);
    if(theRunNo==1) {
-       addCode("${myPrefix}class ${pInterfaceName} : public striboh::base::Object {\n");
+       addCode("${myPrefix} class ${pInterfaceName} : public striboh::base::ServantBase {\n");
+       addCode("${myPrefix} public:\n");
    }
    if(theRunNo==2) {
        var myModuleList = concatStringList(theModuleNames);
+       addCode("\n");
+       addCode("${myPrefix}\t virtual striboh::base::Interface& getInterface() override { return mInterface; }\n\n");
+       addCode("${myPrefix} private:\n");
        addCode("${myPrefix}\t striboh::base::Interface mInterface{\n");
        addCode("${myPrefix}\t\t *this,\n");
        print("Module list:${myModuleList}");
@@ -113,7 +121,7 @@ def stribohIdlServantBeginMethod(pMethodName,pReturnType) {
    if(theRunNo==1) {
        var myPrefix=concatPrefix(theModuleDepth);
        var myCppType=stribohTypeToCpp(pReturnType);
-       addCode("\n${myPrefix}virtual ${myCppType} ${pMethodName}(");
+       addCode("\n${myPrefix} virtual ${myCppType} ${pMethodName}(");
    }
    if(theRunNo==2) {
        var myPrefix=concatPrefix(theModuleDepth+1);
@@ -150,7 +158,7 @@ def stribohIdlServantBeginParameter(pParameterName,pType) {
    var myCppType=stribohTypeToCpp(pType);
    if(theRunNo==1) {
        if(theParNo>0) {
-          addCode(",\n");
+          addCode(", ");
        }
       addCode("const ${myCppType} & ${pParameterName}");
    }

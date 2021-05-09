@@ -46,6 +46,7 @@ endif()
 
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
+set(STRIBOH_LIBS boost_log boost_filesystem boost_program_options boost_system boost_thread fmt pthread ${CMAKE_DL_LIBS})
 
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)

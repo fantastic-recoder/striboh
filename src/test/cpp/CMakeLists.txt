@@ -1,8 +1,6 @@
 message(STATUS "STRIBOH_INCLUDE_DIR=${STRIBOH_INCLUDE_DIR}")
 message(STATUS "CONAN_INCLUDE_DIRS_GTEST=${CONAN_INCLUDE_DIRS_GTEST}")
 
-set(STRIBOH_LIBS boost_log boost_filesystem boost_program_options boost_system boost_thread fmt pthread ${CMAKE_DL_LIBS})
-
 add_executable(striboh_idl_tests striboh_idl_tests.cpp)
 target_include_directories(striboh_idl_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
 target_link_libraries(striboh_idl_tests striboh_base_library striboh_idl_library gmock gtest_main gtest ${STRIBOH_LIBS})

@@ -384,9 +384,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseBrokerIface.hpp"
+#include "stribohBaseServantBase.hpp"
+#include "stribohBaseMessage.hpp"
+#include "stribohBaseMethod.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleBodyNode.hpp"
-#include "stribohBaseEMessageType.hpp"
 
 namespace striboh::base {
 
@@ -400,8 +402,12 @@ namespace striboh::base {
 
     using json = ::nlohmann::json;
 
+    Broker::Broker(ServantBase &pServant) : BrokerIface(pServant.getLog()) {
+        this->addServant(pServant.getInterface());
+    }
+
     const std::atomic<EServerState> &
-    Broker::serve() {
+    Broker::serveOnce() {
         if (getState() != EServerState::K_NOMINAL) {
             getLog().warn("ORB is not ready.");
         } else {
@@ -655,4 +661,5 @@ namespace striboh::base {
     Broker::~Broker() {
         doShutdown();
     }
+
 }// namespace striboh

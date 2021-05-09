@@ -377,14 +377,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "stribohBaseObject.hpp"
+#include "stribohBaseServantBase.hpp"
 #include "stribohBaseLogBoostImpl.hpp"
 
 namespace striboh::base {
 
     static striboh::base::LogBoostImpl theLog;
 
-    LogIface& Object::getLog() {
+    LogIface& ServantBase::getLog() {
         return theLog;
     }
 

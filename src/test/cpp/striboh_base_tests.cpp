@@ -465,7 +465,7 @@ TEST(stribohBaseTests, testParseUrlParameters) {
 
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
     Broker aBroker(theLog);
-    aBroker.serve();
+    aBroker.serveOnce();
     aBroker.shutdown();
     ASSERT_EQ(EServerState::K_NOMINAL, aBroker.getState());
 }
@@ -526,7 +526,7 @@ TEST(stribohBaseTests, testUuidGeneration) {
 
 Interface createTestInterface() {
     return Interface{
-            theDummyServantObject,
+            theEchoServant,
             {"m0", "m1"}, InterfaceName("Hello"),
             {
                     Method{"echo",
@@ -604,10 +604,10 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     Broker aBroker(theLog);
-    aBroker.serve();
+    aBroker.serveOnce();
 
     Interface myInterface{
-            theDummyServantObject,
+            theEchoServant,
             {"m0"}, InterfaceName{"Hello"},
             {
                     Method{"echo",

@@ -384,6 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <atomic>
 #include <string>
 #include <future>
+#include <set>
 #include <NamedType/named_type.hpp>
 
 #include "stribohBaseInstanceId.hpp"
@@ -392,6 +393,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseEServerState.hpp"
+#include "stribohBaseMessage.hpp"
 
 namespace striboh::base {
 
@@ -446,7 +448,7 @@ namespace striboh::base {
             initialize() = 0;
 
             virtual const std::atomic<EServerState>&
-            serve() = 0;
+            serveOnce() = 0;
 
             virtual std::future<void>
             shutdown() = 0;

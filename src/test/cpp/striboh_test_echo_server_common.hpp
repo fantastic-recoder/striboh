@@ -390,37 +390,43 @@ namespace striboh {
     namespace base {
 
         LogIface &getLog();
-        struct EchoServantObject : public Object {
 
-        } theDummyServantObject;
+        struct EchoServantObject : public ServantBase {
 
-        Interface theEchoServerInterface{
-                theDummyServantObject,
-                {"m0", "m1"}, InterfaceName{"Hello"},
-                {
-                        Method{"echo",
-                               ParameterDescriptionList{
-                                       {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
-                               },
-                               [](const Message &pIncoming, Context pCtx) {
-                                   std::string myWhom(std::string("Server greats ")+
-                                           pIncoming.getParameters()[0].getValue().get<std::string>() + "!");
-                                   std::cout << myWhom << std::endl;
-                                   return Message(Value{myWhom}, getLog());
-                               },
-                               getLog()
-                        },
-                        Method{"shutdown",
-                               ParameterDescriptionList{},
-                               [](const Message &pIncoming, Context pCtx) {
-                                   pCtx.getBroker().shutdown();
-                                   return Message(Value{}, getLog());
-                               },
-                               getLog()
-                        }
+            Interface mEchoServerInterface {
+                    *this,
+                    {"m0", "m1"}, InterfaceName{"Hello"},
+                    {
+                            Method{"echo",
+                                   ParameterDescriptionList{
+                                           {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
+                                   },
+                                   [this](const Message &pIncoming, Context pCtx) {
+                                       std::string myWhom(std::string("Server greats ") +
+                                                          pIncoming.getParameters()[0].getValue().get<std::string>() +
+                                                          "!");
+                                       std::cout << myWhom << std::endl;
+                                       return Message(Value{myWhom}, getLog());
+                                   },
+                                   getLog()
+                            },
+                            Method{"shutdown",
+                                   ParameterDescriptionList{},
+                                   [this](const Message &pIncoming, Context pCtx) {
+                                       pCtx.getBroker().shutdown();
+                                       return Message(Value{}, getLog());
+                                   },
+                                   getLog()
+                            }
 
-                }
-        };
+                    }
+            };
+
+            Interface& getInterface() override {
+                return mEchoServerInterface;
+            }
+
+        } theEchoServant;
     }
 }
 

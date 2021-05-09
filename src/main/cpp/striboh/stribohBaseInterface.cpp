@@ -379,11 +379,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/log/trivial.hpp>
 
 #include "stribohBaseInterface.hpp"
+#include "stribohBaseMethod.hpp"
 
 namespace striboh::base {
         Interface::Interface
         (
-                Object& pObject,
+                ServantBase& pObject,
                 std::initializer_list<std::string> pPath,
                 InterfaceName pName,
                 std::initializer_list<Method> pMethodList
@@ -417,7 +418,7 @@ namespace striboh::base {
             return mPath;
         }
 
-    Object &Interface::getObject() {
+    ServantBase &Interface::getObject() {
         return mObject;
     }
 

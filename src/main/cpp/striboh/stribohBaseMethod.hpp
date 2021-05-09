@@ -384,7 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseEMessageType.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseParameterList.hpp"
-#include "stribohBaseObject.hpp"
+#include "stribohBaseServantBase.hpp"
 
 namespace striboh::base {
 
@@ -406,7 +406,6 @@ namespace striboh::base {
 
     class Method {
     public:
-        //typedef Message(Object::*MethodGlue_t)(const Message &, Context);
         using MethodGlue_t = std::function<Message(const striboh::base::Message&, striboh::base::Context)>;
 
         explicit Method(std::string pName, ParameterDescriptionList pParameters, MethodGlue_t pImplementation, LogIface& pLog)
@@ -416,7 +415,7 @@ namespace striboh::base {
             return mName;
         }
 
-        Message invoke(Object& pObject, const Message &pIns, Context pCtx) {
+        Message invoke(ServantBase& pObject, const Message &pIns, Context pCtx) {
             if (mImplementation)
                 return mImplementation(pIns, pCtx);
             return Message(Value(),mLog);

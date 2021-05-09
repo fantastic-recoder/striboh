@@ -376,21 +376,29 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_OBJECT_HPP
-#define STRIBOH_BASE_OBJECT_HPP
+#ifndef STRIBOH_BASE_SERVANT_BASE_HPP
+#define STRIBOH_BASE_SERVANT_BASE_HPP
+
+#include "stribohBaseInterface.hpp"
 
 namespace striboh::base {
 
     class LogIface;
+    class Interface;
 
-    class Object {
-        public:
+    /**
+     * Base object for servants.
+     */
+    class ServantBase {
+    public:
 
-            virtual LogIface& getLog();
+        virtual LogIface &getLog();
 
-            ~Object() = default;
+        ~ServantBase() = default;
+
+        virtual Interface &getInterface() = 0;
     };
 
-}
+} // namespace striboh::base
 
-#endif //STRIBOH_BASE_OBJECT_HPP
+#endif //STRIBOH_BASE_SERVANT_BASE_HPP

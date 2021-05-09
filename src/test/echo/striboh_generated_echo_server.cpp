@@ -377,60 +377,34 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <striboh/stribohBaseLogBoostImpl.hpp>
 #include "Echo.hpp"
 
 #include <string>
-#include <striboh/stribohBaseInterface.hpp>
-#include <striboh/stribohBaseEMessageType.hpp>
-#include <striboh/stribohBaseParameterList.hpp>
 #include <striboh/stribohBaseBroker.hpp>
+#include <striboh/stribohBaseBeastServer.hpp>
 
-namespace striboh_generated_echo_server {
-    class Test : public striboh::base::Object {
-
-        std::string doEcho(const std::string &p0) {
-            std::string myWhom(std::string("Server greats ") + p0 + "!");
-            std::cout << myWhom << std::endl;
-            return myWhom;
+namespace generated_echo_test {
+    class EchoServant : public Echo {
+    public:
+        virtual std::string echo(const std::string & pMsg ) override {
+            return "Hello "+pMsg+ "!";
         }
 
-        striboh::base::Interface mInterface{
-                *this,
-                {"m0", "m1"}, striboh::base::InterfaceName{"Hello"},
-                {
-                    striboh::base::Method{"echo",
-                      striboh::base::ParameterDescriptionList{
-                              {
-                                      striboh::base::ParameterDescription{striboh::base::EDirection::K_IN,striboh::base::ETypes::K_STRING, "p0"}
-                              }
-                      },
-                      [this](const striboh::base::Message &pIncoming,
-                             striboh::base::Context pCtx) {
-                          return striboh::base::Message(striboh::base::Value{
-                                                                doEcho(pIncoming.getParameters()[0].getValue().get<std::string>())},
-                                                        getLog());
-                      },
-                      getLog()
-                    },
-                    striboh::base::Method{"shutdown",
-                                          striboh::base::ParameterDescriptionList{},
-                                          [this](const striboh::base::Message &pIncoming,
-                                                 striboh::base::Context pCtx) {
-                                              pCtx.getBroker().shutdown();
-                                              return striboh::base::Message(striboh::base::Value{}, getLog());
-                                          },
-                                          getLog()
-                    }
-                }
-        };
-
-        Test() {
-
+        virtual int64_t add(const int64_t & pA, const int64_t & pB ) override {
+            return pA + pB;
         }
+
     };
 }
 
+using generated_echo_test::EchoServant;
+
 int main() {
+    EchoServant myEchoServant;
+    striboh::base::Broker aBroker(myEchoServant);
+    //aBroker.setServer(std::make_shared<striboh::base::BeastServer>(3,aBroker,myEchoServant.getLog()));
+    for(;aBroker.getState()!=striboh::base::EServerState::K_SHUTTING_DOWN; aBroker.serveOnce()) {
+        ;
+    }
     return 0;
 }
