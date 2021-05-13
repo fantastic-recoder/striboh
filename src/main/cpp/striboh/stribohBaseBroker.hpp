@@ -446,6 +446,8 @@ namespace striboh::base {
 
             virtual ~Broker();
 
+            void serve();
+
         private:
 
             void
@@ -474,6 +476,7 @@ namespace striboh::base {
 
             void doShutdown();
 
+            std::chrono::seconds mStep = std::chrono::seconds(10);
         };
 
     }

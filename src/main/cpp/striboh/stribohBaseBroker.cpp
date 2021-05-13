@@ -387,6 +387,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseServantBase.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseMethod.hpp"
+#include "stribohBaseBeastServer.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleBodyNode.hpp"
 
@@ -660,6 +661,16 @@ namespace striboh::base {
 
     Broker::~Broker() {
         doShutdown();
+    }
+
+    void Broker::serve() {
+        if(!getServer()) {
+            setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
+        }
+        for(;getState()!=striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
+            std::this_thread::sleep_for(mStep);
+            getLog().debug("<-> tick.");
+        }
     }
 
 }// namespace striboh

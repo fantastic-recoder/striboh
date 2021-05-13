@@ -405,9 +405,6 @@ using generated_echo_test::EchoServant;
 int main() {
     EchoServant myEchoServant;
     striboh::base::Broker aBroker(myEchoServant);
-    //aBroker.setServer(std::make_shared<striboh::base::BeastServer>(3,aBroker,myEchoServant.getLog()));
-    for(;aBroker.getState()!=striboh::base::EServerState::K_SHUTTING_DOWN; aBroker.serveOnce()) {
-        ;
-    }
+    aBroker.serve();
     return 0;
 }
