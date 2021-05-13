@@ -2,7 +2,7 @@ set(IdlName Echo)
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/EchoServant.hpp
-        COMMAND ${striboh_BINARY_DIR}/bin/striboh_idl_compiler --backend cpp --servant ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl --output-file ${CMAKE_CURRENT_SOURCE_DIR}/Echo.hpp
+        COMMAND ${striboh_BINARY_DIR}/bin/striboh_idl_compiler --backend cpp --servant ${CMAKE_CURRENT_SOURCE_DIR}/Echo.hpp --client ${CMAKE_CURRENT_SOURCE_DIR}/EchoClt.hpp ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
         DEPENDS ${striboh_BINARY_DIR}/bin/striboh_idl_compiler ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
         COMMENT "Generating code with ${striboh_BINARY_DIR}/bin/striboh_idl_compiler ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl."
 )

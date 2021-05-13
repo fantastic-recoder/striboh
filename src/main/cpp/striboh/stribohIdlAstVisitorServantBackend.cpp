@@ -377,37 +377,66 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "Echo.hpp"
+#include <vector>
 
-#include <string>
-#include <striboh/stribohBaseBroker.hpp>
-#include <striboh/stribohBaseBeastServer.hpp>
+#include <fmt/format.h>
 
-namespace generated_echo_test {
-    class EchoServant : public Echo {
-    public:
-        virtual std::string echo(const std::string &pMsg) override {
-            return "Hello " + pMsg + "!";
-        }
+#include "stribohBaseLogIface.hpp"
+#include "stribohIdlAstVisitorServantBackend.hpp"
+#include "stribohIdlParser.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
 
-        virtual int64_t add(const int64_t &pA, const int64_t &pB) override {
-            return pA + pB;
-        }
+using std::string;
+using fmt::format;
 
-        virtual int64_t shutdown() override {
-            return 0;
-        }
-    };
-}
+namespace striboh::idl {
 
-using generated_echo_test::EchoServant;
-
-int main() {
-    EchoServant myEchoServant;
-    striboh::base::Broker aBroker(myEchoServant);
-    //aBroker.setServer(std::make_shared<striboh::base::BeastServer>(3,aBroker,myEchoServant.getLog()));
-    for(;aBroker.getState()!=striboh::base::EServerState::K_SHUTTING_DOWN; aBroker.serveOnce()) {
-        ;
+    AstVisitorServantBackend::AstVisitorServantBackend
+            (
+                    IdlContext &pIdlCtx,
+                    const chaiscript::Exception_Handler &pExceptionHandler,
+                    const string &pReport
+            ) : mExceptionHandler(pExceptionHandler),
+                mReport(pReport),
+                mIdlCtx(pIdlCtx) {
     }
-    return 0;
+
+    void AstVisitorServantBackend::beginModule(std::string_view pModuleName) {
+        mModuleBeginScript = format("stribohIdlServantBeginModule(\"{}\")", pModuleName);
+        mIdlCtx.getLog().trace("Calling {}", mModuleBeginScript);
+        mIdlCtx.evalChaiscript(mModuleBeginScript, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorServantBackend::endModule(std::string_view pModuleName) {
+        string myChaiBackendCallback = format("stribohIdlServantEndModule(\"{}\")", pModuleName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorServantBackend::beginInterface(std::string_view pInterfaceName) {
+        string myChaiBackendCallback = format("stribohIdlServantBeginInterface(\"{}\")", pInterfaceName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorServantBackend::endInterface(std::string_view pInterfaceName) {
+        string myChaiBackendCallback = format("stribohIdlServantEndInterface(\"{}\")", pInterfaceName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorServantBackend::beginMethod(const ast::TypedIdentifierNode &pMethod) {
+        string myChaiBackendCallback = format("stribohIdlServantBeginMethod(\"{}\",\"{}\")",
+                                              pMethod.getName(), pMethod.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorServantBackend::endMethod(std::string_view pMethodName) {
+        string myChaiBackendCallback = format("stribohIdlServantEndMethod(\"{}\")", pMethodName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorServantBackend::beginParameter(const ast::TypedIdentifierNode &pPar) {
+        string myChaiBackendCallback = format("stribohIdlServantBeginParameter(\"{}\",\"{}\")",
+                                              pPar.getName(), pPar.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
 }

@@ -388,7 +388,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstTypeNode.hpp"
 #include "stribohIdlAstTypedIdentifierNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
-#include "stribohIdlAstVisitorBackend.hpp"
+#include "stribohIdlAstVisitorServantBackend.hpp"
+#include "stribohIdlAstVisitorClientBackend.hpp"
 #include "stribohIdlAstErrorNode.hpp"
 #include "stribohBaseExceptionsFileNotFound.hpp"
 #include "stribohBaseLogIface.hpp"
@@ -524,7 +525,7 @@ namespace striboh {
 
                 typedIdentifier = type >> identifier;
 
-                methodParameters  = typedIdentifier[_val += _1] >> *(',' >> typedIdentifier[_val += _1]) ;
+                methodParameters = typedIdentifier[_val += _1] >> *(',' >> typedIdentifier[_val += _1]);
 
                 method = typedIdentifier[_val += _1] >> '(' >> *methodParameters[_val += _1] >> ')' >> ';';
 
@@ -538,10 +539,10 @@ namespace striboh {
                 moduleBody = moduleList[_val += _1] >> interfaceList[_val += _1];
 
                 module = lit("module") >> identifier[_val += _1] >> '{'
-                        >> moduleBody[_val += _1]
-                        >> '}' >> ';';
+                                       >> moduleBody[_val += _1]
+                                       >> '}' >> ';';
 
-                idl = moduleBody[_val += _1][ _val += mErrorMessages];
+                idl = moduleBody[_val += _1][_val += mErrorMessages];
 
                 on_error<fail>(idl, handler(_1, _2, _3, _4));
                 on_error<fail>(moduleBody, handler(_1, _2, _3, _4));
@@ -554,19 +555,18 @@ namespace striboh {
                 on_error<fail>(interface, handler(_1, _2, _3, _4));
                 on_error<fail>(method, handler(_1, _2, _3, _4));
                 on_error<fail>(type, handler(_1, _2, _3, _4));
-                /*auto set_location_info = annotate(_val, _1, _3);
-                on_success(moduleBody, set_location_info);
+                auto set_location_info = annotate(_val, _1, _3);
                 on_success(identifier, set_location_info);
                 on_success(typedIdentifier, set_location_info);
-                on_success(moduleBody, set_location_info);
                 on_success(interface, set_location_info);
+                on_success(method, set_location_info);
                 on_success(import, set_location_info);
                 on_success(module, set_location_info);
                 on_success(interface, set_location_info);
                 on_success(method, set_location_info);
-                on_success(type, set_location_info);*/
+                on_success(type, set_location_info);
                 BOOST_SPIRIT_DEBUG_NODES((idl)(import)(quoted_file_name)(identifier)(module)
-                (method)(type)(typedIdentifier)(importList))
+                                                 (method)(type)(typedIdentifier)(importList))
             }
 
             phx::function<error_handler_f> handler;
@@ -585,7 +585,7 @@ namespace striboh {
             qi::rule<Iterator, ast::ModuleListNode(), ascii::space_type> moduleList;
             qi::rule<Iterator, ast::InterfaceListNode(), ascii::space_type> interfaceList;
             qi::rule<Iterator, ast::InterfaceNode(), ascii::space_type> interface;
-            qi::rule<Iterator, ast::ParameterList(),ascii::space_type> methodParameters;
+            qi::rule<Iterator, ast::ParameterList(), ascii::space_type> methodParameters;
             qi::rule<Iterator, ascii::space_type> unknownType;
         }; // end IdlGrammar
 
@@ -630,9 +630,9 @@ namespace striboh {
             string::const_iterator myIter = pInputStr.begin();
             string::const_iterator myEnd = pInputStr.end();
             ast::RootNode myIdlDoc;
-            bool isSuccess=doParse(pIncludes, myIter, myEnd, myIdlDoc);
-            if(!isSuccess) {
-                myIdlDoc.getErrors().push_back("Parsing failed near: \""+string(myIter,myEnd)+"\n.");
+            bool isSuccess = doParse(pIncludes, myIter, myEnd, myIdlDoc);
+            if (!isSuccess) {
+                myIdlDoc.getErrors().push_back("Parsing failed near: \"" + string(myIter, myEnd) + "\n.");
             }
             return myIdlDoc;
         }
@@ -671,26 +671,60 @@ namespace striboh {
             return mInterpreter->eval(pInput, pExceptionHandler, pReport);
         }
 
-        IdlGeneratedSnippets
+        IdlGenerated
         IdlContext::generateCode(const Includes &pIncludes,
                                  const EGenerateParts pWhichParts2Generate,
                                  const std::vector<ast::RootNode> &pParsedIdls,
                                  const chaiscript::Exception_Handler &pExceptionHandler,
                                  const string &pReport) noexcept {
-            static const string myInit("\n");
-            IdlGeneratedSnippets myRetVal;
-            std::string myChaiBackendCallback = mBackendScript + "\nstribohIdlServantInit()";
+            IdlGenerated myRetVal;
+            if (pWhichParts2Generate & EGenerateParts::EServant) {
+                myRetVal.mServant=generateServantCode(pParsedIdls, pExceptionHandler, pReport);
+            }
+            if (pWhichParts2Generate & EGenerateParts::EClient) {
+                myRetVal.mClient=generateClientCode(pParsedIdls, pExceptionHandler, pReport);
+            }
+            return myRetVal;
+        }
+
+        static const string K_INIT_STR("\n");
+
+        IdlGeneratedSnippet IdlContext::generateServantCode(const vector <ast::RootNode> &pParsedIdls,
+                                                             const chaiscript::Exception_Handler &pExceptionHandler,
+                                                             const string &pReport) {
+            IdlGeneratedSnippet myRetVal;
+            std::string myChaiServantBackendCallback = mBackendScript + "\nstribohIdlServantInit()";
             for (auto myAstTree: pParsedIdls) {
                 mGenerated.clear();
-                evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
-                AstVisitorBackend myVisitor(*this, pExceptionHandler, pReport);
+                evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
+                AstVisitorServantBackend myVisitor(*this, pExceptionHandler, pReport);
                 for (int myRun = 1; myRun <= mRunCount; myRun++) {
-                    myChaiBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
-                    evalChaiscript(myChaiBackendCallback, pExceptionHandler, pReport);
+                    myChaiServantBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
+                    evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
                     myAstTree.visit(myVisitor);
                 }
-                string mySnippet = std::accumulate(mGenerated.begin(), mGenerated.end(), myInit);
-                myRetVal.emplace_back(IdlGeneratedSnippet(mySnippet));
+                myRetVal.get() += std::accumulate(mGenerated.begin(), mGenerated.end(), K_INIT_STR);
+            }
+            return myRetVal;
+        }
+
+        IdlGeneratedSnippet IdlContext::generateClientCode(const vector <ast::RootNode> &pParsedIdls,
+                                                            const chaiscript::Exception_Handler &pExceptionHandler,
+                                                            const string &pReport) {
+            IdlGeneratedSnippet myRetVal;
+            std::string myChaiClientBackendCallback = mBackendScript + "\nstribohIdlClientInit()";
+            for (auto myAstTree: pParsedIdls) {
+                mGenerated.clear();
+                /*
+                evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
+                AstVisitorClientBackend myVisitor(*this, pExceptionHandler, pReport);
+                for (int myRun = 1; myRun <= mRunCount; myRun++) {
+                    myChaiClientBackendCallback = fmt::format("stribohIdlClientBeginRun({})", myRun);
+                    evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
+                    myAstTree.visit(myVisitor);
+                }
+                myRetVal.get() += std::accumulate(mGenerated.begin(), mGenerated.end(), K_INIT_STR);
+                 */
             }
             return myRetVal;
         }

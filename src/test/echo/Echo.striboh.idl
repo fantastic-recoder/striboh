@@ -2,5 +2,6 @@ module generated_echo_test {
    interface Echo {
        string echo( string pMsg );
        int add( int pA, int pB );
+       int shutdown();
    };
 };

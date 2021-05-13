@@ -377,37 +377,46 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "Echo.hpp"
+#ifndef STRIBOH_IDL_AST_VISITOR_SERVANT_BACKEND_HPP
+#define STRIBOH_IDL_AST_VISITOR_SERVANT_BACKEND_HPP
 
-#include <string>
-#include <striboh/stribohBaseBroker.hpp>
-#include <striboh/stribohBaseBeastServer.hpp>
+#include <chaiscript/chaiscript.hpp>
 
-namespace generated_echo_test {
-    class EchoServant : public Echo {
+#include "stribohIdlAstVisitor.hpp"
+
+namespace striboh::idl {
+
+    class IdlContext;
+
+    class AstVisitorServantBackend : public AstVisitor {
     public:
-        virtual std::string echo(const std::string &pMsg) override {
-            return "Hello " + pMsg + "!";
-        }
+        /// @TODO move pExceptionHandler and pReport to IdlContext
+        AstVisitorServantBackend(IdlContext &pIdlCtx,
+                                 const chaiscript::Exception_Handler &pExceptionHandler,
+                                 const std::string &pReport);
 
-        virtual int64_t add(const int64_t &pA, const int64_t &pB) override {
-            return pA + pB;
-        }
+        ~AstVisitorServantBackend() override = default;
 
-        virtual int64_t shutdown() override {
-            return 0;
-        }
+        void beginModule(std::string_view pModuleName) override;
+
+        void endModule(std::string_view pModuleName) override;
+
+        void beginInterface(std::string_view pInterfaceName) override;
+
+        void endInterface(std::string_view pInterfaceName) override;
+
+        void beginMethod(const ast::TypedIdentifierNode &pMethod) override;
+
+        void endMethod(std::string_view pMethodName) override;
+
+        void beginParameter(const ast::TypedIdentifierNode &pPar) override;
+
+    private:
+
+        IdlContext& mIdlCtx;
+        const chaiscript::Exception_Handler &mExceptionHandler;
+        const std::string &mReport;
+        std::string mModuleBeginScript;
     };
 }
-
-using generated_echo_test::EchoServant;
-
-int main() {
-    EchoServant myEchoServant;
-    striboh::base::Broker aBroker(myEchoServant);
-    //aBroker.setServer(std::make_shared<striboh::base::BeastServer>(3,aBroker,myEchoServant.getLog()));
-    for(;aBroker.getState()!=striboh::base::EServerState::K_SHUTTING_DOWN; aBroker.serveOnce()) {
-        ;
-    }
-    return 0;
-}
+#endif //STRIBOH_IDL_AST_VISITOR_SERVANT_BACKEND_HPP

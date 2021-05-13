@@ -377,46 +377,66 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_IDL_AST_VISITOR_BACKEND_HPP
-#define STRIBOH_IDL_AST_VISITOR_BACKEND_HPP
+#include <vector>
 
-#include <chaiscript/chaiscript.hpp>
+#include <fmt/format.h>
 
-#include "stribohIdlAstVisitor.hpp"
+#include "stribohBaseLogIface.hpp"
+#include "stribohIdlAstVisitorClientBackend.hpp"
+#include "stribohIdlParser.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
+
+using std::string;
+using fmt::format;
 
 namespace striboh::idl {
 
-    class IdlContext;
+    AstVisitorClientBackend::AstVisitorClientBackend
+            (
+                    IdlContext &pIdlCtx,
+                    const chaiscript::Exception_Handler &pExceptionHandler,
+                    const string &pReport
+            ) : mExceptionHandler(pExceptionHandler),
+                mReport(pReport),
+                mIdlCtx(pIdlCtx) {
+    }
 
-    class AstVisitorBackend : public AstVisitor {
-    public:
-        /// @TODO move pExceptionHandler and pReport to IdlContext
-        AstVisitorBackend(IdlContext &pIdlCtx,
-                          const chaiscript::Exception_Handler &pExceptionHandler,
-                          const std::string &pReport);
+    void AstVisitorClientBackend::beginModule(std::string_view pModuleName) {
+        mModuleBeginScript = format("stribohIdlClientBeginModule(\"{}\")", pModuleName);
+        mIdlCtx.getLog().trace("Calling {}", mModuleBeginScript);
+        mIdlCtx.evalChaiscript(mModuleBeginScript, mExceptionHandler, mReport);
+    }
 
-        ~AstVisitorBackend() override = default;
+    void AstVisitorClientBackend::endModule(std::string_view pModuleName) {
+        string myChaiBackendCallback = format("stribohIdlClientEndModule(\"{}\")", pModuleName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
-        void beginModule(std::string_view pModuleName) override;
+    void AstVisitorClientBackend::beginInterface(std::string_view pInterfaceName) {
+        string myChaiBackendCallback = format("stribohIdlClientBeginInterface(\"{}\")", pInterfaceName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
-        void endModule(std::string_view pModuleName) override;
+    void AstVisitorClientBackend::endInterface(std::string_view pInterfaceName) {
+        string myChaiBackendCallback = format("stribohIdlClientEndInterface(\"{}\")", pInterfaceName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
-        void beginInterface(std::string_view pInterfaceName) override;
+    void AstVisitorClientBackend::beginMethod(const ast::TypedIdentifierNode &pMethod) {
+        string myChaiBackendCallback = format("stribohIdlClientBeginMethod(\"{}\",\"{}\")",
+                                              pMethod.getName(), pMethod.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
-        void endInterface(std::string_view pInterfaceName) override;
+    void AstVisitorClientBackend::endMethod(std::string_view pMethodName) {
+        string myChaiBackendCallback = format("stribohIdlClientEndMethod(\"{}\")", pMethodName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
-        void beginMethod(const ast::TypedIdentifierNode &pMethod) override;
+    void AstVisitorClientBackend::beginParameter(const ast::TypedIdentifierNode &pPar) {
+        string myChaiBackendCallback = format("stribohIdlClientBeginParameter(\"{}\",\"{}\")",
+                                              pPar.getName(), pPar.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
-        void endMethod(std::string_view pMethodName) override;
-
-        void beginParameter(const ast::TypedIdentifierNode &pPar) override;
-
-    private:
-
-        IdlContext& mIdlCtx;
-        const chaiscript::Exception_Handler &mExceptionHandler;
-        const std::string &mReport;
-        std::string mModuleBeginScript;
-    };
 }
-#endif //STRIBOH_IDL_AST_VISITOR_BACKEND_HPP

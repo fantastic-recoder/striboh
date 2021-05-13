@@ -413,8 +413,11 @@ namespace striboh {
         using Includes = std::vector<std::string>;
         using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
-        using IdlGeneratedSnippet = fluent::NamedType<std::string,struct IdlGeneratedSnippetTag>;
-        using IdlGeneratedSnippets = std::vector<IdlGeneratedSnippet>;
+        using IdlGeneratedSnippet = fluent::NamedType<std::string, struct IdlGeneratedSnippetTag>;
+        struct IdlGenerated {
+            IdlGeneratedSnippet mServant;
+            IdlGeneratedSnippet mClient;
+        };
 
 
         /**
@@ -441,12 +444,16 @@ namespace striboh {
          * EGeneratedParts.EServant generate only servant part
          * EGeneratedParts.EBoth generate both parts.
          */
-        enum class EGenerateParts {
+        enum class EGenerateParts : uint8_t {
             EClient /*   001 */ = 1,
             EServant /*  010 */ = 2,
             EBoth /*     011 */ = 3,
             ENone /*         */ = 0
         };
+
+        inline bool operator & ( const EGenerateParts p0, const EGenerateParts p1 ) {
+            return uint8_t(p0) & uint8_t(p1);
+        }
 
         class IdlContext : public std::enable_shared_from_this<IdlContext> {
         public:
@@ -456,7 +463,7 @@ namespace striboh {
              *
              * @param pCtxName a uniq name for this context.
              */
-            IdlContext(::striboh::base::LogIface& pLog);
+            IdlContext(::striboh::base::LogIface &pLog);
 
             /**
              * Used to exchange infos between Chaiscript and C++
@@ -498,7 +505,7 @@ namespace striboh {
              * @param pReport Chaiscript error report.
              * @return the generated code, pairs filename and code
              */
-            IdlGeneratedSnippets
+            IdlGenerated
             generateCode(const Includes &pIncludes,
                          const EGenerateParts pWhichParts2Generate,
                          const std::vector<ast::RootNode> &pParsedIdls,
@@ -526,21 +533,23 @@ namespace striboh {
              *
              * @return the loaded backend script
              */
-            std::string& loadBackend( std::string_view pBackendName);
+            std::string &loadBackend(std::string_view pBackendName);
 
             /**
              * Sets the backend script content alternative to loadBackend.
              *
              * @param pNewBackend the new content - script to be called by IdlContext::generateCode()
              */
-             void setBackend( std::string_view pNewBackend) {
-                 mBackendScript = pNewBackend;
-             }
+            void setBackend(std::string_view pNewBackend) {
+                mBackendScript = pNewBackend;
+            }
 
             std::vector<std::string> getGeneratedSnippets();
 
-            ::striboh::base::LogIface& getLog() { return mLog; }
-            const ::striboh::base::LogIface& getLog() const { return mLog; }
+            ::striboh::base::LogIface &getLog() { return mLog; }
+
+            const ::striboh::base::LogIface &getLog() const { return mLog; }
+
         private:
             using IdlContextList = std::vector<IdlContextPtr>;
 
@@ -556,10 +565,18 @@ namespace striboh {
             int mRunCount = 1;
             ChaiScriptPtr mInterpreter;
             std::vector<std::string> mGenerated;
-            ::striboh::base::LogIface& mLog;
+            ::striboh::base::LogIface &mLog;
             std::string mBackendScript;
 
             std::string &doLoadBackend(const std::filesystem::path &myFilename);
+
+            IdlGeneratedSnippet generateServantCode(const std::vector<ast::RootNode> &pParsedIdls,
+                                                    const chaiscript::Exception_Handler &pExceptionHandler,
+                                                    const std::string &pReport);
+
+            IdlGeneratedSnippet generateClientCode(const std::vector<ast::RootNode> &pParsedIdls,
+                                                   const chaiscript::Exception_Handler &pExceptionHandler,
+                                                   const std::string &pReport);
         };
 
     }

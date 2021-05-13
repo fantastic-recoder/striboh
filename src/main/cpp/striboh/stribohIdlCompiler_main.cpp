@@ -400,7 +400,7 @@ using striboh::base::LogBoostImpl;
 using striboh::base::LogIface;
 using striboh::base::ELogLevel;
 using striboh::idl::EGenerateParts;
-using striboh::idl::IdlGeneratedSnippets;
+using striboh::idl::IdlGenerated;
 using std::filesystem::current_path;
 using std::filesystem::path;
 
@@ -436,9 +436,7 @@ namespace {
     int parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogBoostImpl &pLog,
                         vector<RootNode> &pParsedInputFiles);
 
-    int dumpGeneratedCode(const IdlGeneratedSnippets &pIdlGenerated, std::ostream &pOutput);
-
-    void setCurrentDirectoryToCompilerDirectory(LogIface& pLog, const char* const pCompileFilename);
+    void setCurrentDirectoryToCompilerDirectory(LogIface &pLog, const char *const pCompileFilename);
 
 } // end anonymous namespace
 
@@ -446,7 +444,7 @@ int main(int pArgc, char *pArgv[]) {
 
     LogBoostImpl aLog;
     // set current directory to executable
-    setCurrentDirectoryToCompilerDirectory(aLog,pArgv[0]);
+    setCurrentDirectoryToCompilerDirectory(aLog, pArgv[0]);
 
     // Declare the supported options.
     po::options_description myOptDesc(fs::basename(pArgv[0]) + string(" options"));
@@ -457,14 +455,13 @@ int main(int pArgc, char *pArgv[]) {
             ("help", "produce help message")
             ("include-path,I", po::value<vector<string>>(), "include directory")
             ("backend,b", po::value<string>(), "language backend")
-            ("servant,s", "Generate server part code, the servants")
-            ("client,c", "Generate client part code")
+            ("servant,s", po::value<string>(), "Generate server part code, the servants into the given file.")
+            ("client,c", po::value<string>(), "Generate client part code into the given output file.")
             ("input-file", po::value<vector<string>>(), "input file")
             ("dump-tree,d", "dump the resulting AST tree.")
             ("verbose,v", po::value<int>(),
              "verbose logging 0..5, 0 - show trace messages, 5 - show error messages")
-            ("stdout,r", "output to standard out")
-            ("output-file,o", po::value<string>(), "output file");
+            ("stdout,r", "output to standard out");
     po::variables_map myVarMap;
     po::store(po::command_line_parser(pArgc, pArgv).options(myOptDesc).positional(myPosOpt).run(), myVarMap);
     po::notify(myVarMap);
@@ -495,8 +492,10 @@ int main(int pArgc, char *pArgv[]) {
     aLog.info("Backend specified:{}.", myBackend);
 
     EGenerateParts myGeneratedParts = EGenerateParts::ENone;
+    std::string myServantFilename, myClientFilename;
     if (myVarMap.count("servant")) {
         myGeneratedParts = EGenerateParts::EServant;
+        myServantFilename = myVarMap["servant"].as<string>();
     }
     if (myVarMap.count("client")) {
         if (myGeneratedParts == EGenerateParts::EServant) {
@@ -504,40 +503,38 @@ int main(int pArgc, char *pArgv[]) {
         } else {
             myGeneratedParts = EGenerateParts::EClient;
         }
+        myClientFilename = myVarMap["client"].as<string>();
     }
     striboh::idl::IdlContext myIdlContext(aLog);
     myIdlContext.loadBackend(myBackend);
 
     chaiscript::Exception_Handler myReport;
     auto myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
-    myRetVal = 0;
     if (myVarMap.count("stdout")) {
-        myRetVal = dumpGeneratedCode(myIdlGenerated, cout);
+        cout << myIdlGenerated.mServant.get() << endl;
+        cout << myIdlGenerated.mClient.get() << endl;
+        cout << endl;
     }
-    if (myRetVal != 0) return myRetVal;
-    if (myVarMap.count("output-file")) {
-        string myOutputFileName(myVarMap["output-file"].as<string>());
-        ofstream myOutput(myOutputFileName.c_str(),std::ios::out);
-        if(!myOutput) {
-            aLog.error("Failed to open \"{}\".", myOutputFileName );
+    if (myGeneratedParts & EGenerateParts::EServant) {
+        ofstream myOutput(myServantFilename.c_str(), std::ios::out);
+        if (!myOutput) {
+            aLog.error("Failed to open \"{}\".", myServantFilename);
             return K_RET_VAL_BAD_OUTPUT;
         }
-        myRetVal = dumpGeneratedCode(myIdlGenerated, myOutput);
+        myOutput << myIdlGenerated.mServant.get() << endl;
+    }
+    if (myGeneratedParts & EGenerateParts::EClient) {
+        ofstream myOutput(myClientFilename.c_str(), std::ios::out);
+        if (!myOutput) {
+            aLog.error("Failed to open \"{}\".", myServantFilename);
+            return K_RET_VAL_BAD_OUTPUT;
+        }
+        myOutput << myIdlGenerated.mClient.get() << endl;
     }
     return myRetVal;
 }
 
 namespace {
-
-    int dumpGeneratedCode(const IdlGeneratedSnippets &pIdlGenerated, std::ostream &pOutput) {
-        if (pOutput.bad()) {
-            return K_RET_VAL_BAD_OUTPUT;
-        }
-        for (auto mySnipped: pIdlGenerated) {
-            pOutput << mySnipped.get() << endl;
-        }
-        return 0;
-    }
 
     int parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogBoostImpl &pLog,
                         vector<RootNode> &pParsedInputFiles) {
@@ -623,7 +620,7 @@ namespace {
         return 0;
     }
 
-    void setCurrentDirectoryToCompilerDirectory(LogIface& pLog, const char* const pCompilerFilename) {
+    void setCurrentDirectoryToCompilerDirectory(LogIface &pLog, const char *const pCompilerFilename) {
         pLog.debug("Old current directory:{}.", current_path().string());
         path myCompilerDir(pCompilerFilename);
         myCompilerDir = myCompilerDir.remove_filename();

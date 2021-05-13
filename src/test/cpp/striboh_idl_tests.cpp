@@ -657,7 +657,7 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     myIdlCtx.setBackend(K_IDL_BACKEND);
     myIdlCtx.generateCode(
             myIncludes,
-            EGenerateParts::EBoth,
+            EGenerateParts::EServant,
             std::vector<ast::RootNode>{aRootNode}
             );
     auto myGeneratedSnippets = myIdlCtx.getGeneratedSnippets();
