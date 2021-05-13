@@ -42,5 +42,6 @@ CMakeLists.txt.user
 /**/*.bak
 /.settings/language.settings.xml
 /src/test/echo/Echo.hpp
+/src/test/echo/EchoClt.hpp
 /cmake-build-debug/_deps/**/*
 /cmake-build-debug/_deps/sml-src/sml.hpp
