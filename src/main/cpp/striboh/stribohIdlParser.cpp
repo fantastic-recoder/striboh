@@ -688,15 +688,19 @@ namespace striboh {
         }
 
         static const string K_INIT_STR("\n");
+        static constexpr const char* K_CALL_SERVANT_INIT = "\nstribohIdlServantInit()";
 
         IdlGeneratedSnippet IdlContext::generateServantCode(const vector <ast::RootNode> &pParsedIdls,
                                                              const chaiscript::Exception_Handler &pExceptionHandler,
                                                              const string &pReport) {
             IdlGeneratedSnippet myRetVal;
-            std::string myChaiServantBackendCallback = mBackendScript + "\nstribohIdlServantInit()";
+            std::string myChaiServantBackendCallback =
+                    (mBackendState == EBackendState::EProcessed)
+                    ? K_CALL_SERVANT_INIT : mBackendScript + K_CALL_SERVANT_INIT;
             for (auto myAstTree: pParsedIdls) {
                 mGenerated.clear();
                 evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
+                mBackendState = EBackendState::EProcessed;
                 AstVisitorServantBackend myVisitor(*this, pExceptionHandler, pReport);
                 for (int myRun = 1; myRun <= mRunCount; myRun++) {
                     myChaiServantBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
@@ -708,15 +712,19 @@ namespace striboh {
             return myRetVal;
         }
 
+        static constexpr const char* K_CALL_CLIENT_INIT = "\nstribohIdlClientInit()";
+
         IdlGeneratedSnippet IdlContext::generateClientCode(const vector <ast::RootNode> &pParsedIdls,
                                                             const chaiscript::Exception_Handler &pExceptionHandler,
                                                             const string &pReport) {
             IdlGeneratedSnippet myRetVal;
-            std::string myChaiClientBackendCallback = mBackendScript + "\nstribohIdlClientInit()";
+            std::string myChaiClientBackendCallback =
+                    (mBackendState == EBackendState::EProcessed)
+                    ? K_CALL_CLIENT_INIT : mBackendScript + K_CALL_CLIENT_INIT;
             for (auto myAstTree: pParsedIdls) {
                 mGenerated.clear();
-                /*
                 evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
+                mBackendState = EBackendState::EProcessed;
                 AstVisitorClientBackend myVisitor(*this, pExceptionHandler, pReport);
                 for (int myRun = 1; myRun <= mRunCount; myRun++) {
                     myChaiClientBackendCallback = fmt::format("stribohIdlClientBeginRun({})", myRun);
@@ -724,7 +732,6 @@ namespace striboh {
                     myAstTree.visit(myVisitor);
                 }
                 myRetVal.get() += std::accumulate(mGenerated.begin(), mGenerated.end(), K_INIT_STR);
-                 */
             }
             return myRetVal;
         }
@@ -739,6 +746,7 @@ namespace striboh {
                 throw myExcept;
             }
             mLog.debug("Going to open backend: {}.", myFilename.c_str());
+            mBackendState = EBackendState::ELoaded;
             return doLoadBackend(myFilename);
         }
 

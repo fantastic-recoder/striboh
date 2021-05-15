@@ -455,6 +455,12 @@ namespace striboh {
             return uint8_t(p0) & uint8_t(p1);
         }
 
+        enum class EBackendState : uint8_t {
+            EInitial /*   */= 0,
+            ELoaded /*    */= 1,
+            EProcessed /* */= 2
+        };
+
         class IdlContext : public std::enable_shared_from_this<IdlContext> {
         public:
 
@@ -567,6 +573,7 @@ namespace striboh {
             std::vector<std::string> mGenerated;
             ::striboh::base::LogIface &mLog;
             std::string mBackendScript;
+            EBackendState mBackendState = EBackendState::EInitial;
 
             std::string &doLoadBackend(const std::filesystem::path &myFilename);
 

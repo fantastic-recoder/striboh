@@ -7,6 +7,7 @@ def stribohIdlServantInit() {
 def stribohIdlServantBeginRun(pRun){
    ++theRunNo;
    if(theRunNo==1) {
+      addCode("#ifndef \n");
       addCode("#include <string>\n");
       addCode("#include <vector>\n");
       addCode("#include <striboh/stribohBaseEMessageType.hpp>\n");
@@ -175,3 +176,39 @@ def stribohIdlServantBeginParameter(pParameterName,pType) {
    theParNo = theParNo+1;
 }
 
+def stribohIdlClientInit() {
+    addCode("#ifndef CLT_HPP\n");
+    addCode("#define CLT_HPP\n");
+}
+
+def stribohIdlClientBeginRun(pRunNo) {
+    addCode("// run no ${pRunNo}");
+}
+
+def stribohIdlClientBeginModule(pModuleName) {
+
+}
+
+def stribohIdlClientEndModule(pModuleName) {
+
+}
+
+def stribohIdlClientBeginInterface(pInterfaceName) {
+
+}
+
+def stribohIdlClientEndInterface(pInterfaceName) {
+
+}
+
+def stribohIdlClientBeginMethod(pMethodName,pReturnType) {
+
+}
+
+def stribohIdlClientEndMethod(pMethodName) {
+
+}
+
+def stribohIdlClientBeginParameter(pParameterName, pParameterType) {
+
+}
