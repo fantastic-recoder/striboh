@@ -406,8 +406,6 @@ namespace striboh::base {
 
         class Broker : public BrokerIface {
         public:
-            Broker(striboh::base::ServantBase &pServant);
-
             typedef std::map<InstanceId ,Interface> Instances_t;
 
             explicit Broker( LogIface& pLogIface ):
@@ -426,7 +424,7 @@ namespace striboh::base {
             invokeMethod(const Message& pInvocation) override;
 
             InstanceId
-            addServant(Interface& pMethodSignature) override;
+            addServant(const Interface& pMethodSignature) override;
 
             ResolvedResult
             resolve(std::string_view pPath ) const override;

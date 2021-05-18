@@ -403,10 +403,6 @@ namespace striboh::base {
 
     using json = ::nlohmann::json;
 
-    Broker::Broker(ServantBase &pServant) : BrokerIface(pServant.getLog()) {
-        this->addServant(pServant.getInterface());
-    }
-
     const std::atomic<EServerState> &
     Broker::serveOnce() {
         if (getState() != EServerState::K_NOMINAL) {
@@ -453,7 +449,7 @@ namespace striboh::base {
     }
 
     void Broker::doShutdown() {
-        EServerState myShutdownStateWas=getState();
+        EServerState myShutdownStateWas = getState();
         setState(EServerState::K_SHUTTING_DOWN);
         getLog().info("Going to shutdown. state = {}", toString(getState()));
         if (myShutdownStateWas != EServerState::K_NOMINAL) {
@@ -474,7 +470,7 @@ namespace striboh::base {
     }
 
     Message
-    Broker::invokeMethod(const Message& pValues) {
+    Broker::invokeMethod(const Message &pValues) {
         const InstanceId aInstanceId(pValues.getInstanceId());
         getLog().debug("Calling instance \"{}\" method \"{}\".",
                        toString(aInstanceId), pValues.getMethodName());
@@ -487,7 +483,7 @@ namespace striboh::base {
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
         }
-        Message myRetVal(Value{},getLog());
+        Message myRetVal(Value{}, getLog());
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
                        pValues.getMethodName(), toString(aInstanceId));
@@ -495,17 +491,23 @@ namespace striboh::base {
     }
 
     InstanceId
-    Broker::addServant(Interface &pInterface) {
+    Broker::addServant(const Interface &pInterface) {
         InstanceId myUuid = generateInstanceId();
-        auto myPair = mInstances.try_emplace(myUuid, pInterface);
+        const auto myPair = mInstances.try_emplace(myUuid, pInterface);
         ModuleListNode *myChildModules = &mRoot.getModules();
         ModuleBodyNode *myModuleBodyNode = nullptr;
         for (string myModuleName : myPair.first->second.getPath()) {
             myModuleBodyNode = addServantModule(myChildModules, myModuleName);
             myChildModules = &myModuleBodyNode->getModules();
         }
-        myModuleBodyNode->getInterfaces().emplace_back(
-                InterfaceNode(IdentifierNode(pInterface.getName().get()), myUuid));
+        if (myModuleBodyNode) {
+            const InterfaceName myInterfaceName(pInterface.getName());
+            myModuleBodyNode->getInterfaces().emplace_back(
+                    InterfaceNode(IdentifierNode(myInterfaceName.get()), myUuid));
+        } else {
+            // TODO make this nicer!
+            throw std::runtime_error("No module");
+        }
         return myUuid;
     }
 
@@ -643,9 +645,9 @@ namespace striboh::base {
     }
 
     std::string
-    Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc) const {
+    Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const {
         json aJson;
-        aJson[K_TAG_SVC][K_TAG_SVC_PATH] =  pPath;
+        aJson[K_TAG_SVC][K_TAG_SVC_PATH] = pPath;
         aJson[K_TAG_SVC][K_TAG_SVC_RESULT] = pSvc.first;
         aJson[K_TAG_SVC][K_TAG_SVC_UUID] = toString(pSvc.second);
         aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR] = pSvc.second.data;
@@ -654,8 +656,8 @@ namespace striboh::base {
 
     ResolvedService
     Broker::resolveServiceFromStr(const std::string &pJson) {
-        json aJson=json::parse(pJson);
-        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], from_json( aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR] ) };
+        json aJson = json::parse(pJson);
+        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], from_json(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR])};
         return mySvc;
     }
 
@@ -664,10 +666,10 @@ namespace striboh::base {
     }
 
     void Broker::serve() {
-        if(!getServer()) {
+        if (!getServer()) {
             setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
         }
-        for(;getState()!=striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
+        for (; getState() != striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
             std::this_thread::sleep_for(mStep);
             getLog().debug("<-> tick.");
         }

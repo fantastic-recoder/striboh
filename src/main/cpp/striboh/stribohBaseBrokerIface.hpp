@@ -457,7 +457,7 @@ namespace striboh::base {
             invokeMethod(const Message& pInvocation) = 0;
 
             virtual InstanceId
-            addServant(Interface& pMethodSignature) = 0;
+            addServant(const Interface& pMethodSignature) = 0;
 
             virtual ResolvedResult
             resolve(std::string_view pPath ) const = 0;

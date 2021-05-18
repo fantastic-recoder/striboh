@@ -671,34 +671,31 @@ namespace striboh {
             return mInterpreter->eval(pInput, pExceptionHandler, pReport);
         }
 
-        IdlGenerated
+        const IdlGenerated&
         IdlContext::generateCode(const Includes &pIncludes,
                                  const EGenerateParts pWhichParts2Generate,
-                                 const std::vector<ast::RootNode> &pParsedIdls,
+                                 const std::vector<ast::RootNode> &pParsed,
                                  const chaiscript::Exception_Handler &pExceptionHandler,
                                  const string &pReport) noexcept {
-            IdlGenerated myRetVal;
             if (pWhichParts2Generate & EGenerateParts::EServant) {
-                myRetVal.mServant=generateServantCode(pParsedIdls, pExceptionHandler, pReport);
+                generateServantCode(pParsed, pExceptionHandler, pReport);
             }
             if (pWhichParts2Generate & EGenerateParts::EClient) {
-                myRetVal.mClient=generateClientCode(pParsedIdls, pExceptionHandler, pReport);
+                generateClientCode(pParsed, pExceptionHandler, pReport);
             }
-            return myRetVal;
+            return mGenerated;
         }
 
         static const string K_INIT_STR("\n");
         static constexpr const char* K_CALL_SERVANT_INIT = "\nstribohIdlServantInit()";
 
-        IdlGeneratedSnippet IdlContext::generateServantCode(const vector <ast::RootNode> &pParsedIdls,
+        void IdlContext::generateServantCode(const vector <ast::RootNode> &pParsed,
                                                              const chaiscript::Exception_Handler &pExceptionHandler,
                                                              const string &pReport) {
-            IdlGeneratedSnippet myRetVal;
             std::string myChaiServantBackendCallback =
                     (mBackendState == EBackendState::EProcessed)
                     ? K_CALL_SERVANT_INIT : mBackendScript + K_CALL_SERVANT_INIT;
-            for (auto myAstTree: pParsedIdls) {
-                mGenerated.clear();
+            for (auto myAstTree: pParsed) {
                 evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
                 AstVisitorServantBackend myVisitor(*this, pExceptionHandler, pReport);
@@ -707,22 +704,18 @@ namespace striboh {
                     evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
                     myAstTree.visit(myVisitor);
                 }
-                myRetVal.get() += std::accumulate(mGenerated.begin(), mGenerated.end(), K_INIT_STR);
             }
-            return myRetVal;
         }
 
         static constexpr const char* K_CALL_CLIENT_INIT = "\nstribohIdlClientInit()";
 
-        IdlGeneratedSnippet IdlContext::generateClientCode(const vector <ast::RootNode> &pParsedIdls,
+        void IdlContext::generateClientCode(const vector <ast::RootNode> &pParsed,
                                                             const chaiscript::Exception_Handler &pExceptionHandler,
                                                             const string &pReport) {
-            IdlGeneratedSnippet myRetVal;
             std::string myChaiClientBackendCallback =
                     (mBackendState == EBackendState::EProcessed)
                     ? K_CALL_CLIENT_INIT : mBackendScript + K_CALL_CLIENT_INIT;
-            for (auto myAstTree: pParsedIdls) {
-                mGenerated.clear();
+            for (auto myAstTree: pParsed) {
                 evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
                 AstVisitorClientBackend myVisitor(*this, pExceptionHandler, pReport);
@@ -731,9 +724,7 @@ namespace striboh {
                     evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
                     myAstTree.visit(myVisitor);
                 }
-                myRetVal.get() += std::accumulate(mGenerated.begin(), mGenerated.end(), K_INIT_STR);
             }
-            return myRetVal;
         }
 
         std::string &
@@ -757,11 +748,6 @@ namespace striboh {
                                   (std::istreambuf_iterator<char>()));
             myScript.close();
             return mBackendScript;
-        }
-
-        vector<std::string>
-        IdlContext::getGeneratedSnippets() {
-            return mGenerated;
         }
 
     } // end namespace idl

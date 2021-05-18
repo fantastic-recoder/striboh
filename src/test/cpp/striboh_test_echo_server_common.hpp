@@ -422,7 +422,7 @@ namespace striboh {
                     }
             };
 
-            Interface& getInterface() override {
+            const Interface& getInterface() const override {
                 return mEchoServerInterface;
             }
 

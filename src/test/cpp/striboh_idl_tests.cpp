@@ -612,42 +612,75 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     }
 
     def stribohIdlServantBeginRun(pRun){
-       addCode("Run_${pRun}");
+       addCode("HelloWorld.hpp","Run_${pRun}\n");
     }
 
     def stribohIdlServantBeginModule(pModuleName) {
-       addCode("MOD_BEGIN_${pModuleName}");
+       addCode("HelloWorld.hpp","MOD_BEGIN_${pModuleName}\n");
     }
 
     def stribohIdlServantEndModule(pModuleName) {
-       addCode("MOD_END_${pModuleName}");
+       addCode("HelloWorld.hpp","MOD_END_${pModuleName}\n");
     }
 
     def stribohIdlServantBeginInterface(pName) {
-       addCode("INTERFACE_BEGIN_${pName}");
+       addCode("HelloWorld.hpp","INTERFACE_BEGIN_${pName}\n");
     }
 
     def stribohIdlServantEndInterface(pName) {
-       addCode("INTERFACE_END_${pName}");
+       addCode("HelloWorld.hpp","INTERFACE_END_${pName}\n");
     }
 
     global pParNo = -1;
 
     def stribohIdlServantBeginMethod(pName,pReturnType) {
        pParNo = 0;
-       addCode("METHOD_BEGIN_${pName}:${pReturnType}");
+       addCode("HelloWorld.hpp","METHOD_BEGIN_${pName}:${pReturnType}\n");
     }
 
     def stribohIdlServantEndMethod(pName) {
-       addCode("METHOD_END_${pName}");
+       addCode("HelloWorld.hpp","METHOD_END_${pName}\n");
     }
 
     def stribohIdlServantBeginParameter(pName,pType) {
-       addCode("PARAMETER_${pParNo}_${pName}:${pType}");
+       addCode("HelloWorld.hpp","PARAMETER_${pParNo}_${pName}:${pType}\n");
        pParNo = pParNo+1;
     }
 
     )K_IDL_COMP_BACK";
+
+    static const char *K_GENERATED =
+R"K_G(Run_1
+MOD_BEGIN_mod0
+MOD_BEGIN_mod1
+INTERFACE_BEGIN_HelloWorld
+METHOD_BEGIN_echo:STRING
+PARAMETER_0_p0:STRING
+METHOD_END_echo
+INTERFACE_END_HelloWorld
+MOD_END_mod1
+MOD_END_mod0
+Run_2
+MOD_BEGIN_mod0
+MOD_BEGIN_mod1
+INTERFACE_BEGIN_HelloWorld
+METHOD_BEGIN_echo:STRING
+PARAMETER_0_p0:STRING
+METHOD_END_echo
+INTERFACE_END_HelloWorld
+MOD_END_mod1
+MOD_END_mod0
+Run_3
+MOD_BEGIN_mod0
+MOD_BEGIN_mod1
+INTERFACE_BEGIN_HelloWorld
+METHOD_BEGIN_echo:STRING
+PARAMETER_0_p0:STRING
+METHOD_END_echo
+INTERFACE_END_HelloWorld
+MOD_END_mod1
+MOD_END_mod0
+)K_G";
 
     Includes myIncludes;
     auto aRootNode = parseIdlStr(myIncludes,K_TST_IDL_INT00);
@@ -661,23 +694,8 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
             std::vector<ast::RootNode>{aRootNode}
             );
     auto myGeneratedSnippets = myIdlCtx.getGeneratedSnippets();
-    ASSERT_EQ(30, myGeneratedSnippets.size());
-    ASSERT_EQ("Run_1", myGeneratedSnippets[0]);
-    ASSERT_EQ("MOD_BEGIN_mod0", myGeneratedSnippets[1]);
-    ASSERT_EQ("MOD_BEGIN_mod1", myGeneratedSnippets[2]);
-    ASSERT_EQ("INTERFACE_BEGIN_HelloWorld", myGeneratedSnippets[3]);
-    ASSERT_EQ("METHOD_BEGIN_echo:STRING", myGeneratedSnippets[4]);
-    ASSERT_EQ("PARAMETER_0_p0:STRING", myGeneratedSnippets[5]);
-    ASSERT_EQ("METHOD_END_echo", myGeneratedSnippets[6]);
-    ASSERT_EQ("INTERFACE_END_HelloWorld", myGeneratedSnippets[7]);
-    ASSERT_EQ("MOD_END_mod1", myGeneratedSnippets[8]);
-    ASSERT_EQ("MOD_END_mod0", myGeneratedSnippets[9]);
-    // run 3 follows
-    ASSERT_EQ("Run_3", myGeneratedSnippets[20]);
-    ASSERT_EQ("MOD_BEGIN_mod0", myGeneratedSnippets[21]);
-    ASSERT_EQ("MOD_BEGIN_mod1", myGeneratedSnippets[22]);
-    ASSERT_EQ("MOD_END_mod1", myGeneratedSnippets[28]);
-    ASSERT_EQ("MOD_END_mod0", myGeneratedSnippets[29]);
+    ASSERT_EQ(1, myGeneratedSnippets.size());
+    ASSERT_EQ(K_GENERATED, myGeneratedSnippets["HelloWorld.hpp"]);
 }
 
 TEST(stribohIdlTests, testNotExistentBackend) {

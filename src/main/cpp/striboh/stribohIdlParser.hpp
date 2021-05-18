@@ -413,12 +413,7 @@ namespace striboh {
         using Includes = std::vector<std::string>;
         using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
-        using IdlGeneratedSnippet = fluent::NamedType<std::string, struct IdlGeneratedSnippetTag>;
-        struct IdlGenerated {
-            IdlGeneratedSnippet mServant;
-            IdlGeneratedSnippet mClient;
-        };
-
+        using IdlGenerated = std::map<std::string, std::string>;
 
         /**
          * Parse the supplied input file.
@@ -445,20 +440,20 @@ namespace striboh {
          * EGeneratedParts.EBoth generate both parts.
          */
         enum class EGenerateParts : uint8_t {
-            EClient /*   001 */ = 1,
-            EServant /*  010 */ = 2,
-            EBoth /*     011 */ = 3,
-            ENone /*         */ = 0
+            EClient /*---001-*/ = 1,
+            EServant /*--010-*/ = 2,
+            EBoth /*-----011-*/ = 3,
+            ENone /*-----000-*/ = 0
         };
 
-        inline bool operator & ( const EGenerateParts p0, const EGenerateParts p1 ) {
+        inline bool operator&(const EGenerateParts p0, const EGenerateParts p1) {
             return uint8_t(p0) & uint8_t(p1);
         }
 
         enum class EBackendState : uint8_t {
-            EInitial /*   */= 0,
-            ELoaded /*    */= 1,
-            EProcessed /* */= 2
+            EInitial /*------*/ = 0,
+            ELoaded /*-------*/ = 1,
+            EProcessed /*----*/ = 2
         };
 
         class IdlContext : public std::enable_shared_from_this<IdlContext> {
@@ -506,15 +501,15 @@ namespace striboh {
              * @param pIncludes the IDL include paths.
              *
              * @param pWhichParts2Generate servant, client or both.
-             * @param pParsedIdls Interface Definition Files the ASTs to be processed/visited.
+             * @param pParsed Interface Definition Files the ASTs to be processed/visited.
              * @param pExceptionHandler Chaiscript exception handler.
              * @param pReport Chaiscript error report.
              * @return the generated code, pairs filename and code
              */
-            IdlGenerated
+            const IdlGenerated &
             generateCode(const Includes &pIncludes,
                          const EGenerateParts pWhichParts2Generate,
-                         const std::vector<ast::RootNode> &pParsedIdls,
+                         const std::vector<ast::RootNode> &pParsed,
                          const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
                          const std::string &pReport = "__EVAL__") noexcept;
 
@@ -550,7 +545,9 @@ namespace striboh {
                 mBackendScript = pNewBackend;
             }
 
-            std::vector<std::string> getGeneratedSnippets();
+            IdlGenerated &getGeneratedSnippets() { return mGenerated; }
+
+            const IdlGenerated &getGeneratedSnippets() const { return mGenerated; }
 
             ::striboh::base::LogIface &getLog() { return mLog; }
 
@@ -563,27 +560,32 @@ namespace striboh {
                 mRunCount = pRunCount;
             }
 
-            void addCode(std::string pGenerated) {
-                mGenerated.emplace_back(pGenerated);
+            const std::string& addCode(const std::string& pFilename, std::string pGenerated) {
+                if (mGenerated.find(pFilename) != mGenerated.end()) {
+                    mGenerated[pFilename] += pGenerated;
+                } else {
+                    mGenerated[pFilename] = pGenerated;
+                }
+                return mGenerated[pFilename];
             }
 
-            bool mIsOk = false;
-            int mRunCount = 1;
-            ChaiScriptPtr mInterpreter;
-            std::vector<std::string> mGenerated;
-            ::striboh::base::LogIface &mLog;
-            std::string mBackendScript;
-            EBackendState mBackendState = EBackendState::EInitial;
+            bool /*-----------------*/ mIsOk /*---------*/ = false;
+            int  /*-----------------*/ mRunCount /*-----*/ = 1;
+            ChaiScriptPtr /*--------*/ mInterpreter /*--*/ ;
+            IdlGenerated /*---------*/ mGenerated /*----*/ ;
+            base::LogIface & /*-----*/ mLog /*----------*/ ;
+            std::string /*----------*/ mBackendScript /**/ ;
+            EBackendState /*--------*/ mBackendState /*-*/ = EBackendState::EInitial;
 
             std::string &doLoadBackend(const std::filesystem::path &myFilename);
 
-            IdlGeneratedSnippet generateServantCode(const std::vector<ast::RootNode> &pParsedIdls,
-                                                    const chaiscript::Exception_Handler &pExceptionHandler,
-                                                    const std::string &pReport);
+            void generateServantCode(const std::vector<ast::RootNode> &pParsed,
+                                     const chaiscript::Exception_Handler &pExceptionHandler,
+                                     const std::string &pReport);
 
-            IdlGeneratedSnippet generateClientCode(const std::vector<ast::RootNode> &pParsedIdls,
-                                                   const chaiscript::Exception_Handler &pExceptionHandler,
-                                                   const std::string &pReport);
+            void generateClientCode(const std::vector<ast::RootNode> &pParsed,
+                                    const chaiscript::Exception_Handler &pExceptionHandler,
+                                    const std::string &pReport);
         };
 
     }

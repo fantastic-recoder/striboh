@@ -396,7 +396,7 @@ namespace striboh::base {
 
         ~ServantBase() = default;
 
-        virtual Interface &getInterface() = 0;
+        virtual const Interface &getInterface() const = 0;
     };
 
 } // namespace striboh::base

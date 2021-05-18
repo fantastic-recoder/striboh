@@ -454,9 +454,10 @@ int main(int pArgc, char *pArgv[]) {
     myOptDesc.add_options()
             ("help", "produce help message")
             ("include-path,I", po::value<vector<string>>(), "include directory")
-            ("backend,b", po::value<string>(), "language backend")
-            ("servant,s", po::value<string>(), "Generate server part code, the servants into the given file.")
-            ("client,c", po::value<string>(), "Generate client part code into the given output file.")
+            ("backend,b", po::value<string>(), "language backend like \"cpp\" for example.")
+            ("out-dir,o", po::value<string>(), "output directory.")
+            ("servant,s", "Generate server part code, the servants into the given file.")
+            ("client,c", "Generate client part code into the given output file.")
             ("input-file", po::value<vector<string>>(), "input file")
             ("dump-tree,d", "dump the resulting AST tree.")
             ("verbose,v", po::value<int>(),
@@ -491,11 +492,14 @@ int main(int pArgc, char *pArgv[]) {
     }
     aLog.info("Backend specified:{}.", myBackend);
 
+    fs::path myOutdir;
+    if (myVarMap.count("out-dir") > 0) {
+        myOutdir = myVarMap["out-dir"].as<string>();
+    }
+
     EGenerateParts myGeneratedParts = EGenerateParts::ENone;
-    std::string myServantFilename, myClientFilename;
     if (myVarMap.count("servant")) {
         myGeneratedParts = EGenerateParts::EServant;
-        myServantFilename = myVarMap["servant"].as<string>();
     }
     if (myVarMap.count("client")) {
         if (myGeneratedParts == EGenerateParts::EServant) {
@@ -503,33 +507,28 @@ int main(int pArgc, char *pArgv[]) {
         } else {
             myGeneratedParts = EGenerateParts::EClient;
         }
-        myClientFilename = myVarMap["client"].as<string>();
     }
     striboh::idl::IdlContext myIdlContext(aLog);
     myIdlContext.loadBackend(myBackend);
 
     chaiscript::Exception_Handler myReport;
-    auto myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
+    const auto& myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
     if (myVarMap.count("stdout")) {
-        cout << myIdlGenerated.mServant.get() << endl;
-        cout << myIdlGenerated.mClient.get() << endl;
-        cout << endl;
+        for( const auto& pMapElement: myIdlGenerated ) {
+            cout << "file: " << pMapElement.first << endl
+            << "*******************************************" << endl
+            << pMapElement.second << endl
+            << "*******************************************" << endl;
+        }
     }
-    if (myGeneratedParts & EGenerateParts::EServant) {
-        ofstream myOutput(myServantFilename.c_str(), std::ios::out);
+    for( const auto& pMapElement: myIdlGenerated ) {
+        fs::path myOutFile = myOutdir / pMapElement.first;
+        ofstream myOutput(myOutFile, std::ios::out);
         if (!myOutput) {
-            aLog.error("Failed to open \"{}\".", myServantFilename);
+            aLog.error("Failed to open \"{}\".", pMapElement.first);
             return K_RET_VAL_BAD_OUTPUT;
         }
-        myOutput << myIdlGenerated.mServant.get() << endl;
-    }
-    if (myGeneratedParts & EGenerateParts::EClient) {
-        ofstream myOutput(myClientFilename.c_str(), std::ios::out);
-        if (!myOutput) {
-            aLog.error("Failed to open \"{}\".", myServantFilename);
-            return K_RET_VAL_BAD_OUTPUT;
-        }
-        myOutput << myIdlGenerated.mClient.get() << endl;
+        myOutput << pMapElement.second << endl;
     }
     return myRetVal;
 }

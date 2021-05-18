@@ -404,7 +404,8 @@ using generated_echo_test::EchoServant;
 
 int main() {
     EchoServant myEchoServant;
-    striboh::base::Broker aBroker(myEchoServant);
+    striboh::base::Broker aBroker(myEchoServant.getLog());
+    aBroker.addServant(myEchoServant.getInterface());
     aBroker.serve();
     return 0;
 }
