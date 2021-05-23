@@ -206,7 +206,8 @@ def stribohIdlServantBeginParameter(pParameterName,pType) {
 }
 
 def stribohIdlClientInit() {
-    theRunNo=0;
+   theRunNo=0;
+   stribohIdlSetRuns(2);// set tree visitor runs
 }
 
 def stribohIdlClientBeginRun(pRunNo) {
@@ -221,27 +222,88 @@ def stribohIdlClientEndModule(pModuleName) {
    theModuleNames.pop_back();
 }
 
+global theMethodMessageCode = [];
+global theMethodCounter = 0;
+
 def stribohIdlClientBeginInterface(pInterfaceName) {
+    theIncludeGuard = "${pInterfaceName}_CLIENT_GUARD_HPP";
+    var myPrefix=concatPrefix(theModuleDepth);
+    theMethodCounter = 0;
     if(theRunNo==1) {
+        theMethodMessageCode.clear();
         theFilename = "${pInterfaceName}Clt.hpp"
-        generateNamespace(pInterfaceName);
     }
+   if(theRunNo==2) {
+        addCode(theFilename,"#ifndef ${theIncludeGuard}\n");
+        addCode(theFilename,"#define ${theIncludeGuard}\n");
+        addCode(theFilename,"#include <string>\n");
+        addCode(theFilename,"#include <vector>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseEMessageType.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseParameterList.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseMethod.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseMessage.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseInterface.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseServantBase.hpp>\n");
+        addCode(theFilename,"\n");
+        generateNamespace(pInterfaceName);
+        addCode(theFilename,"${myPrefix}\t class ${pInterfaceName} {\n");// end class ${pInterfaceName}\n");
+   }
+   ++theModuleDepth;
 }
 
 def stribohIdlClientEndInterface(pInterfaceName) {
-   if(theRunNo==1) {
+   var myPrefix=concatPrefix(theModuleDepth);
+   if(theRunNo==2) {
+        addCode(theFilename,"${myPrefix} };// end class ${pInterfaceName}\n");
         generateNamespaceClosing();
+        addCode(theFilename,"#endif // ${theIncludeGuard}\n");
    }
+   --theModuleDepth;
 }
 
 def stribohIdlClientBeginMethod(pMethodName,pReturnType) {
-
+   var myMethodType = stribohTypeToCpp(pReturnType);
+   var myPrefix=concatPrefix(theModuleDepth);
+   if(theRunNo==1) {
+       theParNo = 0;
+       theMethodMessageCode.push_back("${myPrefix} striboh::base::Message ${pMethodName}Msg(\"${pMethodName}\", {\n");
+   }
+   if(theRunNo==2) {
+       theParNo = 0;
+       addCode(theFilename, "${myPrefix}\t ${myMethodType} ${pMethodName}(");
+   }
 }
 
 def stribohIdlClientEndMethod(pMethodName) {
-
+   var myPrefix=concatPrefix(theModuleDepth);
+   if(theRunNo==1) {
+       theMethodMessageCode[theMethodCounter] += "${myPrefix}\t\t }); // end method message"
+   }
+   if(theRunNo==2) {
+       addCode(theFilename, "){\n");
+       addCode(theFilename, "${myPrefix}\t ${theMethodMessageCode[theMethodCounter]}\n");
+       addCode(theFilename, "${myPrefix}\t } // end method\n");
+   }
+   ++theMethodCounter;
 }
 
 def stribohIdlClientBeginParameter(pParameterName, pParameterType) {
-
+   var myParameterType = stribohTypeToCpp(pParameterType);
+   var myPrefix=concatPrefix(theModuleDepth);
+   if(theRunNo==1) {
+       theMethodMessageCode[theMethodCounter] += "${myPrefix}\t\t\t{ \"${pParameterName}\", ${pParameterName} }";
+       if(theParNo>0) {
+          theMethodMessageCode[theMethodCounter] += "\n";
+       } else  {
+          theMethodMessageCode[theMethodCounter] += ",\n";
+       }
+       ++theParNo;
+   }
+   if(theRunNo==2) {
+       if(theParNo>0) {
+           addCode(theFilename, ", ");
+       }
+       addCode(theFilename, "${myParameterType} ${pParameterName}");
+       ++theParNo;
+   }
 }
