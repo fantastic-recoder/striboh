@@ -407,7 +407,7 @@ namespace striboh::idl {
 
         void beginMethod(const ast::TypedIdentifierNode &pMethod) override;
 
-        void endMethod(std::string_view pMethodName) override;
+        void endMethod(const ast::TypedIdentifierNode &pMethod) override;
 
         void beginParameter(const ast::TypedIdentifierNode &pPar) override;
 

@@ -382,8 +382,20 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 #include <iostream>
 
+#include <striboh/stribohBaseLogBoostImpl.hpp>
+#include <striboh/stribohBaseBroker.hpp>
+
 #include "EchoClt.hpp"
 
-TEST(stribohGeneratedEchoTests, testShutdown) {
+namespace {
+    static striboh::base::LogBoostImpl theLog;
+    striboh::base::Broker theBroker(theLog);
+}
 
+using namespace generated_echo_test;
+
+TEST(stribohGeneratedEchoTests, testShutdown) {
+    EchoProxy myEchoClt(theBroker);
+    auto myAddOp = myEchoClt.add(3,4);
+    EXPECT_EQ(7,myAddOp.getVal());
 }

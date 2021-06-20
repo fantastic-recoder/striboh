@@ -428,8 +428,9 @@ namespace striboh::idl {
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
-    void AstVisitorServantBackend::endMethod(std::string_view pMethodName) {
-        string myChaiBackendCallback = format("stribohIdlServantEndMethod(\"{}\")", pMethodName);
+    void AstVisitorServantBackend::endMethod(const ast::TypedIdentifierNode &pMethod) {
+        string myChaiBackendCallback = format("stribohIdlServantEndMethod(\"{}\",\"{}\")",
+                                              pMethod.getName(), pMethod.getTypeString());
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 

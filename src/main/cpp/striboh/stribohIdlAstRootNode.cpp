@@ -74,7 +74,7 @@ namespace striboh {
                             for( int  myI = 1; myI < myMethod.size(); myI++) {
                                 pVisitor.beginParameter(myMethod[myI]);
                             }
-                            pVisitor.endMethod(myMethod.getMethodName());
+                            pVisitor.endMethod(myMethod[0]);
                         }
                         pVisitor.endInterface(myInterfaceName);
                     }

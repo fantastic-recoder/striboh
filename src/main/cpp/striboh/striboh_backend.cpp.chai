@@ -164,7 +164,7 @@ def stribohIdlServantBeginMethod(pMethodName,pReturnType) {
    }
 }
 
-def stribohIdlServantEndMethod(pMethodName) {
+def stribohIdlServantEndMethod(pMethodName,pMethodType) {
    if(theRunNo==1) {
       addCode(theFilename, " ) = 0;\n");
    }
@@ -225,6 +225,22 @@ def stribohIdlClientEndModule(pModuleName) {
 global theMethodMessageCode = [];
 global theMethodCounter = 0;
 
+def generateModulePath(pModuleNames) {
+    var myModulePath = "";
+    for( var ii=0; ii<theModuleNames.size(); ++ii ) {
+        if( ii == 0 ) {
+            myModulePath += theModuleNames[ii];
+        } else {
+            myModulePath += "/";
+            myModulePath += theModuleNames[ii];
+        }
+    }
+    if(!theModuleNames.empty()) {
+        myModulePath += "/";
+    }
+    return myModulePath;
+}
+
 def stribohIdlClientBeginInterface(pInterfaceName) {
     theIncludeGuard = "${pInterfaceName}_CLIENT_GUARD_HPP";
     var myPrefix=concatPrefix(theModuleDepth);
@@ -243,10 +259,14 @@ def stribohIdlClientBeginInterface(pInterfaceName) {
         addCode(theFilename,"#include <striboh/stribohBaseMethod.hpp>\n");
         addCode(theFilename,"#include <striboh/stribohBaseMessage.hpp>\n");
         addCode(theFilename,"#include <striboh/stribohBaseInterface.hpp>\n");
-        addCode(theFilename,"#include <striboh/stribohBaseServantBase.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseProxyBase.hpp>\n");
+        addCode(theFilename,"#include <striboh/stribohBaseBroker.hpp>\n");
         addCode(theFilename,"\n");
         generateNamespace(pInterfaceName);
-        addCode(theFilename,"${myPrefix}\t class ${pInterfaceName} {\n");// end class ${pInterfaceName}\n");
+        var myModulePath = generateModulePath(theModuleNames);
+        addCode(theFilename,"${myPrefix}\t class ${pInterfaceName}Proxy : public striboh::base::ProxyBase {\n");// starting class ${pInterfaceName}Proxy\n");
+        addCode(theFilename,"${myPrefix}\t public:\n");
+        addCode(theFilename,"${myPrefix}\t\t ${pInterfaceName}Proxy( striboh::base::Broker& pBroker ) : striboh::base::ProxyBase(pBroker,\"${myModulePath}${pInterfaceName}\") {}\n");
    }
    ++theModuleDepth;
 }
@@ -270,18 +290,20 @@ def stribohIdlClientBeginMethod(pMethodName,pReturnType) {
    }
    if(theRunNo==2) {
        theParNo = 0;
-       addCode(theFilename, "${myPrefix}\t ${myMethodType} ${pMethodName}(");
+       addCode(theFilename, "${myPrefix}\t striboh::base::RetValProxy<${myMethodType}> ${pMethodName}(");
    }
 }
 
-def stribohIdlClientEndMethod(pMethodName) {
+def stribohIdlClientEndMethod(pMethodName,pReturnType) {
    var myPrefix=concatPrefix(theModuleDepth);
    if(theRunNo==1) {
-       theMethodMessageCode[theMethodCounter] += "${myPrefix}\t\t }); // end method message"
+       theMethodMessageCode[theMethodCounter] += "\n${myPrefix}\t\t } , getLog() ); // end method message"
    }
    if(theRunNo==2) {
+       var myCppType=stribohTypeToCpp(pReturnType);
        addCode(theFilename, "){\n");
        addCode(theFilename, "${myPrefix}\t ${theMethodMessageCode[theMethodCounter]}\n");
+       addCode(theFilename, "${myPrefix}\t\t return invoke(${pMethodName}Msg, ${myCppType}{} ); // send request\n");
        addCode(theFilename, "${myPrefix}\t } // end method\n");
    }
    ++theMethodCounter;
@@ -291,11 +313,10 @@ def stribohIdlClientBeginParameter(pParameterName, pParameterType) {
    var myParameterType = stribohTypeToCpp(pParameterType);
    var myPrefix=concatPrefix(theModuleDepth);
    if(theRunNo==1) {
-       theMethodMessageCode[theMethodCounter] += "${myPrefix}\t\t\t{ \"${pParameterName}\", ${pParameterName} }";
-       if(theParNo>0) {
-          theMethodMessageCode[theMethodCounter] += "\n";
-       } else  {
-          theMethodMessageCode[theMethodCounter] += ",\n";
+       if(theParNo==0) {
+          theMethodMessageCode[theMethodCounter] += "${myPrefix}\t\t\t{ \"${pParameterName}\", ${pParameterName} }";
+       } else {
+          theMethodMessageCode[theMethodCounter] += ",\n${myPrefix}\t\t\t{ \"${pParameterName}\", ${pParameterName} }";
        }
        ++theParNo;
    }

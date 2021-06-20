@@ -638,7 +638,7 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
        addCode("HelloWorld.hpp","METHOD_BEGIN_${pName}:${pReturnType}\n");
     }
 
-    def stribohIdlServantEndMethod(pName) {
+    def stribohIdlServantEndMethod(pName,pReturnType) {
        addCode("HelloWorld.hpp","METHOD_END_${pName}\n");
     }
 

@@ -394,7 +394,7 @@ namespace striboh::idl {
         virtual void beginInterface( std::string_view pInterfaceName ) = 0;
         virtual void endInterface( std::string_view pInterfaceName ) = 0;
         virtual void beginMethod( const ast::TypedIdentifierNode &pMethod ) = 0;
-        virtual void endMethod( std::string_view pMethodName ) = 0;
+        virtual void endMethod( const ast::TypedIdentifierNode &pMethod ) = 0;
         virtual void beginParameter( const ast::TypedIdentifierNode& pPar ) = 0;
     };
 }
