@@ -405,7 +405,8 @@ using generated_echo_test::EchoServant;
 int main() {
     EchoServant myEchoServant;
     striboh::base::Broker aBroker(myEchoServant.getLog());
-    aBroker.addServant(myEchoServant.getInterface());
+    auto myUiid=aBroker.addServant(myEchoServant.getInterface());
+    aBroker.getLog().debug("EchoServant Uiid = {}.",to_string(myUiid));
     aBroker.serve();
     return 0;
 }

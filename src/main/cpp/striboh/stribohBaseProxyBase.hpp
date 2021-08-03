@@ -382,6 +382,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseMessage.hpp"
+#include "stribohBaseClient.hpp"
 
 namespace striboh::base {
 
@@ -401,13 +402,15 @@ namespace striboh::base {
 
     class ProxyBase {
         LogIface& mLogIface;
-        BrokerIface& mBroker;
         std::string mModulePath;
+        HostConnection mConnection;
+        std::shared_ptr<ObjectProxy> mObjectProxy;
     public:
-        ProxyBase( striboh::base::BrokerIface& pBroker, std::string&& pModulePath )
-        : mBroker(pBroker)
-        , mLogIface(pBroker.getLog())
+        ProxyBase( std::string_view pHost, short pPort, std::string&& pModulePath, LogIface& pIface )
+        : mLogIface(pIface)
         , mModulePath(std::forward<std::string>(pModulePath))
+        , mConnection(pHost,pPort,mLogIface)
+        , mObjectProxy(mConnection.createProxyFor(mModulePath))
         {}
 
         LogIface& getLog() { return mLogIface; }
@@ -415,7 +418,7 @@ namespace striboh::base {
 
         template< class TRetType >
         inline RetValProxy<TRetType> invoke( const Message& pMsg, const TRetType& ) {
-            return RetValProxy<TRetType>(mBroker.invokeMethod(pMsg));
+            return RetValProxy<TRetType>(mObjectProxy->invokeMethod(pMsg));
         }
     };
 }
