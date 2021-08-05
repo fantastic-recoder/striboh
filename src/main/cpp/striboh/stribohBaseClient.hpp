@@ -471,7 +471,9 @@ namespace striboh {
             std::string mBaseUrl;
             InstanceId mUuid;
             std::string mWebSocketUrl;
-            beast::flat_buffer buffer_; // (Must persist between reads)
+            beast::flat_buffer mFlatBuffer; // (Must persist between reads)
+            bool mUpgraded = false;
+            uint8_t mRetryCnt = 13;
         public:
 
             /**
@@ -515,7 +517,7 @@ namespace striboh {
             }
 
             std::shared_ptr<InvocationContext>
-            invokeMethod(Message pValues);
+            invokeMethod(Message&& pValues);
 
         private:
 

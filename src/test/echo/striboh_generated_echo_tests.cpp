@@ -394,8 +394,16 @@ namespace {
 
 using namespace generated_echo_test;
 
-TEST(stribohGeneratedEchoTests, testShutdown) {
-    EchoProxy myEchoClt(theBroker);
+
+TEST(stribohGeneratedEchoTests, testEcho) {
+    EchoProxy myEchoClt(striboh::base::K_DEFAULT_HOST,striboh::base::K_DEFAULT_PORT,theLog);
+    auto myAddOp = myEchoClt.echo("John");
+    auto myRetVal = myAddOp.getVal();
+    EXPECT_EQ("Hello John!",myRetVal);
+}
+
+TEST(stribohGeneratedEchoTests, testAdd) {
+    EchoProxy myEchoClt(striboh::base::K_DEFAULT_HOST,striboh::base::K_DEFAULT_PORT,theLog);
     auto myAddOp = myEchoClt.add(3,4);
     EXPECT_EQ(7,myAddOp.getVal());
 }

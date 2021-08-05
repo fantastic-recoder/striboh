@@ -388,13 +388,16 @@ namespace striboh::base {
 
     template < class TRetType >
     class RetValProxy {
-        Message mReply;
+        std::shared_ptr<InvocationContext> mCtx;
+        bool mInvoked = false;
     public:
-        RetValProxy( Message&& pMsg ) : mReply(std::forward<Message>(pMsg)) {}
+        RetValProxy( std::shared_ptr<InvocationContext>&& pInvocation )
+        : mCtx(std::forward<std::shared_ptr<InvocationContext>>(pInvocation))
+        {}
 
-        /// TODO: make this reference.
         TRetType getVal() {
-            return mReply.getReturn().get<TRetType>();
+            Message myReply(mCtx->getReturnValue());
+            return myReply.getReturn().get<TRetType>();
         }
     };
 
@@ -417,9 +420,10 @@ namespace striboh::base {
         const LogIface& getLog() const { return mLogIface; }
 
         template< class TRetType >
-        inline RetValProxy<TRetType> invoke( const Message& pMsg, const TRetType& ) {
-            return RetValProxy<TRetType>(mObjectProxy->invokeMethod(pMsg));
+        inline RetValProxy<TRetType> invoke( Message&& pMsg, const TRetType& ) {
+            return RetValProxy<TRetType>(mObjectProxy->invokeMethod(std::forward<Message>(pMsg)));
         }
+
     };
 }
 

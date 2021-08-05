@@ -266,7 +266,8 @@ def stribohIdlClientBeginInterface(pInterfaceName) {
         var myModulePath = generateModulePath(theModuleNames);
         addCode(theFilename,"${myPrefix}\t class ${pInterfaceName}Proxy : public striboh::base::ProxyBase {\n");// starting class ${pInterfaceName}Proxy\n");
         addCode(theFilename,"${myPrefix}\t public:\n");
-        addCode(theFilename,"${myPrefix}\t\t ${pInterfaceName}Proxy( striboh::base::Broker& pBroker ) : striboh::base::ProxyBase(pBroker,\"${myModulePath}${pInterfaceName}\") {}\n");
+        addCode(theFilename,"${myPrefix}\t\t ${pInterfaceName}Proxy(  std::string_view pHost, short pPort, striboh::base::LogIface& pLogIface )\n");
+        addCode(theFilename,"${myPrefix}\t\t\t : striboh::base::ProxyBase(pHost, pPort, \"/${myModulePath}${pInterfaceName}\", pLogIface ) {}\n");
    }
    ++theModuleDepth;
 }
@@ -303,7 +304,7 @@ def stribohIdlClientEndMethod(pMethodName,pReturnType) {
        var myCppType=stribohTypeToCpp(pReturnType);
        addCode(theFilename, "){\n");
        addCode(theFilename, "${myPrefix}\t ${theMethodMessageCode[theMethodCounter]}\n");
-       addCode(theFilename, "${myPrefix}\t\t return invoke(${pMethodName}Msg, ${myCppType}{} ); // send request\n");
+       addCode(theFilename, "${myPrefix}\t\t return invoke(std::forward<striboh::base::Message>(${pMethodName}Msg), ${myCppType}{} ); // send request\n");
        addCode(theFilename, "${myPrefix}\t } // end method\n");
    }
    ++theMethodCounter;

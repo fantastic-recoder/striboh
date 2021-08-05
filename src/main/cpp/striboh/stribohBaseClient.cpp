@@ -379,6 +379,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <string>
 #include <thread>
+#include <fmt/format.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
 
@@ -412,15 +413,26 @@ namespace striboh {
          * @return
          */
         std::shared_ptr<InvocationContext>
-        ObjectProxy::invokeMethod(Message pValues)
+        ObjectProxy::invokeMethod(Message&& pValues)
         {
-            pValues.setInstanceId(mUuid);
             if(getConnectionStatus()==EConnectionStatus::K_INITIAL) {
-                mLog.debug("Going to do TCP connect.");
-                doTcpResolveAntConnect();
-                mIoContext.run();
-                mLog.debug("TCP connect returned.");
+                    mLog.debug("Going to do TCP connect.");
+                    doTcpResolveAntConnect();
+                    for(uint8_t pII=0; pII<mRetryCnt; pII++) {
+                        mIoContext.run();
+                        mLog.debug("run returned upgraded={}.",mUpgraded);
+                        if(mUpgraded)
+                            break;
+                    }
+                if(mUpgraded) {
+                    mLog.debug("TCP connect upgraded. UUID={}.", to_string(mUuid));
+                } else {
+                    const string myMsg(fmt::format("Failed to connect to {}:{}.",mClient.getHost(),mClient.getPort()));
+                    mLog.error(myMsg);
+                    throw new std::runtime_error(myMsg);
+                }
             }
+            pValues.setInstanceId(mUuid);
             auto myInvocationContext = std::make_shared<InvocationContext>
                     (*this,mIoContext,pValues,mLog);
             myInvocationContext->startInvocation();
@@ -574,7 +586,7 @@ namespace striboh {
                 return fail(ec, "ObjectProxy::onGetInstanceSend");
             mLog.debug("Write succeeded going to read ...");
             // Receive the HTTP response
-            http::async_read(beast::get_lowest_layer(mWebSocket), buffer_, mResponse,
+            http::async_read(beast::get_lowest_layer(mWebSocket), mFlatBuffer, mResponse,
                              beast::bind_front_handler(
                                      &ObjectProxy::onGetInstanceResponse,
                                      shared_from_this()));
@@ -590,6 +602,7 @@ namespace striboh {
             mLog.debug("Read succeeded going to upgrade ...");
             string myResponse(mResponse.body());
             // Write the message to standard out
+            mLog.debug("Received getInstance response \"{}\"",myResponse);
             ResolvedService mySvc = Broker::resolveServiceFromStr(myResponse);
             mUuid = mySvc.second;
             mLog.debug("Resolved uuid={} from {}.", boost::lexical_cast<string>(mUuid), myResponse);
@@ -617,6 +630,7 @@ namespace striboh {
                 return fail(ec, "ObjectProxy::onUpgradeHandshake");
             mWebSocket.binary(true);
             mLog.debug("ObjectProxy::onUpgradeHandshake ok.");
+            mUpgraded = true;
         }
 
         void
