@@ -642,19 +642,21 @@ TEST(stribohBaseTests, testSerailization) {
     Message myInputValues("testMethod",
                           {{"p0", "Echo string."},
                            {"p1", 42L},
-                           {"p2", "end."}}, getLog());
+                           {"p2", "end."},
+                           {"p3", 13L}}, getLog());
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
     EXPECT_EQ(myIId, myInputValues.getInstanceId());
-    EXPECT_EQ(3, myInputValues.getParameters().size());
+    EXPECT_EQ(4, myInputValues.getParameters().size());
     Buffer myBuff;
     myInputValues.packToBuffer(myBuff);
     Message myOutputValues(getLog());
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
-    EXPECT_EQ(3, myOutputValues.getParameters().size());
+    EXPECT_EQ(4, myOutputValues.getParameters().size());
     EXPECT_EQ("Echo string.", myOutputValues.getParameters()[0].get<string>());
-    EXPECT_EQ(42, myOutputValues.getParameters()[1].getValue().get<uint64_t>());
+    EXPECT_EQ(42L, myOutputValues.getParameters()[1].getValue().get<int64_t>());
     EXPECT_EQ("end.", myOutputValues.getParameters()[2].get<string>());
+    EXPECT_EQ(13L, myOutputValues.getParameters()[3].getValue().get<int64_t>());
     EXPECT_EQ("testMethod", myOutputValues.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
     myOutputValues.setMethodName(K_TEST_METHOD_NAME2);
@@ -769,7 +771,7 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
     EXPECT_EQ("p2", m1.getParameters()[1].getName());
     EXPECT_EQ("Santa Maria", m1.getParameters()[1].getValue().get<std::string>());
     EXPECT_EQ("p1", m1.getParameters()[0].getName());
-    EXPECT_EQ(42L, m1.getParameters()[0].getValue().get<uint64_t>());
+    EXPECT_EQ(42L, m1.getParameters()[0].getValue().get<int64_t>());
     EXPECT_EQ("helloMethod", m1.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, m1.getType());
 }

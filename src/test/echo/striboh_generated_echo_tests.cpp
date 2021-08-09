@@ -397,8 +397,8 @@ using namespace generated_echo_test;
 
 TEST(stribohGeneratedEchoTests, testEcho) {
     EchoProxy myEchoClt(striboh::base::K_DEFAULT_HOST,striboh::base::K_DEFAULT_PORT,theLog);
-    auto myAddOp = myEchoClt.echo("John");
-    auto myRetVal = myAddOp.getVal();
+    auto myEchoOp = myEchoClt.echo("John");
+    auto myRetVal = myEchoOp.getVal();
     EXPECT_EQ("Hello John!",myRetVal);
 }
 

@@ -750,7 +750,7 @@ namespace striboh {
                 if (pErrorCode) {
                     fail(pErrorCode, "onWsRead");
                 }
-                mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
+                mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
                 Message myMsg(mLog);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
@@ -762,7 +762,7 @@ namespace striboh {
             }
 
             void doWriteBufferToWebSocket() {
-                mBroker.getLog().debug("Sending {} bytes.",
+                mBroker.getLog().debug("WS Send {} bytes.",
                                        mWriteBuffer.size());
                 mWebSocketStream->async_write(mWriteBuffer.data(),
                                               beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));

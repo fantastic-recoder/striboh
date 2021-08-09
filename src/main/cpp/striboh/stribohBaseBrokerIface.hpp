@@ -454,7 +454,7 @@ namespace striboh::base {
             shutdown() = 0;
 
             virtual Message
-            invokeMethod(const Message& pInvocation) = 0;
+            invokeMethod(Message&& pInvocation) = 0;
 
             virtual InstanceId
             addServant(const Interface& pMethodSignature) = 0;

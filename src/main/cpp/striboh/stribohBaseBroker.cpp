@@ -470,7 +470,7 @@ namespace striboh::base {
     }
 
     Message
-    Broker::invokeMethod(const Message &pValues) {
+    Broker::invokeMethod(Message &&pValues) {
         const InstanceId aInstanceId(pValues.getInstanceId());
         getLog().debug("Calling instance \"{}\" method \"{}\".",
                        toString(aInstanceId), pValues.getMethodName());
@@ -478,7 +478,13 @@ namespace striboh::base {
         if (myInterfaceIt != mInstances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
-                return myMethodIt->invoke(myInterfaceIt->second.getObject(), pValues, Context(*this));
+                try {
+                    return myMethodIt->invoke(myInterfaceIt->second.getObject(), pValues, Context(*this));
+                } catch (std::exception& pException) {
+                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), pException.what());
+                } catch( ... ) {
+                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), "Unknown exception caught");
+                }
             }
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));

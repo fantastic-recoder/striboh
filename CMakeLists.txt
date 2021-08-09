@@ -3,7 +3,7 @@ project(striboh)
 
 set(CMAKE_CXX_STANDARD 17)
 set(MSGPACK_CXX17 ON)
-add_definitions("-std=c++17")
+add_definitions("-std=c++2a")
 enable_testing()
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)

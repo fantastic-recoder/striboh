@@ -382,19 +382,33 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 #include <striboh/stribohBaseBroker.hpp>
 #include <striboh/stribohBaseBeastServer.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
 
+namespace {
+    static striboh::base::LogBoostImpl theLog;
+}
 namespace generated_echo_test {
+
+    using striboh::base::BrokerIface;
+
     class EchoServant : public Echo {
+        BrokerIface& mBroker;
     public:
+        EchoServant( BrokerIface& pBroker ): mBroker(pBroker) {}
+
         virtual std::string echo(const std::string &pMsg) override {
+            theLog.info("*** Echoing {}.",pMsg);
             return "Hello " + pMsg + "!";
         }
 
         virtual int64_t add(const int64_t &pA, const int64_t &pB) override {
+            theLog.info("*** Adding {} and {}.",pA,pB);
             return pA + pB;
         }
 
         virtual int64_t shutdown() override {
+            theLog.info("shutdown()");
+            mBroker.shutdown();
             return 0;
         }
     };
@@ -403,8 +417,8 @@ namespace generated_echo_test {
 using generated_echo_test::EchoServant;
 
 int main() {
-    EchoServant myEchoServant;
-    striboh::base::Broker aBroker(myEchoServant.getLog());
+    striboh::base::Broker aBroker(theLog);
+    EchoServant myEchoServant(aBroker);
     auto myUiid=aBroker.addServant(myEchoServant.getInterface());
     aBroker.getLog().debug("EchoServant Uiid = {}.",to_string(myUiid));
     aBroker.serve();
