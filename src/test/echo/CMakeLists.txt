@@ -13,6 +13,7 @@ target_link_libraries(striboh_generated_echo_server striboh_base_library striboh
 
 add_executable(striboh_generated_echo_tests striboh_generated_echo_tests.cpp ${CMAKE_CURRENT_BINARY_DIR}/EchoClt.hpp)
 target_include_directories(striboh_generated_echo_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(striboh_generated_echo_tests striboh_base_library striboh_idl_library gmock gtest_main gtest ${STRIBOH_LIBS})
+target_link_libraries(striboh_generated_echo_tests striboh_base_library striboh_idl_library striboh_test_utils gmock
+        gtest_main gtest ${STRIBOH_LIBS})
 add_test(NAME striboh_generated_echo_tests COMMAND striboh_generated_echo_tests)
 
