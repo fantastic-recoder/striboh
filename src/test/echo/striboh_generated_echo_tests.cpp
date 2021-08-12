@@ -385,6 +385,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseLogBoostImpl.hpp>
 #include <striboh/stribohBaseBroker.hpp>
 
+#include "../cpp/striboh_test_utils.hpp"
+
 #include "EchoClt.hpp"
 
 namespace {
@@ -393,17 +395,27 @@ namespace {
 }
 
 using namespace generated_echo_test;
-
+using namespace striboh::test;
 
 TEST(stribohGeneratedEchoTests, testEcho) {
+    auto myChild = runServer("./striboh_generated_echo_server",theLog);
+    sleep(10);
     EchoProxy myEchoClt(striboh::base::K_DEFAULT_HOST,striboh::base::K_DEFAULT_PORT,theLog);
     auto myEchoOp = myEchoClt.echo("John");
     auto myRetVal = myEchoOp.getVal();
     EXPECT_EQ("Hello John!",myRetVal);
+    myEchoClt.shutdown();
+    sleep(10);
+    ASSERT_FALSE(myChild->running());
 }
 
 TEST(stribohGeneratedEchoTests, testAdd) {
+    auto myChild = runServer("./striboh_generated_echo_server",theLog);
+    sleep(10);
     EchoProxy myEchoClt(striboh::base::K_DEFAULT_HOST,striboh::base::K_DEFAULT_PORT,theLog);
     auto myAddOp = myEchoClt.add(3,4);
     EXPECT_EQ(7,myAddOp.getVal());
+    myEchoClt.shutdown();
+    sleep(10);
+    ASSERT_FALSE(myChild->running());
 }
