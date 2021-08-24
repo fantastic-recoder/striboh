@@ -7,7 +7,14 @@ add_definitions("-std=c++2a")
 enable_testing()
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS)
+else()
+    message(WARNING "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
+endif()
+
+find_package(PythonLibs 3.8 REQUIRED)
 
 include(FetchContent)
 ###############################################################################
@@ -46,7 +53,8 @@ endif()
 
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
-set(STRIBOH_LIBS boost_log boost_filesystem boost_program_options boost_system boost_thread fmt pthread ${CMAKE_DL_LIBS})
+set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} ${CMAKE_DL_LIBS} pthread)
+set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_BOOST} ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS})
 
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
