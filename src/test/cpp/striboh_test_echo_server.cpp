@@ -433,7 +433,7 @@ int main( const int argc, const char* argv[]) {
     InstanceId  myUuid = aBroker.addServant(theEchoServant.getInterface() );
     myLog.info( "Test echo servant added." );
     int mySecondsCounter=0;
-    int myStep=10;
+    int myStep=1;
     do {
         std::this_thread::sleep_for(std::chrono::seconds(myStep));
         myLog.debug("Waiting for broker state:{} time {}/{} step {}.",

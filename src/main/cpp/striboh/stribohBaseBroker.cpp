@@ -421,7 +421,7 @@ namespace striboh::base {
                     getLog().debug("Waiting for main servant. state = {}",
                                    toString(getState()));
                 }
-                mReceiver.wait_for(std::chrono::duration<int, std::milli>(100));
+                mReceiver.wait_for(std::chrono::duration<int, std::milli>(mDispatchSleep));
             } while (getState() != EServerState::K_STARTED);
         }
         return getState();
@@ -432,7 +432,7 @@ namespace striboh::base {
         do {
             setState(EServerState::K_STARTED);
             getLog().debug("Going to sleep. state = {}", toString(getState()));
-            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(20 * 1000));
+            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(mDispatchSleep));
         } while (getState() == EServerState::K_STARTED);
         getLog().info("Shutdown completed. state = {}", toString(getState()));
     }
@@ -676,8 +676,7 @@ namespace striboh::base {
             setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
         }
         for (; getState() != striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
-            std::this_thread::sleep_for(mStep);
-            getLog().debug("<-> tick.");
+            std::this_thread::sleep_for(mDispatchSleep);
         }
     }
 
