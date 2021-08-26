@@ -18,3 +18,12 @@ add_executable(striboh_idl_compiler stribohIdlCompiler_main.cpp stribohIdlAstErr
 target_link_libraries(striboh_idl_compiler striboh_base_library striboh_idl_library
         ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} pthread ${CMAKE_DL_LIBS})
 target_link_directories(striboh_idl_compiler PRIVATE ${CONAN_LIB_DIRS_FMT} ${CONAN_LIB_DIRS_BOOST})
+
+#Without this, any build libraries automatically have names "lib{x}.so"
+set(CMAKE_SHARED_MODULE_PREFIX "")
+# Add a shared module - modules are intended to be imported at runtime.
+add_library(stribohIdlPy MODULE stribohIdlPyModule.cpp)
+set_target_properties(stribohIdlPy PROPERTIES LINK_OPTIONS LINKER:-shared )
+target_link_libraries(stribohIdlPy ${PYTHON_LIBRARIES})
+target_include_directories(stribohIdlPy PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${PYTHON_INCLUDE_DIRS})
+configure_file(stribohIdl.py ${striboh_BINARY_DIR}/bin/stribohIdl.py COPYONLY)
