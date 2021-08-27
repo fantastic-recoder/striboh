@@ -22,8 +22,11 @@ target_link_directories(striboh_idl_compiler PRIVATE ${CONAN_LIB_DIRS_FMT} ${CON
 #Without this, any build libraries automatically have names "lib{x}.so"
 set(CMAKE_SHARED_MODULE_PREFIX "")
 # Add a shared module - modules are intended to be imported at runtime.
-add_library(stribohIdlPy MODULE stribohIdlPyModule.cpp)
-set_target_properties(stribohIdlPy PROPERTIES LINK_OPTIONS LINKER:-shared )
-target_link_libraries(stribohIdlPy ${PYTHON_LIBRARIES})
-target_include_directories(stribohIdlPy PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${PYTHON_INCLUDE_DIRS})
-configure_file(stribohIdl.py ${striboh_BINARY_DIR}/bin/stribohIdl.py COPYONLY)
+add_library(stribohIdl MODULE stribohIdlPyModule.cpp)
+set_target_properties(stribohIdl PROPERTIES LINK_OPTIONS LINKER:-shared )
+target_link_libraries(stribohIdl ${PYTHON_LIBRARIES})
+target_include_directories(stribohIdl PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${PYTHON_INCLUDE_DIRS})
+
+configure_file(striboh_idl.py ${striboh_BINARY_DIR}/bin/striboh_idl.py COPYONLY)
+add_custom_target(striboh_idl.py ALL DEPENDS ${striboh_BINARY_DIR}/bin/striboh_idl.py)
+add_dependencies(striboh_idl.py stribohIdl)

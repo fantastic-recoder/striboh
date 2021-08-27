@@ -385,7 +385,7 @@ const char * const version() {
     return "0.0.1-SNAPSHOT";
 }
 
-PYBIND11_MODULE(stribohIdlPy, mod)
+PYBIND11_MODULE(stribohIdl, mod)
 {
     mod.doc() = "stribohIdlPythonModule"; // optional module docstring
     mod.def("version", version, "print version");
