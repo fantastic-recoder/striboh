@@ -377,225 +377,76 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_IDL_PARSER_HPP
-#define STRIBOH_IDL_PARSER_HPP
+#ifndef STRIBOH_STRIBOHIDLCOMPILER_HPP
+#define STRIBOH_STRIBOHIDLCOMPILER_HPP
 
 #include <string>
 #include <vector>
-#include <filesystem>
 
-#include <boost/filesystem.hpp>
-
-#include <NamedType/named_type.hpp>
-#include <chaiscript/chaiscript.hpp>
-
-#include "stribohIdlAstRootNode.hpp"
-#include "stribohIdlCompiler.hpp"
-
-namespace chaiscript {
-   class ChaiScript;
+namespace boost::program_options {
+    class options_description;
+    class variables_map;
 }
 
-/**
- * Top leve Striboh namespace, all Striboh is in.
- */
 namespace striboh {
 
     namespace base {
         class LogIface;
-
-        namespace exceptions {
-            class FileNotFound;
-        }
     }
 
-    /**
-     * The IDL (Interface Definition Language) Parser API.
-     *
-     * The backends are written in ChaiScript.
-     */
     namespace idl {
 
-        class IdlContext;
-
-        using IdlContextPtr = std::shared_ptr<IdlContext>;
-        using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
-        using IdlGenerated = std::map<std::string, std::string>;
-
-        /**
-         * Parse the supplied input file.
-         * @param pIncludes vector of include directories.
-         * @param pInputFile file to unpackFromBuffer.
-         * @return The parsed input file as AST tree.
-         */
-        ast::RootNode
-        parseIdlFile(const Includes &pIncludes, const boost::filesystem::path &pInputFile) noexcept;
-
-        /**
-         * Parse the supplied string.
-         * @param pIncludes vector of include directories.
-         * @param pInputStr string to unpackFromBuffer.
-         * @return The parsed input string as AST tree.
-         */
-        ast::RootNode
-        parseIdlStr(const Includes &pIncludes, const std::string &pInputStr) noexcept;
-
-        /**
-         * What parts should be generated.
-         * EGeneratedParts.EClient generate only client part.
-         * EGeneratedParts.EServant generate only servant part
-         * EGeneratedParts.EBoth generate both parts.
-         */
-        enum class EGenerateParts : uint8_t {
-            EClient /*---001-*/ = 1,
-            EServant /*--010-*/ = 2,
-            EBoth /*-----011-*/ = 3,
-            ENone /*-----000-*/ = 0
-        };
-
-        inline bool operator&(const EGenerateParts p0, const EGenerateParts p1) {
-            return uint8_t(p0) & uint8_t(p1);
+        namespace ast {
+            class RootNode;
         }
 
-        enum class EBackendState : uint8_t {
-            EInitial /*------*/ = 0,
-            ELoaded /*-------*/ = 1,
-            EProcessed /*----*/ = 2
-        };
+        using Includes = std::vector<std::string>;
 
-        class IdlContext : public std::enable_shared_from_this<IdlContext> {
+        class Compiler {
+            constexpr static const int K_RET_VAL_HELP /*...............*/= 100;
+            constexpr static const int K_RET_VAL_PARSE_ERROR /*........*/= 200;
+            constexpr static const int K_RET_VAL_BAD_VERBOSE_VALUE /*..*/= 201;
+            constexpr static const int K_RET_VAL_NO_BACKEND /*.........*/= 202;
+            constexpr static const int K_RET_VAL_BAD_OUTPUT /*.........*/= 203;
+
+            static constexpr struct ProgramReturnValues {
+                int mCode;
+                const char *mDescription;
+            } theProgramReturnValues[] = {
+                    {K_RET_VAL_HELP,        "Help invoked."},
+                    {K_RET_VAL_PARSE_ERROR, "Parse error"}
+            };
+
+            int processInputIdlFiles(const ::boost::program_options::variables_map &pVariablesMap,
+                                     const ::striboh::idl::Includes &pIncludes,
+                                     ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputs, ::striboh::base::LogIface &pLog);
+
+            void dumpTree(::striboh::base::LogIface &pLog, ::std::vector<::striboh::idl::ast::RootNode> &pParsedIdls);
+
+            int
+            processVerbose(::striboh::base::LogIface &pLog, const ::boost::program_options::variables_map &pVarMap);
+
+            int processHelp(const ::boost::program_options::variables_map &pVarMap,
+                            const ::boost::program_options::options_description &pOptDesc);
+
+            ::std::vector<std::string>
+            processIncludes(const ::boost::program_options::variables_map &pVarMap, ::striboh::base::LogIface &pLog);
+
+            int parseInputFiles(const ::boost::program_options::variables_map &pVarMap, const ::std::vector<std::string> &pIncludes,
+                                ::striboh::base::LogIface &pLog,
+                                ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputFiles);
+
+            int processInputFiles(const ::boost::program_options::variables_map &pVarMap, const std::vector<std::string> &pIncludes,
+                                  ::striboh::base::LogIface &pLog,
+                                  ::std::vector<::std::string> &pInputFiles) ;
+
+            void setCurrentDirectoryToCompilerDirectory(::striboh::base::LogIface &pLog, const char *const pCompileFilename);
+
         public:
-
-            /**
-             * Create a unique named context.
-             *
-             * @param pCtxName a uniq name for this context.
-             */
-            IdlContext(::striboh::base::LogIface &pLog);
-
-            /**
-             * Used to exchange infos between Chaiscript and C++
-             * @return the value the backend writes sets in Chaiscript.
-             */
-            bool isOk() { return mIsOk; }
-
-            /**
-             * @see IdlContext::isOk()
-             *
-             * @param pIsOk sets the isOk() value.
-             */
-            void setOk(bool pIsOk) { mIsOk = pIsOk; }
-
-            /**
-             * Run some Chaiscript backend script.
-             *
-             * @see https://chaiscript.com
-             *
-             * @param pInput the script to be interpreted.
-             * @param pExceptionHandler see Chaiscript.
-             * @param pReport see Chaiscript.
-             *
-             * @return the result of the interpreter run.
-             */
-            chaiscript::Boxed_Value
-            evalChaiscript(const std::string &pInput,
-                           const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
-                           const std::string &pReport = "__EVAL__") noexcept;
-
-            /**
-             * Generate code with the specified backend.
-             *
-             * @param pIncludes the IDL include paths.
-             *
-             * @param pWhichParts2Generate servant, client or both.
-             * @param pParsed Interface Definition Files the ASTs to be processed/visited.
-             * @param pExceptionHandler Chaiscript exception handler.
-             * @param pReport Chaiscript error report.
-             * @return the generated code, pairs filename and code
-             */
-            const IdlGenerated &
-            generateCode(const Includes &pIncludes,
-                         const EGenerateParts pWhichParts2Generate,
-                         const std::vector<ast::RootNode> &pParsed,
-                         const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
-                         const std::string &pReport = "__EVAL__") noexcept;
-
-            /**
-             *
-             * @param pName Instances name.
-             * @return found instance or empty pointer.
-             */
-            static IdlContext &findInstance(std::string_view pName);
-
-            /**
-             * Get the Chaiscript interpreter.
-             * @begin
-             */
-            ChaiScriptPtr getInterpreter() { return mInterpreter; }
-
-            const ChaiScriptPtr getInterpreter() const { return mInterpreter; }
-            /// @end
-
-            /**
-             * @param pBackendName The name of the backend generator script like for example "cpp".
-             *
-             * @return the loaded backend script
-             */
-            std::string &loadBackend(std::string_view pBackendName);
-
-            /**
-             * Sets the backend script content alternative to loadBackend.
-             *
-             * @param pNewBackend the new content - script to be called by IdlContext::generateCode()
-             */
-            void setBackend(std::string_view pNewBackend) {
-                mBackendScript = pNewBackend;
-            }
-
-            IdlGenerated &getGeneratedSnippets() { return mGenerated; }
-
-            const IdlGenerated &getGeneratedSnippets() const { return mGenerated; }
-
-            ::striboh::base::LogIface &getLog() { return mLog; }
-
-            const ::striboh::base::LogIface &getLog() const { return mLog; }
-
-        private:
-            using IdlContextList = std::vector<IdlContextPtr>;
-
-            void stribohIdlSetRuns(int pRunCount) {
-                mRunCount = pRunCount;
-            }
-
-            const std::string& addCode(const std::string& pFilename, std::string pGenerated) {
-                if (mGenerated.find(pFilename) != mGenerated.end()) {
-                    mGenerated[pFilename] += pGenerated;
-                } else {
-                    mGenerated[pFilename] = pGenerated;
-                }
-                return mGenerated[pFilename];
-            }
-
-            bool /*-----------------*/ mIsOk /*---------*/ = false;
-            int  /*-----------------*/ mRunCount /*-----*/ = 1;
-            ChaiScriptPtr /*--------*/ mInterpreter /*--*/ ;
-            IdlGenerated /*---------*/ mGenerated /*----*/ ;
-            base::LogIface & /*-----*/ mLog /*----------*/ ;
-            std::string /*----------*/ mBackendScript /**/ ;
-            EBackendState /*--------*/ mBackendState /*-*/ = EBackendState::EInitial;
-
-            std::string &doLoadBackend(const std::filesystem::path &myFilename);
-
-            void generateServantCode(const std::vector<ast::RootNode> &pParsed,
-                                     const chaiscript::Exception_Handler &pExceptionHandler,
-                                     const std::string &pReport);
-
-            void generateClientCode(const std::vector<ast::RootNode> &pParsed,
-                                    const chaiscript::Exception_Handler &pExceptionHandler,
-                                    const std::string &pReport);
+            int process(int pArgC, char **pArgV);
         };
-
     }
-} // end namespace striboh
+}
 
-#endif //STRIBOH_IDL_PARSER_HPP
+
+#endif //STRIBOH_STRIBOHIDLCOMPILER_HPP

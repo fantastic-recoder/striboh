@@ -377,225 +377,223 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_IDL_PARSER_HPP
-#define STRIBOH_IDL_PARSER_HPP
-
 #include <string>
 #include <vector>
-#include <filesystem>
-
+#include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/log/expressions.hpp>
 
-#include <NamedType/named_type.hpp>
-#include <chaiscript/chaiscript.hpp>
-
-#include "stribohIdlAstRootNode.hpp"
+#include "stribohBaseLogIface.hpp"
+#include "stribohBaseLogBoostImpl.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
 #include "stribohIdlCompiler.hpp"
+#include "stribohIdlParser.hpp"
 
-namespace chaiscript {
-   class ChaiScript;
+using std::string;
+using std::vector;
+using std::cout;
+using std::endl;
+using std::ofstream;
+using striboh::idl::ast::RootNode;
+using striboh::base::LogBoostImpl;
+using striboh::base::LogIface;
+using striboh::base::ELogLevel;
+using striboh::idl::EGenerateParts;
+using striboh::idl::IdlGenerated;
+using std::filesystem::current_path;
+using std::filesystem::path;
+
+namespace po = boost::program_options;
+namespace fs = boost::filesystem;
+
+namespace {
+    LogBoostImpl aLog;
 }
 
-/**
- * Top leve Striboh namespace, all Striboh is in.
- */
-namespace striboh {
+namespace striboh::idl {
 
-    namespace base {
-        class LogIface;
+    int Compiler::process(int pArgC, char **pArgV) {
+        // set current directory to executable
+        setCurrentDirectoryToCompilerDirectory(aLog, pArgV[0]);
 
-        namespace exceptions {
-            class FileNotFound;
+        // Declare the supported options.
+        po::options_description myOptDesc(fs::basename(pArgV[0]) + string(" options"));
+        po::positional_options_description myPosOpt;
+        myPosOpt.add("input-file", -1);
+
+        myOptDesc.add_options()
+                ("help", "produce help message")
+                ("include-path,I", po::value<vector<string>>(), "include directory")
+                ("backend,b", po::value<string>(), "language backend like \"cpp\" for example.")
+                ("out-dir,o", po::value<string>(), "output directory.")
+                ("servant,s", "Generate server part code, the servants into the given file.")
+                ("client,c", "Generate client part code into the given output file.")
+                ("input-file", po::value<vector<string>>(), "input file")
+                ("dump-tree,d", "dump the resulting AST tree.")
+                ("verbose,v", po::value<int>(),
+                 "verbose logging 0..5, 0 - show trace messages, 5 - show error messages")
+                ("stdout,r", "output to standard out");
+        po::variables_map myVarMap;
+        po::store(po::command_line_parser(pArgC, pArgV).options(myOptDesc).positional(myPosOpt).run(), myVarMap);
+        po::notify(myVarMap);
+
+        int myRetVal = 0;
+        myRetVal = processVerbose(aLog, myVarMap);
+        if (myRetVal != 0) return myRetVal;
+
+        myRetVal = processHelp(myVarMap, myOptDesc);
+        if (myRetVal != 0) return myRetVal;
+
+        vector<string> myIncludes = processIncludes(myVarMap, aLog);
+
+        vector<RootNode> myParsedInputFiles;
+        myRetVal = parseInputFiles(myVarMap, myIncludes, aLog, myParsedInputFiles);
+        if (myRetVal != 0) return myRetVal;
+
+        if (myVarMap.count("dump-tree")) {
+            dumpTree(aLog, myParsedInputFiles);
+        }
+
+        string myBackend;
+        if (myVarMap.count("backend") > 0) {
+            myBackend = myVarMap["backend"].as<string>();
+        } else {
+            return K_RET_VAL_NO_BACKEND;
+        }
+        aLog.info("Backend specified:{}.", myBackend);
+
+        fs::path myOutdir;
+        if (myVarMap.count("out-dir") > 0) {
+            myOutdir = myVarMap["out-dir"].as<string>();
+        }
+
+        EGenerateParts myGeneratedParts = EGenerateParts::ENone;
+        if (myVarMap.count("servant")) {
+            myGeneratedParts = EGenerateParts::EServant;
+        }
+        if (myVarMap.count("client")) {
+            if (myGeneratedParts == EGenerateParts::EServant) {
+                myGeneratedParts = EGenerateParts::EBoth;
+            } else {
+                myGeneratedParts = EGenerateParts::EClient;
+            }
+        }
+        striboh::idl::IdlContext myIdlContext(aLog);
+        myIdlContext.loadBackend(myBackend);
+
+        chaiscript::Exception_Handler myReport;
+        const auto& myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
+        if (myVarMap.count("stdout")) {
+            for( const auto& pMapElement: myIdlGenerated ) {
+                cout << "file: " << pMapElement.first << endl
+                     << "*******************************************" << endl
+                     << pMapElement.second << endl
+                     << "*******************************************" << endl;
+            }
+        }
+        for( const auto& pMapElement: myIdlGenerated ) {
+            fs::path myOutFile = myOutdir / pMapElement.first;
+            ofstream myOutput(myOutFile, std::ios::out);
+            if (!myOutput) {
+                aLog.error("Failed to open \"{}\".", pMapElement.first);
+                return K_RET_VAL_BAD_OUTPUT;
+            }
+            myOutput << pMapElement.second << endl;
+        }
+        return myRetVal;
+    }
+
+    int Compiler::parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogIface &pLog,
+                        vector<RootNode> &pParsedInputFiles) {
+        int myRetVal = 0;
+        if (pVarMap.count("input-file")) {
+            myRetVal = processInputIdlFiles(pVarMap, pIncludes, pParsedInputFiles, pLog);
+        }
+        return myRetVal;
+    }
+
+    int Compiler::processInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogIface &pLog,
+                          vector<string> &pInputFiles) {
+        int myRetVal = 0;
+        if (pVarMap.count("input-file")) {
+            pInputFiles = pVarMap["input-file"].as<std::vector<string> >();
+        }
+        return myRetVal;
+    }
+
+    vector<string>
+            Compiler::processIncludes(const po::variables_map &pVarMap, LogIface &pLog) {
+        std::vector<string> myIncludes;
+        if (pVarMap.count("include-path")) {
+            myIncludes = pVarMap["include-path"].as<std::vector<string> >();
+            pLog.info("Include paths are:");
+            for (auto myInclude: myIncludes) {
+                pLog.info("\t\t{}", myInclude);
+            }
+        }
+        return myIncludes;
+    }
+
+    int Compiler::processHelp(const po::variables_map &pVarMap, const po::options_description &pOptDesc) {
+        int myRetVal = 0;
+        if (pVarMap.count("help")) {
+            std::cout << pOptDesc;
+            myRetVal = K_RET_VAL_HELP;
+        }
+        return myRetVal;
+    }
+
+    int Compiler::processVerbose(LogIface &pLog, const po::variables_map &pVarMap) {
+        int myRetVal = 0;
+        if (pVarMap.count("verbose")) {
+            auto myVerbose = pVarMap["verbose"].as<int>();
+            if (!pLog.setThreshold(myVerbose)) {
+                pLog.error("Verbose value {}  is out of range 0-5!", myVerbose);
+                myRetVal = K_RET_VAL_BAD_VERBOSE_VALUE;
+            }
+        } else {
+            pLog.setThreshold(ELogLevel::INFO);
+        }
+        return myRetVal;
+    }
+
+    void Compiler::dumpTree(LogIface &pLog, vector<RootNode> &pParsedIdls) {
+        for (auto &myNode:pParsedIdls) {
+            pLog.info("---> {}", myNode.getValueStr());
+            std::cout << myNode;
+            pLog.info("<--- {}", myNode.getValueStr());
         }
     }
 
-    /**
-     * The IDL (Interface Definition Language) Parser API.
-     *
-     * The backends are written in ChaiScript.
-     */
-    namespace idl {
-
-        class IdlContext;
-
-        using IdlContextPtr = std::shared_ptr<IdlContext>;
-        using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
-        using IdlGenerated = std::map<std::string, std::string>;
-
-        /**
-         * Parse the supplied input file.
-         * @param pIncludes vector of include directories.
-         * @param pInputFile file to unpackFromBuffer.
-         * @return The parsed input file as AST tree.
-         */
-        ast::RootNode
-        parseIdlFile(const Includes &pIncludes, const boost::filesystem::path &pInputFile) noexcept;
-
-        /**
-         * Parse the supplied string.
-         * @param pIncludes vector of include directories.
-         * @param pInputStr string to unpackFromBuffer.
-         * @return The parsed input string as AST tree.
-         */
-        ast::RootNode
-        parseIdlStr(const Includes &pIncludes, const std::string &pInputStr) noexcept;
-
-        /**
-         * What parts should be generated.
-         * EGeneratedParts.EClient generate only client part.
-         * EGeneratedParts.EServant generate only servant part
-         * EGeneratedParts.EBoth generate both parts.
-         */
-        enum class EGenerateParts : uint8_t {
-            EClient /*---001-*/ = 1,
-            EServant /*--010-*/ = 2,
-            EBoth /*-----011-*/ = 3,
-            ENone /*-----000-*/ = 0
-        };
-
-        inline bool operator&(const EGenerateParts p0, const EGenerateParts p1) {
-            return uint8_t(p0) & uint8_t(p1);
-        }
-
-        enum class EBackendState : uint8_t {
-            EInitial /*------*/ = 0,
-            ELoaded /*-------*/ = 1,
-            EProcessed /*----*/ = 2
-        };
-
-        class IdlContext : public std::enable_shared_from_this<IdlContext> {
-        public:
-
-            /**
-             * Create a unique named context.
-             *
-             * @param pCtxName a uniq name for this context.
-             */
-            IdlContext(::striboh::base::LogIface &pLog);
-
-            /**
-             * Used to exchange infos between Chaiscript and C++
-             * @return the value the backend writes sets in Chaiscript.
-             */
-            bool isOk() { return mIsOk; }
-
-            /**
-             * @see IdlContext::isOk()
-             *
-             * @param pIsOk sets the isOk() value.
-             */
-            void setOk(bool pIsOk) { mIsOk = pIsOk; }
-
-            /**
-             * Run some Chaiscript backend script.
-             *
-             * @see https://chaiscript.com
-             *
-             * @param pInput the script to be interpreted.
-             * @param pExceptionHandler see Chaiscript.
-             * @param pReport see Chaiscript.
-             *
-             * @return the result of the interpreter run.
-             */
-            chaiscript::Boxed_Value
-            evalChaiscript(const std::string &pInput,
-                           const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
-                           const std::string &pReport = "__EVAL__") noexcept;
-
-            /**
-             * Generate code with the specified backend.
-             *
-             * @param pIncludes the IDL include paths.
-             *
-             * @param pWhichParts2Generate servant, client or both.
-             * @param pParsed Interface Definition Files the ASTs to be processed/visited.
-             * @param pExceptionHandler Chaiscript exception handler.
-             * @param pReport Chaiscript error report.
-             * @return the generated code, pairs filename and code
-             */
-            const IdlGenerated &
-            generateCode(const Includes &pIncludes,
-                         const EGenerateParts pWhichParts2Generate,
-                         const std::vector<ast::RootNode> &pParsed,
-                         const chaiscript::Exception_Handler &pExceptionHandler = chaiscript::Exception_Handler(),
-                         const std::string &pReport = "__EVAL__") noexcept;
-
-            /**
-             *
-             * @param pName Instances name.
-             * @return found instance or empty pointer.
-             */
-            static IdlContext &findInstance(std::string_view pName);
-
-            /**
-             * Get the Chaiscript interpreter.
-             * @begin
-             */
-            ChaiScriptPtr getInterpreter() { return mInterpreter; }
-
-            const ChaiScriptPtr getInterpreter() const { return mInterpreter; }
-            /// @end
-
-            /**
-             * @param pBackendName The name of the backend generator script like for example "cpp".
-             *
-             * @return the loaded backend script
-             */
-            std::string &loadBackend(std::string_view pBackendName);
-
-            /**
-             * Sets the backend script content alternative to loadBackend.
-             *
-             * @param pNewBackend the new content - script to be called by IdlContext::generateCode()
-             */
-            void setBackend(std::string_view pNewBackend) {
-                mBackendScript = pNewBackend;
-            }
-
-            IdlGenerated &getGeneratedSnippets() { return mGenerated; }
-
-            const IdlGenerated &getGeneratedSnippets() const { return mGenerated; }
-
-            ::striboh::base::LogIface &getLog() { return mLog; }
-
-            const ::striboh::base::LogIface &getLog() const { return mLog; }
-
-        private:
-            using IdlContextList = std::vector<IdlContextPtr>;
-
-            void stribohIdlSetRuns(int pRunCount) {
-                mRunCount = pRunCount;
-            }
-
-            const std::string& addCode(const std::string& pFilename, std::string pGenerated) {
-                if (mGenerated.find(pFilename) != mGenerated.end()) {
-                    mGenerated[pFilename] += pGenerated;
+    int Compiler::processInputIdlFiles(const po::variables_map &pVariablesMap, const striboh::idl::Includes &pIncludes,
+                             vector<RootNode> &pParsedInputs, LogIface &pLog) {
+        auto myInputs = pVariablesMap["input-file"].as<vector<string> >();
+        for (const auto &myInput:myInputs) {
+            pLog.info("Processing {}", myInput);
+            try {
+                const RootNode myParseIdl = striboh::idl::parseIdlFile(pIncludes, fs::path(myInput));
+                if (!myParseIdl.hasErrors()) {
+                    pLog.info("Parsing of \"{}\" succeeded.", myInput);
+                    pParsedInputs.push_back(myParseIdl);
                 } else {
-                    mGenerated[pFilename] = pGenerated;
+                    for (string myError: myParseIdl.getErrors()) {
+                        pLog.error(myError);
+                    }
+                    return K_RET_VAL_PARSE_ERROR;
                 }
-                return mGenerated[pFilename];
+            } catch (std::exception &pExc) {
+                pLog.error("Something unexpected happened: \"{}\".", pExc.what());
             }
-
-            bool /*-----------------*/ mIsOk /*---------*/ = false;
-            int  /*-----------------*/ mRunCount /*-----*/ = 1;
-            ChaiScriptPtr /*--------*/ mInterpreter /*--*/ ;
-            IdlGenerated /*---------*/ mGenerated /*----*/ ;
-            base::LogIface & /*-----*/ mLog /*----------*/ ;
-            std::string /*----------*/ mBackendScript /**/ ;
-            EBackendState /*--------*/ mBackendState /*-*/ = EBackendState::EInitial;
-
-            std::string &doLoadBackend(const std::filesystem::path &myFilename);
-
-            void generateServantCode(const std::vector<ast::RootNode> &pParsed,
-                                     const chaiscript::Exception_Handler &pExceptionHandler,
-                                     const std::string &pReport);
-
-            void generateClientCode(const std::vector<ast::RootNode> &pParsed,
-                                    const chaiscript::Exception_Handler &pExceptionHandler,
-                                    const std::string &pReport);
-        };
-
+        }
+        return 0;
     }
-} // end namespace striboh
 
-#endif //STRIBOH_IDL_PARSER_HPP
+    void Compiler::setCurrentDirectoryToCompilerDirectory(LogIface &pLog, const char *const pCompilerFilename) {
+        pLog.debug("Old current directory:{}.", current_path().string());
+        path myCompilerDir(pCompilerFilename);
+        myCompilerDir = myCompilerDir.remove_filename();
+        current_path(myCompilerDir);
+        pLog.debug("New current directory:{}.", current_path().string());
+    }
+
+}
