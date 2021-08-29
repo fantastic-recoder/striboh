@@ -415,7 +415,6 @@ namespace striboh::idl {
     int Compiler::process(int pArgC, char **pArgV) {
         // set current directory to executable
         setCurrentDirectoryToCompilerDirectory(aLog, pArgV[0]);
-
         // Declare the supported options.
         po::options_description myOptDesc(fs::basename(pArgV[0]) + string(" options"));
         po::positional_options_description myPosOpt;
@@ -458,6 +457,7 @@ namespace striboh::idl {
         if (myVarMap.count("backend") > 0) {
             myBackend = myVarMap["backend"].as<string>();
         } else {
+            aLog.error("No backend specified.");
             return K_RET_VAL_NO_BACKEND;
         }
         aLog.info("Backend specified:{}.", myBackend);
@@ -521,8 +521,7 @@ namespace striboh::idl {
         return myRetVal;
     }
 
-    vector<string>
-            Compiler::processIncludes(const po::variables_map &pVarMap, LogIface &pLog) {
+    vector<string> Compiler::processIncludes(const po::variables_map &pVarMap, LogIface &pLog) {
         std::vector<string> myIncludes;
         if (pVarMap.count("include-path")) {
             myIncludes = pVarMap["include-path"].as<std::vector<string> >();
@@ -589,10 +588,21 @@ namespace striboh::idl {
     }
 
     void Compiler::setCurrentDirectoryToCompilerDirectory(LogIface &pLog, const char *const pCompilerFilename) {
-        pLog.debug("Old current directory:{}.", current_path().string());
+        const string myOldCompilerDir(current_path().string());
+        pLog.debug("Old current directory:{}.", myOldCompilerDir);
         path myCompilerDir(pCompilerFilename);
         myCompilerDir = myCompilerDir.remove_filename();
-        current_path(myCompilerDir);
+        const string myCompilerDirStr(myCompilerDir.string());
+        pLog.debug("Setting current directory:{}.", myCompilerDirStr);
+        if(myCompilerDirStr==myOldCompilerDir) {
+            pLog.debug("Compiler dir is current dir.");
+        } else {
+            if(myCompilerDir.empty()) {
+                pLog.debug("Current directory is empty.");
+            } else {
+                current_path(myCompilerDir);
+            }
+        }
         pLog.debug("New current directory:{}.", current_path().string());
     }
 

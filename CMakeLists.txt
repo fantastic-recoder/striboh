@@ -3,7 +3,7 @@ project(striboh)
 
 set(CMAKE_CXX_STANDARD 17)
 set(MSGPACK_CXX17 ON)
-add_definitions("-std=c++2a")
+add_definitions("-std=c++2a -fPIC")
 enable_testing()
 
 find_package(PythonLibs 3.8 REQUIRED)

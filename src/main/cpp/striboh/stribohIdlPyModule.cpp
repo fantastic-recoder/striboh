@@ -378,16 +378,35 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include "stribohIdlCompiler.hpp"
 
 namespace py = pybind11;
 
-const char * const version() {
-    return "0.0.1-SNAPSHOT";
+namespace {
+
+    using namespace striboh::idl;
+
+    const char *const version() {
+        return "0.0.2-SNAPSHOT";
+    }
+
+    int process(std::vector<std::string> pArg) {
+        const size_t mySz = pArg.size();
+        std::unique_ptr<char*> myArgs(new char*[mySz]);
+        for (int pII=0; pII<mySz; pII++) {
+            myArgs.get()[pII]=pArg[pII].data();
+        }
+        striboh::idl::Compiler myCompiler;
+        return myCompiler.process(mySz,myArgs.get());
+    }
+
 }
 
 PYBIND11_MODULE(stribohIdl, mod)
 {
     mod.doc() = "stribohIdlPythonModule"; // optional module docstring
-    mod.def("version", version, "print version");
+    mod.def("version", version, "Print module version.");
+    mod.def("process", process, "Process the command the IDL sources specified on command line.");
 }
 
