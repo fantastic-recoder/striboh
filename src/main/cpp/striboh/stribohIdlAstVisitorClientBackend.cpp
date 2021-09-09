@@ -377,6 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
+#include <string>
 #include <vector>
 
 #include <fmt/format.h>

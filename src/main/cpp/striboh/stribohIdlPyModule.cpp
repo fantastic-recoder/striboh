@@ -380,6 +380,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "stribohIdlCompiler.hpp"
+#include "stribohIdlAstVisitor.hpp"
 
 namespace py = pybind11;
 
@@ -387,10 +388,54 @@ namespace {
 
     using namespace striboh::idl;
 
+    class PyAstVisitor : public AstVisitor {
+    public:
+        using AstVisitor::AstVisitor;
+
+        ~PyAstVisitor() override = default;
+
+        void beginModule(std::string_view pModuleName) override;
+
+        void endModule(std::string_view pModuleName) override;
+
+        void beginInterface(std::string_view pInterfaceName) override;
+
+        void endInterface(std::string_view pInterfaceName) override;
+
+        void beginMethod(const ast::TypedIdentifierNode &pMethod) override;
+
+        void endMethod(const ast::TypedIdentifierNode &pMethod) override;
+
+        void beginParameter(const ast::TypedIdentifierNode &pPar) override;
+    };
+
+    void PyAstVisitor::beginModule(std::string_view pModuleName) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                beginModule, /* Name of function in C++ (must match Python name) */
+                pModuleName  /* Argument(s) */
+        );
+    }
+
+    void PyAstVisitor::endModule(std::string_view pModuleName) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                endModule, /* Name of function in C++ (must match Python name) */
+                pModuleName  /* Argument(s) */
+        );
+    }
+
     const char *const version() {
         return "0.0.2-SNAPSHOT";
     }
 
+    /**
+     * Pass the command line arguments and run the compiler ( process the input files ).
+     *
+     * @pArg the arguments passed to the script on command line.
+     */
     int process(std::vector<std::string> pArg) {
         const size_t mySz = pArg.size();
         std::unique_ptr<char*> myArgs(new char*[mySz]);
@@ -401,12 +446,22 @@ namespace {
         return myCompiler.process(mySz,myArgs.get());
     }
 
+    void setBackendVisitors( AstVisitor& pClientBackend, AstVisitor& pServantBackend) {
+
+    }
 }
 
-PYBIND11_MODULE(stribohIdl, mod)
+PYBIND11_MODULE(stribohIdl, pPyModule)
 {
-    mod.doc() = "stribohIdlPythonModule"; // optional module docstring
-    mod.def("version", version, "Print module version.");
-    mod.def("process", process, "Process the command the IDL sources specified on command line.");
+    pPyModule.doc() = "stribohIdlPythonModule"; // optional module docstring
+    pPyModule.def("version", version, "Print module version.");
+    pPyModule.def("process", process, "Process the command the IDL sources specified on command line.");
+    pPyModule.def("setBackendVisitors",setBackendVisitors, "Set the visitors to be called upon backend code "
+                                                           "generation.");
+
+    py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(pPyModule, "AstVisitor")
+            .def(py::init<>())
+            .def("beginModule", &AstVisitor::beginModule)
+            .def("endModule", &AstVisitor::endModule);
 }
 

@@ -392,8 +392,8 @@ namespace striboh::idl {
     public:
         /// @TODO move pExceptionHandler and pReport to IdlContext
         AstVisitorClientBackend(IdlContext &pIdlCtx,
-                                 const chaiscript::Exception_Handler &pExceptionHandler,
-                                 const std::string &pReport);
+                                const chaiscript::Exception_Handler &pExceptionHandler,
+                                const std::string &pReport);
 
         ~AstVisitorClientBackend() override = default;
 
@@ -413,10 +413,11 @@ namespace striboh::idl {
 
     private:
 
-        IdlContext& mIdlCtx;
+        IdlContext &mIdlCtx;
         const chaiscript::Exception_Handler &mExceptionHandler;
         const std::string &mReport;
         std::string mModuleBeginScript;
     };
+
 }
 #endif //STRIBOH_IDL_AST_VISITOR_CLIENT_BACKEND_HPP
