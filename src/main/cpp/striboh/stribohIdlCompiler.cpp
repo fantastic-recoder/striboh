@@ -388,6 +388,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstTypedIdentifierNode.hpp"
 #include "stribohIdlCompiler.hpp"
 #include "stribohIdlParser.hpp"
+#include "stribohIdlAstVisitorClientBackend.hpp"
+#include "stribohIdlAstVisitorServantBackend.hpp"
 
 using std::string;
 using std::vector;
@@ -482,7 +484,7 @@ namespace striboh::idl {
         myIdlContext.loadBackend(myBackend);
 
         chaiscript::Exception_Handler myReport;
-        const auto& myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
+        const auto myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
         if (myVarMap.count("stdout")) {
             for( const auto& pMapElement: myIdlGenerated ) {
                 cout << "file: " << pMapElement.first << endl

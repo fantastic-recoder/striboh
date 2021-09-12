@@ -410,7 +410,6 @@ namespace striboh::idl {
         void endMethod(const ast::TypedIdentifierNode &pMethod) override;
 
         void beginParameter(const ast::TypedIdentifierNode &pPar) override;
-
     private:
 
         IdlContext& mIdlCtx;

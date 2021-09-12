@@ -1,8 +1,10 @@
 message(STATUS "Striboh conan libs: ${CONAN_LIBS}.")
 
-configure_file(striboh_backend.cpp.chai ${striboh_BINARY_DIR}/share/striboh/striboh_backend.cpp.chai COPYONLY)
+configure_file(striboh_backend.cpp.chai ${striboh_BINARY_DIR}/share/striboh/striboh_backend.cpp.chai
+        COPYONLY)
 
-set(STRIBOH_LIBS_INCLUDES ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON} ${CONAN_INCLUDE_DIRS_FMT} ${CONAN_INCLUDE_DIRS_CHAISCRIPT})
+set(STRIBOH_LIBS_INCLUDES ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON}
+        ${CONAN_INCLUDE_DIRS_FMT} ${CONAN_INCLUDE_DIRS_CHAISCRIPT})
 
 add_library(striboh_idl_library STATIC stribohIdlParser.cpp stribohIdlParser.hpp stribohIdlAstRootNode.cpp stribohIdlAstRootNode.hpp stribohIdlAstBaseNode.hpp stribohIdlAstModuleNode.cpp stribohIdlAstModuleNode.hpp stribohIdlAstIdentifierNode.hpp stribohIdlAstImportListNode.hpp stribohIdlAstMethodNode.hpp stribohIdlAstTypeNode.hpp stribohIdlAstEBuildinTypes.hpp stribohIdlAstTypedIdentifierNode.hpp stribohIdlAstNode.hpp stribohIdlAstBaseNode.cpp stribohIdlAstImportListNode.cpp stribohIdlAstMethodNode.cpp stribohIdlAstModuleListNode.cpp stribohIdlAstTypedIdentifierNode.cpp stribohIdlAstImportNode.hpp stribohIdlAstImportNode.cpp stribohIdlAstTypeNode.cpp stribohIdlAstIdentifierNode.cpp stribohIdlAstInterfaceListNode.cpp stribohIdlAstInterfaceListNode.hpp stribohIdlAstModuleBodyNode.cpp stribohIdlAstModuleBodyNode.hpp stribohIdlAstInterfaceNode.cpp stribohIdlAstInterfaceNode.hpp stribohIdlAstVisitor.hpp stribohIdlAstVisitorServantBackend.cpp stribohIdlAstVisitorServantBackend.hpp stribohIdlAstVisitorClientBackend.cpp stribohIdlAstVisitorClientBackend.hpp stribohBaseExceptionsFileNotFound.hpp stribohBaseExceptionsFileNotFound.cpp )
 target_include_directories(striboh_idl_library PUBLIC ${STRIBOH_LIBS_INCLUDES})
@@ -23,9 +25,11 @@ add_library(stribohIdl MODULE stribohIdlPyModule.cpp stribohIdlCompiler.cpp stri
 set_target_properties(stribohIdl PROPERTIES LINK_OPTIONS LINKER:-shared )
 target_link_libraries(stribohIdl ${PYTHON_LIBRARIES} boost_program_options striboh_base_library striboh_idl_library
         ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} pthread ${CMAKE_DL_LIBS})
-target_include_directories(stribohIdl PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${PYTHON_INCLUDE_DIRS} ${STRIBOH_LIBS_INCLUDES})
+target_include_directories(stribohIdl PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11}
+        ${PYTHON_INCLUDE_DIRS} ${STRIBOH_LIBS_INCLUDES})
 target_link_directories(stribohIdl PRIVATE ${CONAN_LIB_DIRS_FMT} ${CONAN_LIB_DIRS_BOOST})
 
+configure_file(striboh_backend.cpp.py ${striboh_BINARY_DIR}/bin/striboh_backend.cpp.py COPYONLY)
 configure_file(striboh_idl.py ${striboh_BINARY_DIR}/bin/striboh_idl.py COPYONLY)
 add_custom_target(striboh_idl.py ALL DEPENDS ${striboh_BINARY_DIR}/bin/striboh_idl.py)
 add_dependencies(striboh_idl.py stribohIdl)

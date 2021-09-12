@@ -379,12 +379,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #ifndef STRIBOH_IDL_AST_VISITOR_HPP
 #define STRIBOH_IDL_AST_VISITOR_HPP
 
+#include <map>
 #include <string>
 namespace striboh::idl {
 
     namespace ast {
         class TypedIdentifierNode;
     }
+
+    using IdlGenerated = std::map<std::string, std::string>;
 
     struct AstVisitor {
         AstVisitor() = default;
@@ -396,6 +399,31 @@ namespace striboh::idl {
         virtual void beginMethod( const ast::TypedIdentifierNode &pMethod ) = 0;
         virtual void endMethod( const ast::TypedIdentifierNode &pMethod ) = 0;
         virtual void beginParameter( const ast::TypedIdentifierNode& pPar ) = 0;
+
+        IdlGenerated &getGeneratedSnippets() { return mGenerated; }
+
+        const IdlGenerated &getGeneratedSnippets() const { return mGenerated; }
+
+        void setRuns(int pRunCount) {
+            mRunCount = pRunCount;
+        }
+
+        int getRuns() const {
+            return mRunCount;
+        }
+
+        const std::string& addCode(const std::string& pFilename, std::string pGenerated) {
+            if (mGenerated.find(pFilename) != mGenerated.end()) {
+                mGenerated[pFilename] += pGenerated;
+            } else {
+                mGenerated[pFilename] = pGenerated;
+            }
+            return mGenerated[pFilename];
+        }
+
+    private:
+        IdlGenerated /*---------*/ mGenerated /*----*/ ;
+        int  /*-----------------*/ mRunCount /*-----*/ = 0;
     };
 }
 #endif //STRIBOH_IDL_AST_VISITOR_HPP

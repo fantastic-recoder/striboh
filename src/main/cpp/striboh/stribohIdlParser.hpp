@@ -391,9 +391,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlCompiler.hpp"
+#include "stribohIdlAstVisitor.hpp"
 
 namespace chaiscript {
-   class ChaiScript;
+    class ChaiScript;
 }
 
 /**
@@ -418,9 +419,12 @@ namespace striboh {
 
         class IdlContext;
 
+        class AstVisitorClientBackend;
+
+        class AstVisitorServantBackend;
+
         using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
-        using IdlGenerated = std::map<std::string, std::string>;
 
         /**
          * Parse the supplied input file.
@@ -513,7 +517,7 @@ namespace striboh {
              * @param pReport Chaiscript error report.
              * @return the generated code, pairs filename and code
              */
-            const IdlGenerated &
+            IdlGenerated
             generateCode(const Includes &pIncludes,
                          const EGenerateParts pWhichParts2Generate,
                          const std::vector<ast::RootNode> &pParsed,
@@ -552,10 +556,6 @@ namespace striboh {
                 mBackendScript = pNewBackend;
             }
 
-            IdlGenerated &getGeneratedSnippets() { return mGenerated; }
-
-            const IdlGenerated &getGeneratedSnippets() const { return mGenerated; }
-
             ::striboh::base::LogIface &getLog() { return mLog; }
 
             const ::striboh::base::LogIface &getLog() const { return mLog; }
@@ -563,23 +563,8 @@ namespace striboh {
         private:
             using IdlContextList = std::vector<IdlContextPtr>;
 
-            void stribohIdlSetRuns(int pRunCount) {
-                mRunCount = pRunCount;
-            }
-
-            const std::string& addCode(const std::string& pFilename, std::string pGenerated) {
-                if (mGenerated.find(pFilename) != mGenerated.end()) {
-                    mGenerated[pFilename] += pGenerated;
-                } else {
-                    mGenerated[pFilename] = pGenerated;
-                }
-                return mGenerated[pFilename];
-            }
-
             bool /*-----------------*/ mIsOk /*---------*/ = false;
-            int  /*-----------------*/ mRunCount /*-----*/ = 1;
             ChaiScriptPtr /*--------*/ mInterpreter /*--*/ ;
-            IdlGenerated /*---------*/ mGenerated /*----*/ ;
             base::LogIface & /*-----*/ mLog /*----------*/ ;
             std::string /*----------*/ mBackendScript /**/ ;
             EBackendState /*--------*/ mBackendState /*-*/ = EBackendState::EInitial;
@@ -593,9 +578,22 @@ namespace striboh {
             void generateClientCode(const std::vector<ast::RootNode> &pParsed,
                                     const chaiscript::Exception_Handler &pExceptionHandler,
                                     const std::string &pReport);
+
+            void setClientRuns(int pRunCount);
+
+            void setServantRuns(int pRunCount);
+
+            const std::string &addClientCode(const std::string &pFilename, std::string pGenerated);
+
+            const std::string &addServantCode(const std::string &pFilename, std::string pGenerated);
+
+            std::unique_ptr<AstVisitorServantBackend> mAstVisitorServantBackend;
+            std::unique_ptr<AstVisitorClientBackend> mAstVisitorClientBackend;
         };
 
-    }
+        IdlGenerated operator+(const IdlGenerated &p1, const IdlGenerated &p2);
+
+    } // end namespace idl
 } // end namespace striboh
 
 #endif //STRIBOH_IDL_PARSER_HPP

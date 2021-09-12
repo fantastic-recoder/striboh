@@ -381,6 +381,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <pybind11/stl.h>
 #include "stribohIdlCompiler.hpp"
 #include "stribohIdlAstVisitor.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
 
 namespace py = pybind11;
 
@@ -427,6 +428,51 @@ namespace {
         );
     }
 
+    void PyAstVisitor::beginInterface(std::string_view pInterfaceName) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                beginInterface, /* Name of function in C++ (must match Python name) */
+                pInterfaceName  /* Argument(s) */
+        );
+    }
+
+    void PyAstVisitor::endInterface(std::string_view pInterfaceName) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                endInterface, /* Name of function in C++ (must match Python name) */
+                pInterfaceName  /* Argument(s) */
+        );
+    }
+
+    void PyAstVisitor::beginMethod(const ast::TypedIdentifierNode &pMethod) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                beginMethod, /* Name of function in C++ (must match Python name) */
+                pMethod  /* Argument(s) */
+        );
+    }
+
+    void PyAstVisitor::endMethod(const ast::TypedIdentifierNode &pMethod) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                endMethod, /* Name of function in C++ (must match Python name) */
+                pMethod  /* Argument(s) */
+        );
+    }
+
+    void PyAstVisitor::beginParameter(const ast::TypedIdentifierNode &pPar) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                beginParameter, /* Name of function in C++ (must match Python name) */
+                pPar  /* Argument(s) */
+        );
+    }
+
     const char *const version() {
         return "0.0.2-SNAPSHOT";
     }
@@ -451,6 +497,8 @@ namespace {
     }
 }
 
+using ast::TypedIdentifierNode;
+
 PYBIND11_MODULE(stribohIdl, pPyModule)
 {
     pPyModule.doc() = "stribohIdlPythonModule"; // optional module docstring
@@ -458,6 +506,20 @@ PYBIND11_MODULE(stribohIdl, pPyModule)
     pPyModule.def("process", process, "Process the command the IDL sources specified on command line.");
     pPyModule.def("setBackendVisitors",setBackendVisitors, "Set the visitors to be called upon backend code "
                                                            "generation.");
+
+    py::enum_<ast::EBuildinTypes>(pPyModule, "EBuildinTypes")
+            .value("INT",ast::EBuildinTypes::INT)
+            .value("STRING",ast::EBuildinTypes::STRING)
+            .value("VOID",ast::EBuildinTypes::VOID)
+            .value("NONE",ast::EBuildinTypes::NONE)
+            ;
+
+    py::class_<ast::TypedIdentifierNode>(pPyModule, "TypedIdentifierNode")
+            .def(py::init<>())
+            .def("getName",&TypedIdentifierNode::getName)
+            .def("getType",&TypedIdentifierNode::getType)
+            .def("getTypeString",&TypedIdentifierNode::getTypeString)
+            ;
 
     py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(pPyModule, "AstVisitor")
             .def(py::init<>())

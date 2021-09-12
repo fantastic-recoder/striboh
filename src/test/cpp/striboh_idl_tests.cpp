@@ -379,11 +379,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <gtest/gtest.h>
 
 #include <string>
-#include <striboh/stribohIdlParser.hpp>
-#include <striboh/stribohIdlAstModuleBodyNode.hpp>
 #include <boost/log/trivial.hpp>
+#include <striboh/stribohIdlAstVisitorClientBackend.hpp>
+#include <striboh/stribohIdlAstVisitorServantBackend.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
 #include <striboh/stribohBaseExceptionsFileNotFound.hpp>
+#include <striboh/stribohIdlParser.hpp>
+#include <striboh/stribohIdlAstModuleBodyNode.hpp>
 
 using namespace striboh::idl;
 using striboh::base::exceptions::FileNotFound;
@@ -608,42 +610,42 @@ TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     static const char *K_IDL_BACKEND = R"K_IDL_COMP_BACK(
 
     def stribohIdlServantInit() {
-       stribohIdlSetRuns(3);// set three runs
+       stribohIdlSetServantRuns(3);// set three runs
     }
 
     def stribohIdlServantBeginRun(pRun){
-       addCode("HelloWorld.hpp","Run_${pRun}\n");
+       addServantCode("HelloWorld.hpp","Run_${pRun}\n");
     }
 
     def stribohIdlServantBeginModule(pModuleName) {
-       addCode("HelloWorld.hpp","MOD_BEGIN_${pModuleName}\n");
+       addServantCode("HelloWorld.hpp","MOD_BEGIN_${pModuleName}\n");
     }
 
     def stribohIdlServantEndModule(pModuleName) {
-       addCode("HelloWorld.hpp","MOD_END_${pModuleName}\n");
+       addServantCode("HelloWorld.hpp","MOD_END_${pModuleName}\n");
     }
 
     def stribohIdlServantBeginInterface(pName) {
-       addCode("HelloWorld.hpp","INTERFACE_BEGIN_${pName}\n");
+       addServantCode("HelloWorld.hpp","INTERFACE_BEGIN_${pName}\n");
     }
 
     def stribohIdlServantEndInterface(pName) {
-       addCode("HelloWorld.hpp","INTERFACE_END_${pName}\n");
+       addServantCode("HelloWorld.hpp","INTERFACE_END_${pName}\n");
     }
 
     global pParNo = -1;
 
     def stribohIdlServantBeginMethod(pName,pReturnType) {
        pParNo = 0;
-       addCode("HelloWorld.hpp","METHOD_BEGIN_${pName}:${pReturnType}\n");
+       addServantCode("HelloWorld.hpp","METHOD_BEGIN_${pName}:${pReturnType}\n");
     }
 
     def stribohIdlServantEndMethod(pName,pReturnType) {
-       addCode("HelloWorld.hpp","METHOD_END_${pName}\n");
+       addServantCode("HelloWorld.hpp","METHOD_END_${pName}\n");
     }
 
     def stribohIdlServantBeginParameter(pName,pType) {
-       addCode("HelloWorld.hpp","PARAMETER_${pParNo}_${pName}:${pType}\n");
+       addServantCode("HelloWorld.hpp","PARAMETER_${pParNo}_${pName}:${pType}\n");
        pParNo = pParNo+1;
     }
 
@@ -688,14 +690,13 @@ MOD_END_mod0
     striboh::idl::IdlContext myIdlCtx(getLog());
 
     myIdlCtx.setBackend(K_IDL_BACKEND);
-    myIdlCtx.generateCode(
+    const auto myGeneratedSnippets = myIdlCtx.generateCode(
             myIncludes,
             EGenerateParts::EServant,
             std::vector<ast::RootNode>{aRootNode}
             );
-    auto myGeneratedSnippets = myIdlCtx.getGeneratedSnippets();
     ASSERT_EQ(1, myGeneratedSnippets.size());
-    ASSERT_EQ(K_GENERATED, myGeneratedSnippets["HelloWorld.hpp"]);
+    ASSERT_EQ(K_GENERATED, myGeneratedSnippets.find("HelloWorld.hpp")->second);
 }
 
 TEST(stribohIdlTests, testNotExistentBackend) {

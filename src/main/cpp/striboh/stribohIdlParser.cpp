@@ -615,7 +615,7 @@ namespace striboh {
             const bool myParsedSuccess
                     = phrase_parse(pIter, pEnd, theIdlGrammar, space, pIdlDoc);
             if (myParsedSuccess && pIter == pEnd) {
-                for (auto myImportNode : pIdlDoc.getImports()) {
+                for (auto myImportNode: pIdlDoc.getImports()) {
                     fs::path myFilename(myImportNode.getFilename());
                     auto myImportIdl = parseIdlFile(pIncludes, myFilename);
                     pIdlDoc.mergeSubtree(myImportIdl);
@@ -660,8 +660,14 @@ namespace striboh {
             mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
             mInterpreter->add(chaiscript::var(this), "theIdlContext");
-            mInterpreter->add(chaiscript::fun(&IdlContext::stribohIdlSetRuns, this), "stribohIdlSetRuns");
-            mInterpreter->add(chaiscript::fun(&IdlContext::addCode, this), "addCode");
+            mInterpreter->add(chaiscript::fun(&IdlContext::setClientRuns, this),
+                              "stribohIdlSetClientRuns");
+            mInterpreter->add(chaiscript::fun(&IdlContext::setServantRuns, this),
+                              "stribohIdlSetServantRuns");
+            mInterpreter->add(chaiscript::fun(&IdlContext::addClientCode, this),
+                              "addClientCode");
+            mInterpreter->add(chaiscript::fun(&IdlContext::addServantCode, this),
+                              "addServantCode");
         }
 
         chaiscript::Boxed_Value
@@ -671,7 +677,15 @@ namespace striboh {
             return mInterpreter->eval(pInput, pExceptionHandler, pReport);
         }
 
-        const IdlGenerated&
+        IdlGenerated operator+(const IdlGenerated &p1, const IdlGenerated &p2) {
+            IdlGenerated mySumm(p1);
+            for (auto myP2: p2) {
+                mySumm[myP2.first] += myP2.second;
+            }
+            return mySumm;
+        }
+
+        IdlGenerated
         IdlContext::generateCode(const Includes &pIncludes,
                                  const EGenerateParts pWhichParts2Generate,
                                  const std::vector<ast::RootNode> &pParsed,
@@ -683,46 +697,61 @@ namespace striboh {
             if (pWhichParts2Generate & EGenerateParts::EClient) {
                 generateClientCode(pParsed, pExceptionHandler, pReport);
             }
-            return mGenerated;
+            static const IdlGenerated theEmptySnippedMap;
+            const IdlGenerated &myServantSnippets =
+                    mAstVisitorServantBackend
+                    ?
+                    mAstVisitorServantBackend->getGeneratedSnippets()
+                    :
+                    theEmptySnippedMap;
+            const IdlGenerated &myClientSnippets =
+                    mAstVisitorClientBackend
+                    ?
+                    mAstVisitorClientBackend->getGeneratedSnippets()
+                    :
+                    theEmptySnippedMap;
+            auto myGenerated = myServantSnippets + myClientSnippets;
+            return myGenerated;
         }
 
         static const string K_INIT_STR("\n");
-        static constexpr const char* K_CALL_SERVANT_INIT = "\nstribohIdlServantInit()";
+        static constexpr const char *K_CALL_SERVANT_INIT = "\nstribohIdlServantInit()";
 
-        void IdlContext::generateServantCode(const vector <ast::RootNode> &pParsed,
-                                                             const chaiscript::Exception_Handler &pExceptionHandler,
-                                                             const string &pReport) {
+        void IdlContext::generateServantCode(const vector<ast::RootNode> &pParsed,
+                                             const chaiscript::Exception_Handler &pExceptionHandler,
+                                             const string &pReport) {
+            mAstVisitorServantBackend = std::make_unique<AstVisitorServantBackend>(*this, pExceptionHandler, pReport);
             std::string myChaiServantBackendCallback =
                     (mBackendState == EBackendState::EProcessed)
                     ? K_CALL_SERVANT_INIT : mBackendScript + K_CALL_SERVANT_INIT;
             for (auto myAstTree: pParsed) {
                 evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
-                AstVisitorServantBackend myVisitor(*this, pExceptionHandler, pReport);
-                for (int myRun = 1; myRun <= mRunCount; myRun++) {
+                for (int myRun = 1; myRun <= mAstVisitorServantBackend->getRuns(); myRun++) {
                     myChaiServantBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
                     evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
-                    myAstTree.visit(myVisitor);
+                    myAstTree.visit(*mAstVisitorServantBackend);
                 }
             }
         }
 
-        static constexpr const char* K_CALL_CLIENT_INIT = "\nstribohIdlClientInit()";
+        static constexpr const char *K_CALL_CLIENT_INIT = "\nstribohIdlClientInit()";
 
-        void IdlContext::generateClientCode(const vector <ast::RootNode> &pParsed,
-                                                            const chaiscript::Exception_Handler &pExceptionHandler,
-                                                            const string &pReport) {
+        void IdlContext::generateClientCode(const vector<ast::RootNode> &pParsed,
+                                            const chaiscript::Exception_Handler &pExceptionHandler,
+                                            const string &pReport) {
+            mAstVisitorClientBackend = std::make_unique<AstVisitorClientBackend>(*this, pExceptionHandler,
+                                                                                      pReport);
             std::string myChaiClientBackendCallback =
                     (mBackendState == EBackendState::EProcessed)
                     ? K_CALL_CLIENT_INIT : mBackendScript + K_CALL_CLIENT_INIT;
             for (auto myAstTree: pParsed) {
                 evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
-                AstVisitorClientBackend myVisitor(*this, pExceptionHandler, pReport);
-                for (int myRun = 1; myRun <= mRunCount; myRun++) {
+                for (int myRun = 1; myRun <= mAstVisitorClientBackend->getRuns(); myRun++) {
                     myChaiClientBackendCallback = fmt::format("stribohIdlClientBeginRun({})", myRun);
                     evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
-                    myAstTree.visit(myVisitor);
+                    myAstTree.visit(*mAstVisitorClientBackend);
                 }
             }
         }
@@ -748,6 +777,38 @@ namespace striboh {
                                   (std::istreambuf_iterator<char>()));
             myScript.close();
             return mBackendScript;
+        }
+
+        void IdlContext::setClientRuns(int pRunCount) {
+            if (mAstVisitorClientBackend) {
+                mAstVisitorClientBackend->setRuns(pRunCount);
+            } else {
+                throw std::runtime_error("Client visitor not yet initialized");
+            }
+        }
+
+        void IdlContext::setServantRuns(int pRunCount) {
+            if (mAstVisitorServantBackend) {
+                mAstVisitorServantBackend->setRuns(pRunCount);
+            } else {
+                throw std::runtime_error("Servant visitor not yet initialized");
+            }
+        }
+
+        const std::string &IdlContext::addClientCode(const string &pFilename, std::string pGenerated) {
+            if (mAstVisitorClientBackend) {
+                return mAstVisitorClientBackend->addCode(pFilename, pGenerated);
+            } else {
+                throw std::runtime_error("Client visitor not yet initialized");
+            }
+        }
+
+        const std::string &IdlContext::addServantCode(const string &pFilename, std::string pGenerated) {
+            if (mAstVisitorServantBackend) {
+                return mAstVisitorServantBackend->addCode(pFilename, pGenerated);
+            } else {
+                throw std::runtime_error("Servant visitor not yet initialized");
+            }
         }
 
     } // end namespace idl
