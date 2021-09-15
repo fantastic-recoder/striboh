@@ -20,6 +20,8 @@
 #include "stribohIdlParser.hpp"
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
+#include "stribohIdlAstVisitor.hpp"
+#include "stribohIdlAstModuleBodyNode.hpp"
 
 namespace {
     static const std::string K_ROOT_VAL = "<root>";
@@ -52,6 +54,47 @@ namespace striboh {
             std::string RootNode::getValueStr() const {
                 return K_ROOT_VAL;
             }
+
+            void RootNode::visit(striboh::idl::AstVisitor &pVisitor) {
+                auto& myModules=getModules();
+                visitModules(pVisitor, myModules);
+            }
+
+            void RootNode::visitModules(AstVisitor &pVisitor, const ModuleListNode &pModules) const {
+                for( const auto& pModule: pModules ) {
+                    const auto& myModuleName = pModule.getIdentifierStr();
+                    pVisitor.beginModule(myModuleName);
+                    auto& myInterfaces = pModule.getModuleBody().getInterfaces();
+                    for( const auto& myInterface : myInterfaces ) {
+                        const string& myInterfaceName = myInterface.getName();
+                        pVisitor.beginInterface(myInterfaceName);
+                        const auto& myMethods=myInterface.getMethods();
+                        for( const auto& myMethod : myMethods ) {
+                            pVisitor.beginMethod(myMethod[0]);
+                            for( int  myI = 1; myI < myMethod.size(); myI++) {
+                                pVisitor.beginParameter(myMethod[myI]);
+                            }
+                            pVisitor.endMethod(myMethod[0]);
+                        }
+                        pVisitor.endInterface(myInterfaceName);
+                    }
+                    visitModules(pVisitor,pModule.getModuleBody().getModules());
+                    pVisitor.endModule(myModuleName);
+                };
+            }
+
+            RootNode& RootNode::operator += (const ModuleBodyNode& pModuleBodyNode) {
+                copy(pModuleBodyNode.getModules().begin(),pModuleBodyNode.getModules().end(),
+                     std::back_inserter(getModules()));
+                //this->getModules().push_back(pModuleBodyNode);
+                BOOST_LOG_TRIVIAL(trace) << "Add module to root ("<< this <<") new size=" << pModuleBodyNode.getModules().size() <<".";
+                return *this;
+            }
+
+            RootNode &RootNode::operator+=(const vector<std::string> &) {
+                return *this;
+            }
+
 
         }
     } // end idl

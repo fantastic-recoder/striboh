@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -376,22 +376,51 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_EXCEPTION_IN_MESSAGE_PARSER_HPP
-#define STRIBOH_BASE_EXCEPTION_IN_MESSAGE_PARSER_HPP
 
-#include <fmt/format.h>
+#include "Echo.hpp"
 
-#include <stdexcept>
+#include <string>
+#include <striboh/stribohBaseBroker.hpp>
+#include <striboh/stribohBaseBeastServer.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
 
-namespace striboh {
-    namespace base {
-        class ExceptionInMessageParser : public std::runtime_error {
-            std::string mMsg;
-        public:
-            ExceptionInMessageParser(std::string_view pCause, size_t pOffset, std::string_view pWrongPart, std::string_view pRest);
-        };
-    }
+namespace {
+    static striboh::base::LogBoostImpl theLog;
+}
+namespace generated_echo_test {
+
+    using striboh::base::BrokerIface;
+
+    class EchoServant : public Echo {
+        BrokerIface& mBroker;
+    public:
+        EchoServant( BrokerIface& pBroker ): mBroker(pBroker) {}
+
+        virtual std::string echo(const std::string &pMsg) override {
+            theLog.info("*** Echoing {}.",pMsg);
+            return "Hello " + pMsg + "!";
+        }
+
+        virtual int64_t add(const int64_t &pA, const int64_t &pB) override {
+            theLog.info("*** Adding {} and {}.",pA,pB);
+            return pA + pB;
+        }
+
+        virtual int64_t shutdown() override {
+            theLog.info("shutdown()");
+            mBroker.shutdown();
+            return 0;
+        }
+    };
 }
 
+using generated_echo_test::EchoServant;
 
-#endif //STRIBOH_BASE_EXCEPTION_IN_MESSAGE_PARSER_HPP
+int main() {
+    striboh::base::Broker aBroker(theLog);
+    EchoServant myEchoServant(aBroker);
+    auto myUiid=aBroker.addServant(myEchoServant.getInterface());
+    aBroker.getLog().debug("EchoServant Uiid = {}.",to_string(myUiid));
+    aBroker.serve();
+    return 0;
+}

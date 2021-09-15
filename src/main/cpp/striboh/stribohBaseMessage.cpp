@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -390,7 +390,7 @@ namespace sml = boost::sml;
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseEMessageType.hpp"
 #include "stribohBaseLogIface.hpp"
-#include "stribohBaseExceptionInMessageParser.hpp"
+#include "stribohBaseExceptionsInMessageParserError.hpp"
 
 using std::string_view;
 namespace mpl = boost::mpl;
@@ -400,12 +400,12 @@ namespace msgpack {
         namespace adaptor {
 
             template<>
-            struct pack<striboh::base::Object> {
+            struct pack<striboh::base::ServantBase> {
                 template<typename Stream>
                 msgpack::packer<Stream> &operator()
                         (
                                 msgpack::packer<Stream> &pStream,
-                                striboh::base::Object const &
+                                striboh::base::ServantBase const &
                         )
                 const {
                     // your implementation
@@ -487,7 +487,6 @@ namespace striboh::base {
     using EvtStringVal = EvtVal<std::string>;
     using EvtBool = EvtVal<bool>;
     using EvtInt64 = EvtVal<int64_t>;
-    using EvtUInt64 = EvtVal<uint64_t>;
 
     struct MessageParserContext {
         Message &mMessage;
@@ -504,7 +503,7 @@ namespace striboh::base {
     };
 
     constexpr auto  actionStoreMessageType
-            = [](const EvtUInt64 &pEvent, MessageParserContext &pContext) {
+            = [](const EvtInt64 &pEvent, MessageParserContext &pContext) {
         pContext.mMessage.setType(EMessageType(pEvent.mVal));
     };
 
@@ -532,7 +531,7 @@ namespace striboh::base {
         pContext.mInstanceId.clear();
     };
 
-    constexpr auto actionStoreInstanceIdByte = [](const EvtUInt64 &pEvt, MessageParserContext &pContext) {
+    constexpr auto actionStoreInstanceIdByte = [](const EvtInt64 &pEvt, MessageParserContext &pContext) {
         pContext.mInstanceId.push_back(pEvt.mVal);
     };
 
@@ -557,6 +556,7 @@ namespace striboh::base {
             void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
                 pContext.mMessage.getParameters().emplace_back(Parameter(pContext.mKey, pEvent.mVal));
             };
+
         };
 
         struct ActionSetReturn {
@@ -578,10 +578,10 @@ namespace striboh::base {
                     //"ParsingMessageState"_s + event<EvtStringVal> / actionStoreKey = "ParsingMessageState"_s,
                     // message type
                     "ParsingMessageState"_s + event<EvtStringVal>[checkMessageTypeKey] = "ParsingMessageType"_s,
-                    "ParsingMessageType"_s + event<EvtUInt64> / actionStoreMessageType = "ParsingMessageState"_s,
+                    "ParsingMessageType"_s + event<EvtInt64> / actionStoreMessageType = "ParsingMessageState"_s,
                     // instance id
                     "ParsingMessageState"_s + event<EvtStringVal>[checkInstanceKey] / actionStartInstanceId = "ParsingInstanceId"_s,
-                    "ParsingInstanceId"_s + event<EvtUInt64>   / actionStoreInstanceIdByte,
+                    "ParsingInstanceId"_s + event<EvtInt64>   / actionStoreInstanceIdByte,
                     "ParsingInstanceId"_s + event<EvtEndArray> / actionStoreInstanceId = "ParsingMessageState"_s,
                     // parameters of a method
                     "ParsingMessageState"_s + event<EvtStringVal>[checkParametersKey] = "ParsingParameters"_s,
@@ -589,7 +589,6 @@ namespace striboh::base {
                     "ParsingParametersKey"_s + event<EvtStringVal> / actionStoreKey = "ParsingParametersKey"_s,
                     "ParsingParametersKey"_s + event<EvtEndMapKey> = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtInt64> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                    "ParsingParameterValue"_s + event<EvtUInt64> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtBool> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtStringVal> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtEndMapValue> = "ParsingParametersKey"_s,
@@ -600,7 +599,6 @@ namespace striboh::base {
                     // return value
                     "ParsingMessageState"_s + event<EvtStringVal>[checkReturnKey] = "ParsingReturn"_s,
                     "ParsingReturn"_s + event<EvtInt64> / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                    "ParsingReturn"_s + event<EvtUInt64> / (ActionSetReturn{}) = "ParsingMessageState"_s,
                     "ParsingReturn"_s + event<EvtBool> / (ActionSetReturn{}) = "ParsingMessageState"_s,
                     "ParsingReturn"_s + event<EvtStringVal> / (ActionSetReturn{}) = "ParsingMessageState"_s,
                     // finished
@@ -639,7 +637,7 @@ namespace striboh::base {
         }
 
         inline bool visit_positive_integer(uint64_t v) {
-            mMessageParser.process_event(EvtUInt64(v));
+            mMessageParser.process_event(EvtInt64(v));
             return isInErrorState();
         }
 
@@ -689,7 +687,7 @@ namespace striboh::base {
         }
 
         void parse_error(size_t pParsedOffset, size_t pErrorOffset) {
-            throw new ExceptionInMessageParser
+            throw new exceptions::InMessageParserError
                     (
                             "Parser error",
                             pErrorOffset,
@@ -699,7 +697,7 @@ namespace striboh::base {
         }
 
         void insufficient_bytes(size_t pParsedOffset, size_t pErrorOffset) {
-            throw new ExceptionInMessageParser
+            throw new exceptions::InMessageParserError
                     (
                             "Insufficient bytes",
                             pErrorOffset,
@@ -763,7 +761,11 @@ namespace striboh::base {
         for (const Parameter &myPar: getParameters()) {
             string_view myName = myPar.getName();
             packString(myPacker, myName);
-            std::visit([&myPacker](auto &&myVal) { myPacker.pack(myVal); }, myPar.getValue().mVal);
+            std::visit([&myPacker](auto &&myVal)
+                {
+                    myPacker.pack(myVal);
+                }, myPar.getValue().mVal
+            );
         }
     }
 

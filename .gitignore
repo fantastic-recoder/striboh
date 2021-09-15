@@ -38,4 +38,10 @@
 .project
 CMakeLists.txt.user
 *.kdev4
+/venv/
+/**/*.bak
+/.settings/language.settings.xml
+/src/test/echo/Echo.hpp
+/src/test/echo/EchoClt.hpp
+/cmake-build-debug/**/*
 

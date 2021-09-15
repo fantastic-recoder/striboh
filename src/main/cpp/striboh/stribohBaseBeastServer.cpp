@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -507,10 +507,15 @@ namespace striboh {
                 return pSend(bad_request("Unknown HTTP-method"));
 
             // Request path must be absolute and not contain "..".
+            /// TODO: set the correct reason here
             if (pRequest.target().empty() ||
                 pRequest.target()[0] != '/' ||
-                pRequest.target().find("..") != beast::string_view::npos)
-                return pSend(bad_request("Illegal request-target"));
+                pRequest.target().find("..") != beast::string_view::npos) {
+                const string myTarget(pRequest.target().data(),pRequest.target().size());
+                pBroker.getLog().debug("Received wrong target: \"{}\".",
+                                       myTarget);
+                return pSend(bad_request("Illegal/empty request-target: \""+myTarget+"\""));
+            }
 
             string myUrl(pRequest.target());
             auto myParams = parseUrlParameters(myUrl);
@@ -745,7 +750,7 @@ namespace striboh {
                 if (pErrorCode) {
                     fail(pErrorCode, "onWsRead");
                 }
-                mLog.debug("Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
+                mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
                 Message myMsg(mLog);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
@@ -757,7 +762,7 @@ namespace striboh {
             }
 
             void doWriteBufferToWebSocket() {
-                mBroker.getLog().debug("Sending {} bytes.",
+                mBroker.getLog().debug("WS Send {} bytes.",
                                        mWriteBuffer.size());
                 mWebSocketStream->async_write(mWriteBuffer.data(),
                                               beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));

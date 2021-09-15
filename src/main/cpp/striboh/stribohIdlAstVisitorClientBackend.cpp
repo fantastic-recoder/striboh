@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -376,21 +376,69 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include "stribohBaseExceptionInMessageParser.hpp"
 
-namespace striboh::base {
-    ExceptionInMessageParser::ExceptionInMessageParser(
-            std::string_view pCause,
-            size_t pOffset, std::string_view pWrongPart, std::string_view pRest)
-    : mMsg
-    (
-            std::forward<std::string>
+#include <string>
+#include <vector>
+
+#include <fmt/format.h>
+
+#include "stribohBaseLogIface.hpp"
+#include "stribohIdlAstVisitorClientBackend.hpp"
+#include "stribohIdlParser.hpp"
+#include "stribohIdlAstTypedIdentifierNode.hpp"
+
+using std::string;
+using fmt::format;
+
+namespace striboh::idl {
+
+    AstVisitorClientBackend::AstVisitorClientBackend
             (
-                    fmt::format(
-                            "{} at offset {} while parsing >>{}<<{}.",
-                            pCause, pOffset, pWrongPart, pRest
-                    )
-            )
-    ), std::runtime_error(mMsg) {}
+                    IdlContext &pIdlCtx,
+                    const chaiscript::Exception_Handler &pExceptionHandler,
+                    const string &pReport
+            ) : mExceptionHandler(pExceptionHandler),
+                mReport(pReport),
+                mIdlCtx(pIdlCtx) {
+    }
+
+    void AstVisitorClientBackend::beginModule(std::string_view pModuleName) {
+        mModuleBeginScript = format("stribohIdlClientBeginModule(\"{}\")", pModuleName);
+        mIdlCtx.getLog().trace("Calling {}", mModuleBeginScript);
+        mIdlCtx.evalChaiscript(mModuleBeginScript, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorClientBackend::endModule(std::string_view pModuleName) {
+        string myChaiBackendCallback = format("stribohIdlClientEndModule(\"{}\")", pModuleName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorClientBackend::beginInterface(std::string_view pInterfaceName) {
+        string myChaiBackendCallback = format("stribohIdlClientBeginInterface(\"{}\")", pInterfaceName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorClientBackend::endInterface(std::string_view pInterfaceName) {
+        string myChaiBackendCallback = format("stribohIdlClientEndInterface(\"{}\")", pInterfaceName);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorClientBackend::beginMethod(const ast::TypedIdentifierNode &pMethod) {
+        string myChaiBackendCallback = format("stribohIdlClientBeginMethod(\"{}\",\"{}\")",
+                                              pMethod.getName(), pMethod.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorClientBackend::endMethod(const ast::TypedIdentifierNode &pMethod) {
+        string myChaiBackendCallback = format("stribohIdlClientEndMethod(\"{}\",\"{}\")",
+                                              pMethod.getName(), pMethod.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
+    void AstVisitorClientBackend::beginParameter(const ast::TypedIdentifierNode &pPar) {
+        string myChaiBackendCallback = format("stribohIdlClientBeginParameter(\"{}\",\"{}\")",
+                                              pPar.getName(), pPar.getTypeString());
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
 
 }

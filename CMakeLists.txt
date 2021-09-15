@@ -3,11 +3,17 @@ project(striboh)
 
 set(CMAKE_CXX_STANDARD 17)
 set(MSGPACK_CXX17 ON)
-add_definitions("-std=c++17")
+add_definitions("-std=c++2a -fPIC")
 enable_testing()
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+find_package(PythonLibs 3.8 REQUIRED)
+
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS)
+else()
+    message(WARNING "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
+endif()
 
 include(FetchContent)
 ###############################################################################
@@ -46,7 +52,11 @@ endif()
 
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
+set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} ${CMAKE_DL_LIBS} pthread)
+set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_BOOST} ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS})
 
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
-
+add_subdirectory(src/test/echo)
+# and this adds the doxygen folder as a CMake subdirectory.
+add_subdirectory(doxygen)

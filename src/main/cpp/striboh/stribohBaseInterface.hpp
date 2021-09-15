@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -386,13 +386,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <NamedType/named_type.hpp>
 
-#include "stribohBaseMethod.hpp"
-
 namespace striboh::base {
 
     class Broker;
 
     class Context;
+
+    class ServantBase;
+
+    class Method;
 
     using InterfaceName = fluent::NamedType<std::string, struct InterfaceNameTag>;
 
@@ -407,6 +409,7 @@ namespace striboh::base {
 
         explicit Interface
                 (
+                        ServantBase& pObject,
                         std::initializer_list<std::string> pPath,
                         InterfaceName pName,
                         std::initializer_list<Method>
@@ -427,10 +430,13 @@ namespace striboh::base {
         }
 
 
+        ServantBase &getObject();
+
     private:
         Methods_t mMethods;
         Path_t mPath;
         InterfaceName mName;
+        ServantBase& mObject;
     };
 
     static const constexpr char *const K_TAG_SVC = "svc";

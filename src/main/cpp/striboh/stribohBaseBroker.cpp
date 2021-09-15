@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -384,9 +384,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseBrokerIface.hpp"
+#include "stribohBaseServantBase.hpp"
+#include "stribohBaseMessage.hpp"
+#include "stribohBaseMethod.hpp"
+#include "stribohBaseBeastServer.hpp"
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleBodyNode.hpp"
-#include "stribohBaseEMessageType.hpp"
 
 namespace striboh::base {
 
@@ -401,7 +404,7 @@ namespace striboh::base {
     using json = ::nlohmann::json;
 
     const std::atomic<EServerState> &
-    Broker::serve() {
+    Broker::serveOnce() {
         if (getState() != EServerState::K_NOMINAL) {
             getLog().warn("ORB is not ready.");
         } else {
@@ -418,7 +421,7 @@ namespace striboh::base {
                     getLog().debug("Waiting for main servant. state = {}",
                                    toString(getState()));
                 }
-                mReceiver.wait_for(std::chrono::duration<int, std::milli>(100));
+                mReceiver.wait_for(std::chrono::duration<int, std::milli>(mDispatchSleep));
             } while (getState() != EServerState::K_STARTED);
         }
         return getState();
@@ -429,7 +432,7 @@ namespace striboh::base {
         do {
             setState(EServerState::K_STARTED);
             getLog().debug("Going to sleep. state = {}", toString(getState()));
-            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(20 * 1000));
+            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(mDispatchSleep));
         } while (getState() == EServerState::K_STARTED);
         getLog().info("Shutdown completed. state = {}", toString(getState()));
     }
@@ -446,7 +449,7 @@ namespace striboh::base {
     }
 
     void Broker::doShutdown() {
-        EServerState myShutdownStateWas=getState();
+        EServerState myShutdownStateWas = getState();
         setState(EServerState::K_SHUTTING_DOWN);
         getLog().info("Going to shutdown. state = {}", toString(getState()));
         if (myShutdownStateWas != EServerState::K_NOMINAL) {
@@ -467,7 +470,7 @@ namespace striboh::base {
     }
 
     Message
-    Broker::invokeMethod(const Message& pValues) {
+    Broker::invokeMethod(Message &&pValues) {
         const InstanceId aInstanceId(pValues.getInstanceId());
         getLog().debug("Calling instance \"{}\" method \"{}\".",
                        toString(aInstanceId), pValues.getMethodName());
@@ -475,12 +478,18 @@ namespace striboh::base {
         if (myInterfaceIt != mInstances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
-                return myMethodIt->invoke(pValues, Context(*this));
+                try {
+                    return myMethodIt->invoke(myInterfaceIt->second.getObject(), pValues, Context(*this));
+                } catch (std::exception& pException) {
+                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), pException.what());
+                } catch( ... ) {
+                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), "Unknown exception caught");
+                }
             }
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
         }
-        Message myRetVal(Value{},getLog());
+        Message myRetVal(Value{}, getLog());
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
                        pValues.getMethodName(), toString(aInstanceId));
@@ -488,17 +497,23 @@ namespace striboh::base {
     }
 
     InstanceId
-    Broker::addServant(Interface &pInterface) {
+    Broker::addServant(const Interface &pInterface) {
         InstanceId myUuid = generateInstanceId();
-        auto myPair = mInstances.try_emplace(myUuid, pInterface);
+        const auto myPair = mInstances.try_emplace(myUuid, pInterface);
         ModuleListNode *myChildModules = &mRoot.getModules();
         ModuleBodyNode *myModuleBodyNode = nullptr;
         for (string myModuleName : myPair.first->second.getPath()) {
             myModuleBodyNode = addServantModule(myChildModules, myModuleName);
             myChildModules = &myModuleBodyNode->getModules();
         }
-        myModuleBodyNode->getInterfaces().emplace_back(
-                InterfaceNode(IdentifierNode(pInterface.getName().get()), myUuid));
+        if (myModuleBodyNode) {
+            const InterfaceName myInterfaceName(pInterface.getName());
+            myModuleBodyNode->getInterfaces().emplace_back(
+                    InterfaceNode(IdentifierNode(myInterfaceName.get()), myUuid));
+        } else {
+            // TODO make this nicer!
+            throw std::runtime_error("No module");
+        }
         return myUuid;
     }
 
@@ -636,9 +651,9 @@ namespace striboh::base {
     }
 
     std::string
-    Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc) const {
+    Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const {
         json aJson;
-        aJson[K_TAG_SVC][K_TAG_SVC_PATH] =  pPath;
+        aJson[K_TAG_SVC][K_TAG_SVC_PATH] = pPath;
         aJson[K_TAG_SVC][K_TAG_SVC_RESULT] = pSvc.first;
         aJson[K_TAG_SVC][K_TAG_SVC_UUID] = toString(pSvc.second);
         aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR] = pSvc.second.data;
@@ -647,12 +662,22 @@ namespace striboh::base {
 
     ResolvedService
     Broker::resolveServiceFromStr(const std::string &pJson) {
-        json aJson=json::parse(pJson);
-        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], from_json( aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR] ) };
+        json aJson = json::parse(pJson);
+        ResolvedService mySvc{aJson[K_TAG_SVC][K_TAG_SVC_RESULT], from_json(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR])};
         return mySvc;
     }
 
     Broker::~Broker() {
         doShutdown();
     }
+
+    void Broker::serve() {
+        if (!getServer()) {
+            setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
+        }
+        for (; getState() != striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
+            std::this_thread::sleep_for(mDispatchSleep);
+        }
+    }
+
 }// namespace striboh

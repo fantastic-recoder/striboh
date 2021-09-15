@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -399,10 +399,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 
-#include <msgpack.hpp>
+#include "striboh_test_utils.hpp"
 #include "striboh_test_echo_server_common.hpp"
 
 using namespace striboh::base;
+using namespace striboh::test;
 using namespace std::chrono_literals;
 using std::endl;
 using std::string;
@@ -466,7 +467,7 @@ TEST(stribohBaseTests, testParseUrlParameters) {
 
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
     Broker aBroker(theLog);
-    aBroker.serve();
+    aBroker.serveOnce();
     aBroker.shutdown();
     ASSERT_EQ(EServerState::K_NOMINAL, aBroker.getState());
 }
@@ -527,6 +528,7 @@ TEST(stribohBaseTests, testUuidGeneration) {
 
 Interface createTestInterface() {
     return Interface{
+            theEchoServant,
             {"m0", "m1"}, InterfaceName("Hello"),
             {
                     Method{"echo",
@@ -604,9 +606,10 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     Broker aBroker(theLog);
-    aBroker.serve();
+    aBroker.serveOnce();
 
     Interface myInterface{
+            theEchoServant,
             {"m0"}, InterfaceName{"Hello"},
             {
                     Method{"echo",
@@ -625,36 +628,37 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             }
     };
     InstanceId myUuid = aBroker.addServant(myInterface);
-    Message myMsg("echo", {{"p0", "Peter!"}},getLog());
+    Message myMsg("echo", {{"p0", "Peter!"}}, getLog());
     BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.asJsonString();
     myMsg.setInstanceId(myUuid);
-    Message myReply = aBroker.invokeMethod(std::forward<Message &&>(myMsg));
-    EXPECT_EQ(0,myReply.getParameters().size()) << "Parameter list should be empty on return message!";
-    EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
+    Message myReply = aBroker.invokeMethod(std::forward<Message>(myMsg));
+    EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list should be empty on return message!";
+    EXPECT_EQ(EMessageType::K_RETURN, myReply.getType());
     EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
     aBroker.shutdown();
 }
 
-static constexpr const char *const K_TEST_METHOD_NAME2 = "abrakadabra";
+static constexpr const char *const K_TEST_METHOD_NAME2 = "abracadabra";
 
 TEST(stribohBaseTests, testSerailization) {
     Message myInputValues("testMethod",
                           {{"p0", "Echo string."},
-                           {"p1", 42},
-                           {"p2", "end."}}
-                           ,getLog());
+                           {"p1", 42L},
+                           {"p2", "end."},
+                           {"p3", 13L}}, getLog());
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
     EXPECT_EQ(myIId, myInputValues.getInstanceId());
-    EXPECT_EQ(3, myInputValues.getParameters().size());
+    EXPECT_EQ(4, myInputValues.getParameters().size());
     Buffer myBuff;
     myInputValues.packToBuffer(myBuff);
     Message myOutputValues(getLog());
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
-    EXPECT_EQ(3, myOutputValues.getParameters().size());
+    EXPECT_EQ(4, myOutputValues.getParameters().size());
     EXPECT_EQ("Echo string.", myOutputValues.getParameters()[0].get<string>());
-    EXPECT_EQ(42, myOutputValues.getParameters()[1].getValue().get<uint64_t>());
+    EXPECT_EQ(42L, myOutputValues.getParameters()[1].getValue().get<int64_t>());
     EXPECT_EQ("end.", myOutputValues.getParameters()[2].get<string>());
+    EXPECT_EQ(13L, myOutputValues.getParameters()[3].getValue().get<int64_t>());
     EXPECT_EQ("testMethod", myOutputValues.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
     myOutputValues.setMethodName(K_TEST_METHOD_NAME2);
@@ -679,15 +683,7 @@ TEST(stribohBaseTests, testSerailization) {
 static constexpr const char *const theTestEchoServerBinary = "./striboh_test_echo_server";
 
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
-    std::shared_ptr<child> myServerChildProcess;
-    const char *const myNoServerVariable = std::getenv("NO_SRV");
-    if (myNoServerVariable == nullptr ||
-        (myNoServerVariable != nullptr && string_view(myNoServerVariable).compare("yes"))) {
-        myServerChildProcess = std::make_shared<child>(theTestEchoServerBinary, std_out > "out.txt");
-        BOOST_LOG_TRIVIAL(debug) << "Starting test echo server...";
-        ASSERT_TRUE(myServerChildProcess->valid()) << "Failed to start " << theTestEchoServerBinary << ".";
-        std::this_thread::sleep_for(std::chrono::seconds(5s));
-    }
+    std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
 
     HostConnection aClient(striboh::base::K_DEFAULT_HOST,
                            striboh::base::K_DEFAULT_PORT, theLog);
@@ -699,7 +695,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         Message myReply = myResult0->getReturnValue();
         EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list is empty, should have 1 element!";
         EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
-        EXPECT_EQ(EMessageType::K_RETURN,myReply.getType());
+        EXPECT_EQ(EMessageType::K_RETURN, myReply.getType());
     }
     {
         auto myResult2 = myProxy
@@ -707,14 +703,14 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         Message myReply2 = myResult2->getReturnValue();
         EXPECT_EQ(0, myReply2.getParameters().size()) << "Parameter list is empty, should have 1 element!";
         EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getReturn().get<std::string>());
-        EXPECT_EQ(EMessageType::K_RETURN,myReply2.getType());
+        EXPECT_EQ(EMessageType::K_RETURN, myReply2.getType());
     }
     {
         auto myResult1 = myProxy
                 ->invokeMethod(Message("shutdown", {}, getLog()));
         Message myReply1 = myResult1->getReturnValue();
         EXPECT_EQ(0, myReply1.getParameters().size());
-        EXPECT_EQ(EMessageType::K_RETURN,myReply1.getType());
+        EXPECT_EQ(EMessageType::K_RETURN, myReply1.getType());
     }
     if (myServerChildProcess) {
         myServerChildProcess->wait_for(30s);
@@ -770,7 +766,7 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
     EXPECT_EQ("p2", m1.getParameters()[1].getName());
     EXPECT_EQ("Santa Maria", m1.getParameters()[1].getValue().get<std::string>());
     EXPECT_EQ("p1", m1.getParameters()[0].getName());
-    EXPECT_EQ(42L, m1.getParameters()[0].getValue().get<uint64_t>());
+    EXPECT_EQ(42L, m1.getParameters()[0].getValue().get<int64_t>());
     EXPECT_EQ("helloMethod", m1.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, m1.getType());
 }

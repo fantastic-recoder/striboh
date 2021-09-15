@@ -14,10 +14,14 @@
 #include "stribohIdlAstImportNode.hpp"
 #include "stribohIdlAstImportListNode.hpp"
 #include "stribohIdlAstModuleListNode.hpp"
+
 #include <boost/type_index.hpp>
 
 namespace striboh {
     namespace idl {
+
+        class AstVisitor;
+
         namespace ast {
 
             static const char *const K_ROOT_NODE = "RootNode";
@@ -59,6 +63,13 @@ namespace striboh {
                 std::string
                 getValueStr() const override;
 
+                void visit(striboh::idl::AstVisitor &pVisitor);
+
+                void visitModules(AstVisitor &pVisitor, const ModuleListNode &pModules) const;
+
+                RootNode& operator += (const ModuleBodyNode& );
+
+                RootNode& operator += (const std::vector<std::string>& );
             };
 
             std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) ;

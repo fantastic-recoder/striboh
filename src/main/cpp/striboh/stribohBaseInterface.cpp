@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -379,15 +379,18 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/log/trivial.hpp>
 
 #include "stribohBaseInterface.hpp"
+#include "stribohBaseMethod.hpp"
 
 namespace striboh::base {
         Interface::Interface
         (
+                ServantBase& pObject,
                 std::initializer_list<std::string> pPath,
                 InterfaceName pName,
                 std::initializer_list<Method> pMethodList
         )
         :
+        mObject(pObject),
         mPath{pPath},
         mName{pName},
         mMethods{pMethodList}
@@ -415,4 +418,8 @@ namespace striboh::base {
             return mPath;
         }
 
+    ServantBase &Interface::getObject() {
+        return mObject;
     }
+
+}

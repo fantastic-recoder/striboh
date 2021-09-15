@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -376,8 +376,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_STRIBOHBASELOGBOOSTIMPL_HPP
-#define STRIBOH_STRIBOHBASELOGBOOSTIMPL_HPP
+#ifndef STRIBOH_BASE_LOG_BOOST_IMPL_HPP
+#define STRIBOH_BASE_LOG_BOOST_IMPL_HPP
 
 #include "stribohBaseLogIface.hpp"
 
@@ -385,9 +385,13 @@ namespace striboh {
     namespace base {
         class LogBoostImpl: public LogIface {
         protected:
+            void doTrace(const std::string pMsg) override;
+
             void doDebug(const std::string pMsg) override;
 
             void doError(const std::string pMsg) override;
+
+            void doFatal(const std::string pMsg) override;
 
             void doWarn(const std::string pMsg) override;
 
@@ -397,4 +401,4 @@ namespace striboh {
     }
 }
 
-#endif //STRIBOH_STRIBOHBASELOGBOOSTIMPL_HPP
+#endif //STRIBOH_BASE_LOG_BOOST_IMPL_HPP

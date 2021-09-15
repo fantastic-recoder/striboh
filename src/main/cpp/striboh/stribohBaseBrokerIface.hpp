@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -384,6 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <atomic>
 #include <string>
 #include <future>
+#include <set>
 #include <NamedType/named_type.hpp>
 
 #include "stribohBaseInstanceId.hpp"
@@ -392,6 +393,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseEServerState.hpp"
+#include "stribohBaseMessage.hpp"
 
 namespace striboh::base {
 
@@ -446,16 +448,16 @@ namespace striboh::base {
             initialize() = 0;
 
             virtual const std::atomic<EServerState>&
-            serve() = 0;
+            serveOnce() = 0;
 
             virtual std::future<void>
             shutdown() = 0;
 
             virtual Message
-            invokeMethod(const Message& pInvocation) = 0;
+            invokeMethod(Message&& pInvocation) = 0;
 
             virtual InstanceId
-            addServant(Interface& pMethodSignature) = 0;
+            addServant(const Interface& pMethodSignature) = 0;
 
             virtual ResolvedResult
             resolve(std::string_view pPath ) const = 0;

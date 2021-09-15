@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -415,16 +415,16 @@ namespace striboh::base {
             initialize() override;
 
             const std::atomic<EServerState>&
-            serve() override;
+            serveOnce() override;
 
             std::future<void>
             shutdown() override;
 
             Message
-            invokeMethod(const Message& pInvocation) override;
+            invokeMethod(Message&& pInvocation) override;
 
             InstanceId
-            addServant(Interface& pMethodSignature) override;
+            addServant(const Interface& pMethodSignature) override;
 
             ResolvedResult
             resolve(std::string_view pPath ) const override;
@@ -444,7 +444,15 @@ namespace striboh::base {
 
             virtual ~Broker();
 
+            void serve();
+
         private:
+
+            Instances_t /*---------------*/ mInstances;
+            RootNode /*------------------*/ mRoot;
+            std::future<void> /*---------*/ mReceiver;
+            std::chrono::seconds /*------*/ mStep /*----------*/ = std::chrono::seconds(10);
+            std::chrono::milliseconds /*-*/ mDispatchSleep /*-*/ = std::chrono::milliseconds(10);
 
             void
             dispatch();
@@ -453,11 +461,6 @@ namespace striboh::base {
                                                PathIterator pSegmentEnd,
                                                ResolvedResult &pRetVal,
                                                const ModuleListNode& pModuleListNode) const;
-
-            Instances_t /*-------*/ mInstances;
-            RootNode /*----------*/ mRoot;
-            std::future<void> /*-*/ mReceiver;
-
             void
             addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
 
@@ -471,6 +474,25 @@ namespace striboh::base {
             resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
 
             void doShutdown();
+
+        public:
+
+            const std::chrono::milliseconds &getDispatchSleep() const {
+                return mDispatchSleep;
+            }
+
+            void setDispatchSleep(const std::chrono::milliseconds &pDispatchSleep) {
+                mDispatchSleep = pDispatchSleep;
+            }
+
+
+            const std::chrono::seconds &getStep() const {
+                return mStep;
+            }
+
+            void setStep(const std::chrono::seconds &pStep) {
+                mStep = pStep;
+            }
 
         };
 

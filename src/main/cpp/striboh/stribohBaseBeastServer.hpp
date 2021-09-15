@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -377,8 +377,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHBASEBEASTSERVER_HPP
-#define STRIBOH_STRIBOHBASEBEASTSERVER_HPP
+#ifndef STRIBOH_BASE_BEAST_SERVER_HPP
+#define STRIBOH_BASE_BEAST_SERVER_HPP
 
 #include <boost/asio.hpp>
 
@@ -429,4 +429,4 @@ namespace striboh {
 } // striboh
 
 
-#endif //STRIBOH_STRIBOHBASEBEASTSERVER_HPP
+#endif //STRIBOH_BASE_BEAST_SERVER_HPP

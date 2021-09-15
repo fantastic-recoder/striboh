@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -376,8 +376,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_STRIBOHBASELOGIFACE_HPP
-#define STRIBOH_STRIBOHBASELOGIFACE_HPP
+#ifndef STRIBOH_BASE_LOG_IFACE_HPP
+#define STRIBOH_BASE_LOG_IFACE_HPP
 
 #include <string>
 #include <fmt/format.h>
@@ -385,11 +385,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh {
     namespace base {
         enum class ELogLevel {
-            NONE= -1000,DBG=3,WRN=2,INF=1,ERR=0
+            NONE= -1000,TRACE=5,DEBUG=4,WARN=3,INFO=2,ERROR=1,FATAL=0
         };
 
         class LogIface {
-            ELogLevel mThreshold=ELogLevel::DBG;
+            ELogLevel mThreshold=ELogLevel::DEBUG;
 
         public:
             ELogLevel getThreshold() const {
@@ -397,13 +397,49 @@ namespace striboh {
             }
 
             void setThreshold(ELogLevel pLevel) {
+                info("Setting log level {}",pLevel);
                 mThreshold = pLevel;
+            }
+
+            bool setThreshold(int pLevel) {
+                switch(pLevel) {
+                    case 0:
+                        setThreshold(ELogLevel::TRACE);
+                        break;
+                    case 1:
+                        setThreshold(ELogLevel::DEBUG);
+                        break;
+                    case 2:
+                        setThreshold(ELogLevel::INFO);
+                        break;
+                    case 3:
+                        setThreshold(ELogLevel::WARN);
+                        break;
+                    case 4:
+                        setThreshold(ELogLevel::ERROR);
+                        break;
+                    case 5:
+                        setThreshold(ELogLevel::FATAL);
+                        break;
+                    default:
+                        setThreshold(ELogLevel::INFO);
+                        return false;
+                }
+                return true;
+            }
+
+            template<class ...TArgs>
+            void
+            trace(std::string_view pFmt, TArgs ...pTArgs) {
+                if(mThreshold >= ELogLevel::TRACE) {
+                    doTrace(fmt::format(pFmt,pTArgs...));
+                }
             }
 
             template<class ...TArgs>
             void
             debug(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::DBG) {
+                if(mThreshold >= ELogLevel::DEBUG) {
                     doDebug(fmt::format(pFmt,pTArgs...));
                 }
             }
@@ -411,7 +447,7 @@ namespace striboh {
             template<class ...TArgs>
             void
             warn(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::WRN) {
+                if(mThreshold >= ELogLevel::WARN) {
                     doWarn(fmt::format(pFmt,pTArgs...));
                 }
             }
@@ -419,7 +455,7 @@ namespace striboh {
             template<class ...TArgs>
             void
             info(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::INF) {
+                if(mThreshold >= ELogLevel::INFO) {
                     doInfo(fmt::format(pFmt,pTArgs...));
                 }
             }
@@ -427,17 +463,28 @@ namespace striboh {
             template<class ...TArgs>
             void
             error(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::ERR) {
+                if(mThreshold >= ELogLevel::ERROR) {
                     doError(fmt::format(pFmt,pTArgs...));
                 }
             }
+
+            template<class ...TArgs>
+            void
+            fatal(std::string_view pFmt, TArgs ...pTArgs) {
+                if(mThreshold >= ELogLevel::FATAL) {
+                    doFatal(fmt::format(pFmt,pTArgs...));
+                }
+            }
+
         protected:
+            virtual void doTrace( const std::string pMsg ) = 0;
             virtual void doDebug( const std::string pMsg ) = 0;
             virtual void doError( const std::string pMsg ) = 0;
+            virtual void doFatal( const std::string pMsg ) = 0;
             virtual void doWarn( const std::string pMsg ) = 0;
             virtual void doInfo( const std::string pMsg ) = 0;
         };
     }
 }
 
-#endif //STRIBOH_STRIBOHBASELOGIFACE_HPP
+#endif //STRIBOH_BASE_LOG_IFACE_HPP

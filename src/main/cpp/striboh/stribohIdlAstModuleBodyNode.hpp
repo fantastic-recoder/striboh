@@ -20,55 +20,60 @@ namespace striboh {
                 ModuleBodyNode() :
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE) {}
 
-                ModuleBodyNode(const ModuleBodyNode& pModuleBody) :
+                ModuleBodyNode(const ModuleBodyNode &pModuleBody) :
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleBody) {}
 
-                ModuleBodyNode(const ModuleListNode& pModuleList) :
+                ModuleBodyNode(const ModuleListNode &pModuleList) :
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleList) {
                 }
 
-                ModuleBodyNode(const InterfaceListNode& pInterfaceList) :
+                ModuleBodyNode(const InterfaceListNode &pInterfaceList) :
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pInterfaceList) {
                 }
 
-                ModuleBodyNode(ModuleListNode&& pModuleList) :
+                ModuleBodyNode(ModuleListNode &&pModuleList) :
                         BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleList) {
                 }
 
-                ModuleBodyNode& operator=(const ModuleListNode& pModuleList) {
+                ModuleBodyNode &operator=(const ModuleListNode &pModuleList) {
                     getSubNode1() = pModuleList;
                     return *this;
                 }
 
-                ModuleBodyNode& operator=(ModuleListNode&& pModuleList) {
+                ModuleBodyNode &operator=(ModuleListNode &&pModuleList) {
                     getSubNode1() = pModuleList;
                     return *this;
                 }
 
-                ModuleBodyNode& operator=(ModuleBodyNode&& pModuleBody) {
+                ModuleBodyNode &operator=(ModuleBodyNode &&pModuleBody) {
                     type_t::operator=(pModuleBody);
                     return *this;
                 }
 
-                ModuleBodyNode& operator=(const ModuleBodyNode& pModuleBody) {
+                ModuleBodyNode &operator=(const ModuleBodyNode &pModuleBody) {
                     type_t::operator=(pModuleBody);
                     return *this;
                 }
 
-                ModuleListNode& getModules() {
+                ModuleListNode &getModules() {
                     return getSubNode1();
                 }
 
-                const ModuleListNode& getModules() const {
+                const ModuleListNode &getModules() const {
                     return getSubNode1();
                 }
 
-                const InterfaceListNode& getInterfaces() const {
+                const InterfaceListNode &getInterfaces() const {
                     return getSubNode2();
                 }
-                InterfaceListNode& getInterfaces() {
+
+                InterfaceListNode &getInterfaces() {
                     return getSubNode2();
                 }
+
+                ModuleBodyNode &operator+=(const InterfaceListNode &pInterfaceList);
+
+                ModuleBodyNode &operator+=(const ModuleListNode &pModuleListNode);
             };
 
         }

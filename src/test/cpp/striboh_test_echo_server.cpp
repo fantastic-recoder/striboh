@@ -1,4 +1,4 @@
-/**
+/*
 
 Mozilla Public License Version 2.0
 ==================================
@@ -380,10 +380,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <thread>
 #include <boost/program_options.hpp>
 
+#include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseInterface.hpp>
 #include <striboh/stribohBaseBroker.hpp>
 #include <striboh/stribohBaseBeastServer.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
+#include <striboh/stribohBaseServantBase.hpp>
 
 #include "striboh_test_echo_server_common.hpp"
 
@@ -406,7 +408,7 @@ int main( const int argc, const char* argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("time,t", po::value<int>(), "Set sleep (serve) time in seconds.")
+            ("time,t", po::value<int>(), "Set sleep (serveOnce) time in seconds.")
             ;
 
     po::variables_map vm;
@@ -425,13 +427,13 @@ int main( const int argc, const char* argv[]) {
 
     Broker aBroker(myLog);
     aBroker.setServer(std::make_shared<BeastServer>(3,aBroker,myLog));
-    aBroker.serve();
+    aBroker.serveOnce();
 
     myLog.debug("Adding echo servant...") ;
-    InstanceId  myUuid = aBroker.addServant(theEchoServerInterface );
+    InstanceId  myUuid = aBroker.addServant(theEchoServant.getInterface() );
     myLog.info( "Test echo servant added." );
     int mySecondsCounter=0;
-    int myStep=10;
+    int myStep=1;
     do {
         std::this_thread::sleep_for(std::chrono::seconds(myStep));
         myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
