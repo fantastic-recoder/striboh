@@ -384,8 +384,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh {
     namespace base {
-        enum class ELogLevel {
-            NONE= -1000,TRACE=5,DEBUG=4,WARN=3,INFO=2,ERROR=1,FATAL=0
+        enum class ELogLevel : int32_t {
+            NO_LOG= -1000,
+            TRACE=5,
+            DEBUG=4,
+            WARN=3,
+            INFO=2,
+            ERRORS=1,
+            FATAL=0
         };
 
         class LogIface {
@@ -416,7 +422,7 @@ namespace striboh {
                         setThreshold(ELogLevel::WARN);
                         break;
                     case 4:
-                        setThreshold(ELogLevel::ERROR);
+                        setThreshold(ELogLevel::ERRORS);
                         break;
                     case 5:
                         setThreshold(ELogLevel::FATAL);
@@ -463,7 +469,7 @@ namespace striboh {
             template<class ...TArgs>
             void
             error(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::ERROR) {
+                if(mThreshold >= ELogLevel::ERRORS) {
                     doError(fmt::format(pFmt,pTArgs...));
                 }
             }

@@ -20,7 +20,7 @@
 namespace striboh {
     namespace idl {
 
-        class AstVisitor;
+        struct AstVisitor;
 
         namespace ast {
 

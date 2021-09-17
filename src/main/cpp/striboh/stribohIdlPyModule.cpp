@@ -508,10 +508,10 @@ PYBIND11_MODULE(stribohIdl, pPyModule)
                                                            "generation.");
 
     py::enum_<ast::EBuildinTypes>(pPyModule, "EBuildinTypes")
-            .value("INT",ast::EBuildinTypes::INT)
-            .value("STRING",ast::EBuildinTypes::STRING)
-            .value("VOID",ast::EBuildinTypes::VOID)
-            .value("NONE",ast::EBuildinTypes::NONE)
+            .value("INT",ast::EBuildinTypes::K_INT)
+            .value("STRING",ast::EBuildinTypes::K_STRING)
+            .value("K_VOID",ast::EBuildinTypes::K_VOID)
+            .value("NONE",ast::EBuildinTypes::K_NONE_TYPE)
             ;
 
     py::class_<ast::TypedIdentifierNode>(pPyModule, "TypedIdentifierNode")

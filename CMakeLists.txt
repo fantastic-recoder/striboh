@@ -3,7 +3,14 @@ project(striboh)
 
 set(CMAKE_CXX_STANDARD 17)
 set(MSGPACK_CXX17 ON)
-add_definitions("-std=c++2a -fPIC")
+if (MSVC)
+    # warning level 4 and all warnings as errors
+    add_compile_options(/bigobj)
+else()
+    # lots of warnings and all warnings as errors
+    add_compile_options(-std=c++2a -fPIC -Wall -Wextra -pedantic -Werror)
+endif()
+
 enable_testing()
 
 find_package(PythonLibs 3.8 REQUIRED)
@@ -12,26 +19,10 @@ if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup(TARGETS)
 else()
-    message(WARNING "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
+    message(ERROR "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
 endif()
 
 include(FetchContent)
-###############################################################################
-# SML begin
-FetchContent_Declare(sml
-        PREFIX ${CMAKE_SOURCE_DIR}/src/main/cpp/sml
-        URL https://raw.githubusercontent.com/boost-ext/sml/master/include/boost/sml.hpp
-        DOWNLOAD_NO_EXTRACT true
-        )
-FetchContent_GetProperties(sml)
-if(NOT sml_POPULATED)
-    FetchContent_Populate(sml)
-    # Copy an additional/replacement file into the populated source
-    file(COPY ${CMAKE_SOURCE_DIR}/src/main/cpp/sml/src/sml.hpp DESTINATION
-            ${CMAKE_SOURCE_DIR}/src/main/cpp/sml)
-endif()
-# SML end
-###############################################################################
 
 ###############################################################################
 # DI begin

@@ -71,7 +71,7 @@ namespace striboh {
                         const auto& myMethods=myInterface.getMethods();
                         for( const auto& myMethod : myMethods ) {
                             pVisitor.beginMethod(myMethod[0]);
-                            for( int  myI = 1; myI < myMethod.size(); myI++) {
+                            for( size_t myI = 1; myI < myMethod.size(); myI++) {
                                 pVisitor.beginParameter(myMethod[myI]);
                             }
                             pVisitor.endMethod(myMethod[0]);

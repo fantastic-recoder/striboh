@@ -399,7 +399,7 @@ namespace striboh::base {
     using InterfaceName = fluent::NamedType<std::string, struct InterfaceNameTag>;
 
     inline bool operator<(const InterfaceName &pLeft, const InterfaceName &pRight) {
-        return pLeft < pRight;
+        return pLeft.get() < pRight.get();
     }
 
     class Interface {

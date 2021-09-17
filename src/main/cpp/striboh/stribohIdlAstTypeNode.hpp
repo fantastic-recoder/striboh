@@ -389,7 +389,7 @@ namespace striboh {
             struct TypeNode : public BaseNode {
                 constexpr static const char *const theTYPE_NAME = "TypeNode";
 
-                EBuildinTypes mBuildinType = EBuildinTypes::NONE;
+                EBuildinTypes mBuildinType = EBuildinTypes::K_NONE_TYPE;
 
                 TypeNode() : BaseNode(theTYPE_NAME) {}
 

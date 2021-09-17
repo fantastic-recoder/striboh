@@ -384,7 +384,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh::idl {
 
     namespace ast {
-        class TypedIdentifierNode;
+        struct TypedIdentifierNode;
     }
 
     using IdlGenerated = std::map<std::string, std::string>;

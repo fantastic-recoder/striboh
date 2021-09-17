@@ -11,10 +11,10 @@ namespace striboh {
     namespace idl {
         namespace ast {
             enum struct EBuildinTypes {
-                INT,
-                STRING,
-                VOID,
-                NONE
+                K_INT,
+                K_STRING,
+                K_VOID,
+                K_NONE_TYPE
             };
 
             const std::string& toString(const EBuildinTypes pType);

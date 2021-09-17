@@ -397,7 +397,7 @@ namespace striboh {
     namespace idl {
 
         namespace ast {
-            class RootNode;
+            struct RootNode;
         }
 
         using Includes = std::vector<std::string>;

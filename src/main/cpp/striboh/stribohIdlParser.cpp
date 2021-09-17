@@ -395,6 +395,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseLogIface.hpp"
 
 #include <filesystem>
+#include <algorithm>
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
@@ -429,6 +430,7 @@ namespace striboh {
         using std::string;
         using std::vector;
         using std::ostream;
+        using std::min;
         using boost::format;
         using qi::lit;
         using qi::lexeme;
@@ -516,11 +518,11 @@ namespace striboh {
                 importList = *import[_val += _1];
 
                 type = (
-                        lit("string")[_val = ast::EBuildinTypes::STRING]
+                        lit("string")[_val = ast::EBuildinTypes::K_STRING]
                         |
-                        lit("int")[_val = ast::EBuildinTypes::INT]
+                        lit("int")[_val = ast::EBuildinTypes::K_INT]
                         |
-                        lit("void")[_val = ast::EBuildinTypes::VOID]
+                        lit("void")[_val = ast::EBuildinTypes::K_VOID]
                 );
 
                 typedIdentifier = type >> identifier;
@@ -646,7 +648,8 @@ namespace striboh {
             if (myIdlDoc.getErrors().empty()) {
                 doParse(pIncludes, myIter, myEnd, myIdlDoc);
             } else {
-                std::string::const_iterator some = myIter + std::min(30, int(myEnd - myIter));
+                const int myOffset = min(30, int(myEnd - myIter));
+                const auto some = myIter + myOffset;
                 std::string context(myIter, (some > myEnd) ? myEnd : some);
                 std::stringstream myErr;
                 myErr << "Parsing of " << pInputFile << " failed, stopped at: \"" << context << "...\".";
@@ -765,7 +768,7 @@ namespace striboh {
                 static FileNotFound myExcept(myFilename, "Backend script not be loaded.");
                 throw myExcept;
             }
-            mLog.debug("Going to open backend: {}.", myFilename.c_str());
+            mLog.debug("Going to open backend: {}.", myFilename.string());
             mBackendState = EBackendState::ELoaded;
             return doLoadBackend(myFilename);
         }

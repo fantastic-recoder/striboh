@@ -557,7 +557,7 @@ namespace striboh::base {
 
         inline void packString(msgpack::packer<Buffer> &myPacker, std::string_view pStr) const {
             myPacker.pack_str(pStr.size());
-            myPacker.pack_str_body(pStr.begin(), pStr.size());
+            myPacker.pack_str_body(pStr.data(), pStr.size());
         }
 
         void packInstanceId(Packer_t &pPacker) const;

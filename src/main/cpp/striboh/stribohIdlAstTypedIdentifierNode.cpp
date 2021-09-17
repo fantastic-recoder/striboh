@@ -396,12 +396,12 @@ namespace striboh {
 
             const std::string& toString(const EBuildinTypes pType) {
                 switch (pType) {
-                    case EBuildinTypes::INT:
+                    case EBuildinTypes::K_INT:
                         return K_INT;
-                    case EBuildinTypes::STRING:
+                    case EBuildinTypes::K_STRING:
                         return K_STRING;
                     default:
-                    case EBuildinTypes::NONE:
+                    case EBuildinTypes::K_NONE_TYPE:
                         return K_NONE;
                 }
             }

@@ -377,19 +377,24 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <sstream>
-#include <sml/sml.hpp>
-
-namespace sml = boost::sml;
-
 #include <variant>
 #include <string_view>
-#include <string>
+#include <boost/sml.hpp>
+
+namespace sml = boost::sml;
+/*
+template <class T, T... Chrs>
+constexpr auto operator""_s() {
+    return sml::front::state<sml::aux::string<T, Chrs...>>{};
+}
+template <class T, T... Chrs>
+constexpr auto operator""_e() {
+    return sml::event<sml::aux::string<T, Chrs...>>;
+}
+*/
 
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseMessage.hpp"
-#include "stribohBaseEMessageType.hpp"
-#include "stribohBaseLogIface.hpp"
 #include "stribohBaseExceptionsInMessageParserError.hpp"
 
 using std::string_view;

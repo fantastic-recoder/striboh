@@ -392,7 +392,7 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            class ModuleBodyNode;
+            struct ModuleBodyNode;
 
             constexpr const char *const K_MODULE_NODE = "ModuleNode";
 
