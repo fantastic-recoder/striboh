@@ -381,13 +381,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::idl::ast {
 
-    ModuleListNode::ModuleListNode()
-            : BaseListNode<ModuleNode>(K_MODULE_LIST_NODE) {
+    ModuleListNode::ModuleListNode() {
         BOOST_LOG_TRIVIAL(trace) << "Created ModuleListNode("<< this <<")";
     }
 
     ModuleListNode& ModuleListNode::operator+= (const ModuleNode& pModuleNode) {
-        BOOST_LOG_TRIVIAL(trace) << "Adding module \""+pModuleNode.getValueStr()+"\" to ModuleListNode("<< this <<")";
+        BOOST_LOG_TRIVIAL(trace) << "Adding module \"" << pModuleNode.getValueStr() << "\" to ModuleListNode("<< this <<")";
         this->push_back(pModuleNode);
         return *this;
     }

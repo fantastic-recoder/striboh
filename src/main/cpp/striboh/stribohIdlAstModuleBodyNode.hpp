@@ -17,44 +17,6 @@ namespace striboh {
 
             struct ModuleBodyNode : public BaseTupleNode<ModuleListNode, InterfaceListNode> {
 
-                ModuleBodyNode() :
-                        BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE) {}
-
-                ModuleBodyNode(const ModuleBodyNode &pModuleBody) :
-                        BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleBody) {}
-
-                ModuleBodyNode(const ModuleListNode &pModuleList) :
-                        BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleList) {
-                }
-
-                ModuleBodyNode(const InterfaceListNode &pInterfaceList) :
-                        BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pInterfaceList) {
-                }
-
-                ModuleBodyNode(ModuleListNode &&pModuleList) :
-                        BaseTupleNode<ModuleListNode, InterfaceListNode>(K_MODULE_BODY_NODE, pModuleList) {
-                }
-
-                ModuleBodyNode &operator=(const ModuleListNode &pModuleList) {
-                    getSubNode1() = pModuleList;
-                    return *this;
-                }
-
-                ModuleBodyNode &operator=(ModuleListNode &&pModuleList) {
-                    getSubNode1() = pModuleList;
-                    return *this;
-                }
-
-                ModuleBodyNode &operator=(ModuleBodyNode &&pModuleBody) {
-                    type_t::operator=(pModuleBody);
-                    return *this;
-                }
-
-                ModuleBodyNode &operator=(const ModuleBodyNode &pModuleBody) {
-                    type_t::operator=(pModuleBody);
-                    return *this;
-                }
-
                 ModuleListNode &getModules() {
                     return getSubNode1();
                 }
@@ -74,6 +36,12 @@ namespace striboh {
                 ModuleBodyNode &operator+=(const InterfaceListNode &pInterfaceList);
 
                 ModuleBodyNode &operator+=(const ModuleListNode &pModuleListNode);
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "InterfaceListNode";
+                    return K_IDENTIFIER_NODE;
+                }
             };
 
         }

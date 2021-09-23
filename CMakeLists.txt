@@ -8,7 +8,7 @@ if (MSVC)
     add_compile_options(/bigobj)
 else()
     # lots of warnings and all warnings as errors
-    add_compile_options(-std=c++2a -fPIC -Wall -Wextra -pedantic -Werror)
+    add_compile_options(-std=c++2a -fPIC -Wall -Wextra -pedantic)
 endif()
 
 enable_testing()

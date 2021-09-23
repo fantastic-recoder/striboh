@@ -490,6 +490,7 @@ namespace striboh {
                     };
 
             // Returns a server error response
+            /* not yet used
             auto const server_error =
                     [&pRequest](beast::string_view what) {
                         http::response<http::string_body> res{http::status::internal_server_error, pRequest.version()};
@@ -500,7 +501,7 @@ namespace striboh {
                         res.prepare_payload();
                         return res;
                     };
-
+*/
             // Make sure we can handle the method
             if (pRequest.method() != http::verb::get &&
                 pRequest.method() != http::verb::head)
@@ -665,9 +666,9 @@ namespace striboh {
             // Take ownership of the socket
             explicit
             WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface &pLog)
-                    : mLambda(*this),
+                    : mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
+                      mLambda(*this),
                       mBroker(pBroker),
-                      mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
                       mLog(pLog) {}
 
             // Get on the correct executor
@@ -749,16 +750,17 @@ namespace striboh {
                 }
                 if (pErrorCode) {
                     fail(pErrorCode, "onWsRead");
+                } else {
+                    mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
+                    Message myMsg(mLog);
+                    auto myConstBuf(mReadBuffer.cdata());
+                    myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
+                    mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
+                    const Message myReply = mBroker.invokeMethod(std::forward<Message &&>(myMsg));
+                    mWriteBuffer.clear();
+                    myReply.packToBuffer(mWriteBuffer);
+                    doWriteBufferToWebSocket();
                 }
-                mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
-                Message myMsg(mLog);
-                auto myConstBuf(mReadBuffer.cdata());
-                myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
-                mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
-                const Message myReply = mBroker.invokeMethod(std::forward<Message &&>(myMsg));
-                mWriteBuffer.clear();
-                myReply.packToBuffer(mWriteBuffer);
-                doWriteBufferToWebSocket();
             }
 
             void doWriteBufferToWebSocket() {
@@ -926,7 +928,7 @@ namespace striboh {
         }
 
         BeastServer::BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog)
-                : mThreadNum(std::max<int>(1, pNum)), mBroker(pBroker), mIoc(mThreadNum), mLog(pLog) {
+                : mLog(pLog), mThreadNum(std::max<int>(1, pNum)), mIoc(mThreadNum), mBroker(pBroker) {
         }
 
         inline std::string toString(const std::thread::id &pThreadId) {

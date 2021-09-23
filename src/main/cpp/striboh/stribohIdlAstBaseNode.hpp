@@ -406,15 +406,10 @@ namespace striboh {
 
                 manip::LocationInfoPrinter printLoc() const;
 
-                BaseNode(const std::string& pName) : mNodeTypeName(pName) {
-                }
+                virtual std::string_view
+                getNodeType() const = 0;
 
-                virtual const std::string&
-                getNodeType() const {
-                    return mNodeTypeName;
-                }
-
-                virtual std::string
+                virtual std::string_view
                 getValueStr() const = 0;
 
                 virtual size_t
@@ -427,8 +422,6 @@ namespace striboh {
                 printAstNode(const int pIndent, std::ostream& pOstream) const;
 
                 BaseNode& operator += (const ErrorNode& pErrorNode);
-            private:
-                std::string mNodeTypeName;
             };
 
             template<class TNodeValue>
@@ -436,18 +429,9 @@ namespace striboh {
                 TNodeValue mValue;
             public:
 
+                BaseValueNode(const TNodeValue& pSubNode) : mValue(pSubNode) {}
 
-                BaseValueNode& operator=(const BaseValueNode& pBaseValueNode) {
-                    mValue = pBaseValueNode.mValue;
-                    return *this;
-                }
-
-                BaseValueNode(const std::string& pNodeName) :
-                        BaseNode(pNodeName) {}
-
-                BaseValueNode(const std::string& pNodeName, const TNodeValue& pSubNode) :
-                        BaseNode(pNodeName), mValue(pSubNode) {}
-
+                BaseValueNode() = default;
 
                 const TNodeValue&
                 getValue() const {
@@ -477,15 +461,6 @@ namespace striboh {
 
                 typedef std::vector<TNode> type_t;
 
-                BaseListNode(const std::string& pTypeName)
-                        : BaseNode(pTypeName) {}
-
-                BaseListNode(const std::string& pTypeName, const std::vector<TNode>& pSubNodes)
-                        : BaseNode(pTypeName), std::vector<TNode>(pSubNodes) {}
-
-                BaseListNode(const std::string& pTypeName, std::vector<TNode>&& pSubNodes)
-                        : BaseNode(pTypeName), std::vector<TNode>(pSubNodes) {}
-
                 BaseListNode& operator=(const std::vector<TNode>& pSubNodes) {
                     std::vector<TNode>::clear();
                     insert(pSubNodes.begin(), pSubNodes.end());
@@ -501,7 +476,7 @@ namespace striboh {
                     return (*this)[pIdx];
                 }
 
-                virtual std::string
+                virtual std::string_view
                 getValueStr() const {
                     return getNodeType();
                 }
@@ -511,28 +486,6 @@ namespace striboh {
             class BaseTupleNode : public BaseNode, public boost::fusion::tuple<TSubNode1, TSubNode2> {
             public:
                 typedef ::boost::fusion::tuple<TSubNode1, TSubNode2> type_t;
-
-                BaseTupleNode(const std::string& pNodeName)
-                        : BaseNode(pNodeName) {}
-
-                BaseTupleNode(const std::string& pNodeName, const type_t& pTuple)
-                        : BaseNode(pNodeName), type_t(pTuple) {}
-
-                BaseTupleNode(const std::string& pNodeName, const TSubNode1& pSubNode1)
-                        : BaseNode(pNodeName) {
-                    getSubNode1() = pSubNode1;
-                }
-
-                BaseTupleNode(const std::string& pNodeName, TSubNode1&& pSubNode1)
-                        : BaseNode(pNodeName), type_t(pSubNode1) {}
-
-                BaseTupleNode(const std::string& pNodeName, const TSubNode2& pSubNode2)
-                        : BaseNode(pNodeName) {
-                    getSubNode2() = pSubNode2;
-                }
-
-                BaseTupleNode(const std::string& pNodeName, TSubNode2&& pSubNode2)
-                        : BaseNode(pNodeName), type_t(pSubNode2) {}
 
                 TSubNode1& getSubNode1() {
                     return boost::fusion::at_c<0>(*this);
@@ -570,7 +523,7 @@ namespace striboh {
                     return getSubNode2()[pIdx - myImportListSize];
                 }
 
-                virtual std::string
+                virtual std::string_view
                 getValueStr() const {
                     return getNodeType();
                 }

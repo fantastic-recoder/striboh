@@ -385,15 +385,15 @@ namespace striboh {
         namespace ast {
 
             InterfaceNode::InterfaceNode()
-                    : BaseValueNode<std::string>(K_INTERFACE_NODE), mUuid{0} {}
+                    : BaseValueNode<std::string>(), mUuid{0} {}
 
             InterfaceNode::InterfaceNode(const IdentifierNode& pIdent)
-                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()), mUuid{0} {
+                    : BaseValueNode<std::string>(pIdent.getValue()), mUuid{0} {
                 BOOST_LOG_TRIVIAL(trace) << "Creating interface \"" << pIdent.getValue() << "\".";
             }
 
             InterfaceNode::InterfaceNode(const IdentifierNode& pIdent, const boost::uuids::uuid& pUuid)
-                    : BaseValueNode<std::string>(K_INTERFACE_NODE, pIdent.getValue()), mUuid(pUuid) {
+                    : BaseValueNode<std::string>(pIdent.getValue()), mUuid(pUuid) {
             }
 
             const std::string &InterfaceNode::getName() const {
@@ -415,4 +415,4 @@ namespace striboh {
 
         }
     }
-};
+}

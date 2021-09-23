@@ -403,11 +403,7 @@ namespace striboh {
             }
 
             const BaseNode&
-            BaseNode::getSubNode(size_t pIdx) const {
-                return *this;
-            }
-
-            BaseNode& BaseNode::operator += (const ErrorNode& pErrorNode) {
+            BaseNode::getSubNode(size_t) const {
                 return *this;
             }
 

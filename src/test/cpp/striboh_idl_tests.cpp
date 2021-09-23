@@ -406,7 +406,7 @@ module m0 {
     void printErrors(const ast::RootNode &myIdlAst) {
         const unsigned long myErrorCount = myIdlAst.getErrors().size();
         string myConcateatedErrors;
-        for (int myCnt = 0; myCnt < myErrorCount; myCnt++) {
+        for (size_t myCnt = 0; myCnt < myErrorCount; myCnt++) {
             string myErrorTxt(myIdlAst.getErrors()[myCnt]);
             myConcateatedErrors += myErrorTxt;
             if(myCnt>0) {

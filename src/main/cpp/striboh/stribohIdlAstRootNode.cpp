@@ -51,7 +51,7 @@ namespace striboh {
                                     pSubtree.getModules().end());
             }
 
-            std::string RootNode::getValueStr() const {
+            std::string_view RootNode::getValueStr() const {
                 return K_ROOT_VAL;
             }
 

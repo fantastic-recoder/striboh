@@ -388,11 +388,15 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            static const char *const K_MODULE_LIST_NODE = "ModuleListNode";
-
             struct ModuleListNode : BaseListNode<ModuleNode> {
                 ModuleListNode();
                 ModuleListNode& operator+= (const ModuleNode& pModuleNode);
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "ModuleListNode";
+                    return K_IDENTIFIER_NODE;
+                }
             };
         }
     }

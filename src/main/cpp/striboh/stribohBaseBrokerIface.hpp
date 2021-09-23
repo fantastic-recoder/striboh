@@ -420,7 +420,7 @@ namespace striboh::base {
         typedef std::set<InterfaceName> Interfaces;
 
         struct ResolvedResult {
-            EResolveResult mResult;
+            EResolveResult mResult = EResolveResult::NOT_FOUND;
             PathSegments   mModules;
             Interfaces mInterfaces;
         };

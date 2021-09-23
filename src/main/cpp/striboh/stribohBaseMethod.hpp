@@ -409,22 +409,35 @@ namespace striboh::base {
         using MethodGlue_t = std::function<Message(const striboh::base::Message&, striboh::base::Context)>;
 
         explicit Method(std::string pName, ParameterDescriptionList pParameters, MethodGlue_t pImplementation, LogIface& pLog)
-                : mName(pName), mImplementation(pImplementation), mLog(pLog) {}
+                : mName(pName), mParameters(pParameters), mImplementation(pImplementation), mLog(pLog) {}
 
         const std::string &getName() const {
             return mName;
         }
 
-        Message invoke(ServantBase& pObject, const Message &pIns, Context pCtx) {
+        Message invoke( Message &pIns, Context pCtx) {
             if (mImplementation)
                 return mImplementation(pIns, pCtx);
             return Message(Value(),mLog);
         }
 
+        const ParameterDescriptionList &getParameters() const {
+            return mParameters;
+        }
+
+        const MethodGlue_t &getImplementation() const {
+            return mImplementation;
+        }
+
+        LogIface &getLog() const {
+            return mLog;
+        }
+
     private:
-        const std::string /*-*/ mName;
-        MethodGlue_t /*------*/ mImplementation;
-        LogIface& /*---------*/ mLog;
+        const std::string /*---------*/ mName;
+        ParameterDescriptionList /*--*/ mParameters;
+        MethodGlue_t /*--------------*/ mImplementation;
+        LogIface& /*-----------------*/ mLog;
     };
 
 }

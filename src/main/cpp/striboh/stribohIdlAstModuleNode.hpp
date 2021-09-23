@@ -394,11 +394,11 @@ namespace striboh {
 
             struct ModuleBodyNode;
 
-            constexpr const char *const K_MODULE_NODE = "ModuleNode";
-
             struct ModuleNode : public BaseValueNode<IdentifierNode> {
 
-                ModuleNode();
+                ModuleNode() = default;
+
+                ModuleNode(const IdentifierNode &pSubNode);
 
                 ModuleNode(const ModuleNode& pModuleNode);
 
@@ -416,12 +416,18 @@ namespace striboh {
 
                 ~ModuleNode();
 
-                virtual std::string
-                getValueStr() const {
+                virtual std::string_view
+                getValueStr() const final {
                     return getValue().getValue();
                 }
 
                 ModuleNode& operator += ( const IdentifierNode& pIdentifier );
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "ModuleNode";
+                    return K_IDENTIFIER_NODE;
+                }
             private:
                 std::unique_ptr<ModuleBodyNode> mBody;
             };

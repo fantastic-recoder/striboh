@@ -1,5 +1,5 @@
 [requires]
-boost/1.71.0
+boost/1.76.0
 gtest/1.10.0
 nlohmann_json/3.9.1
 fmt/7.1.3

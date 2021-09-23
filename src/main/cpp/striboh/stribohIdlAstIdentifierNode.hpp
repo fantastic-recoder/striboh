@@ -14,11 +14,10 @@
 namespace striboh {
     namespace idl {
         namespace ast {
-            constexpr const char *const K_IDENTIFIER_NODE = "IdentifierNode";
 
             struct IdentifierNode : BaseValueNode<std::string> {
 
-                IdentifierNode();
+                IdentifierNode() noexcept;
 
                 explicit IdentifierNode(const std::string& pIdentifierName);
 
@@ -26,9 +25,15 @@ namespace striboh {
                     return 1L;
                 }
 
-                virtual std::string
-                getValueStr() const override {
+                virtual std::string_view
+                getValueStr() const final {
                     return getValue();
+                }
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "IdentifierNode";
+                    return K_IDENTIFIER_NODE;
                 }
 
             };

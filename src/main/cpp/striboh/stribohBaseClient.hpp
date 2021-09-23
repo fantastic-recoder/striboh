@@ -404,6 +404,7 @@ namespace striboh {
         using tcp = ::boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
         namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
         class LogIface;
+
         using WebSocket = websocket::stream<beast::tcp_stream>;
 
         class HostConnection;
@@ -420,19 +421,19 @@ namespace striboh {
         class ObjectProxy;
 
         class InvocationContext : public std::enable_shared_from_this<InvocationContext> {
-            ObjectProxy& mObjectProxy;
-            net::io_context& mIoContext;
             LogIface &mLog;
+            ObjectProxy &mObjectProxy;
+            net::io_context &mIoContext;
             Message mValues;
             Message mReturnValues;
             beast::flat_buffer mReadBuffer; // (Must persist between reads)
             Buffer mWriteBuffer; // (Must persist between reads)
         public:
             InvocationContext(
-                    ObjectProxy& pObjectProxy,
-                    net::io_context& pIoContext,
-                    const Message& pValues,
-                    LogIface &pLog );
+                    ObjectProxy &pObjectProxy,
+                    net::io_context &pIoContext,
+                    const Message &pValues,
+                    LogIface &pLog);
 
             Message getReturnValue() { return mReturnValues; }
 
@@ -453,7 +454,7 @@ namespace striboh {
 
             void readWebSocketMessage();
 
-            void fail(beast::error_code ec, char const* what);
+            void fail(beast::error_code ec, char const *what);
 
         };
 
@@ -461,7 +462,6 @@ namespace striboh {
         private:
             std::atomic<EConnectionStatus> mConnectionStatus;
             net::io_context mIoContext;
-            LogIface &mLog;
             tcp::resolver mResolver;
             tcp::resolver::results_type mTcpResolverResult;
             WebSocket mWebSocket;
@@ -474,6 +474,7 @@ namespace striboh {
             beast::flat_buffer mFlatBuffer; // (Must persist between reads)
             bool mUpgraded = false;
             uint8_t mRetryCnt = 13;
+            LogIface &mLog;
         public:
 
             /**
@@ -484,13 +485,11 @@ namespace striboh {
             ObjectProxy(const HostConnection &pClient,
                         std::string_view pPath,
                         LogIface &pLog) :
-                    mClient(pClient), //< striboh context
-                    mBaseUrl(std::move(pPath)), //< base url
-                    mLog(pLog), //< log
-                    mResolver(net::make_strand(mIoContext)), //
+                    mConnectionStatus(EConnectionStatus::K_INITIAL), //< striboh context
+                    mResolver(net::make_strand(mIoContext)), //< log
                     mWebSocket(net::make_strand(mIoContext)), //
-                    mConnectionStatus(EConnectionStatus::K_INITIAL)
-            {}
+                    mClient(pClient), //
+                    mBaseUrl(std::move(pPath)), mLog(pLog) {}
 
             const WebSocket &getWebSocket() const {
                 return mWebSocket;
@@ -504,20 +503,20 @@ namespace striboh {
                 return mConnectionStatus;
             }
 
-            std::atomic<EConnectionStatus>& getConnectionStatus() {
+            std::atomic<EConnectionStatus> &getConnectionStatus() {
                 return mConnectionStatus;
             }
 
             bool
             isConnected() {
-                if(mConnectionStatus==EConnectionStatus::K_INITIAL) {
+                if (mConnectionStatus == EConnectionStatus::K_INITIAL) {
                     doTcpResolveAntConnect();
                 }
-                return mConnectionStatus==EConnectionStatus::K_CONNECTED;
+                return mConnectionStatus == EConnectionStatus::K_CONNECTED;
             }
 
             std::shared_ptr<InvocationContext>
-            invokeMethod(Message&& pValues);
+            invokeMethod(Message &&pValues);
 
         private:
 

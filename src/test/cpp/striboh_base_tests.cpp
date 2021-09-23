@@ -434,30 +434,30 @@ TEST(stribohBaseTests, testParseUrlParameters) {
     {
         string_view myUrl("");
         Parameters_t myUrlParameters = parseUrlParameters(myUrl);
-        EXPECT_EQ(1, myUrlParameters.size());
+        EXPECT_EQ(1UL, myUrlParameters.size());
         EXPECT_EQ("", myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?resolve");
         Parameters_t myUrlParameters = parseUrlParameters(myUrl);
-        EXPECT_EQ(2, myUrlParameters.size());
+        EXPECT_EQ(2UL, myUrlParameters.size());
         EXPECT_TRUE(myUrlParameters["resolve"].empty());
         EXPECT_EQ("/m0/m1/Hello", myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?p0=val0");
         Parameters_t myUrlParameters = parseUrlParameters(myUrl);
-        ASSERT_EQ(2, myUrlParameters.size());
-        ASSERT_EQ(1, myUrlParameters["p0"].size());
+        ASSERT_EQ(2UL, myUrlParameters.size());
+        ASSERT_EQ(1UL, myUrlParameters["p0"].size());
         EXPECT_EQ("val0", myUrlParameters["p0"][0]);
         EXPECT_EQ("/m0/m1/Hello", myUrlParameters[K_BASE_URL][0]);
     }
     {
         string_view myUrl("/m0/m1/Hello?p0=val0&p1=val1&p0=val1");
         Parameters_t myUrlParameters = parseUrlParameters(myUrl);
-        ASSERT_EQ(3, myUrlParameters.size());
-        ASSERT_EQ(2, myUrlParameters["p0"].size());
-        ASSERT_EQ(1, myUrlParameters["p1"].size());
+        ASSERT_EQ(3UL, myUrlParameters.size());
+        ASSERT_EQ(2UL, myUrlParameters["p0"].size());
+        ASSERT_EQ(1UL, myUrlParameters["p1"].size());
         EXPECT_EQ("val1", myUrlParameters["p1"][0]);
         EXPECT_EQ("val0", myUrlParameters["p0"][0]);
         EXPECT_EQ("val1", myUrlParameters["p0"][1]);
@@ -492,7 +492,7 @@ TEST(stribohBaseTests, testSplit) {
     {
         string myPathStr0("/aa/bbb/ccc");
         Path myPath0 = Broker::split(myPathStr0, "/");
-        ASSERT_EQ(myPath0.get().size(), 3);
+        ASSERT_EQ(myPath0.get().size(), 3UL);
         ASSERT_EQ(myPath0.get()[0].get(), "aa");
         ASSERT_EQ(myPath0.get()[1].get(), "bbb");
         ASSERT_EQ(myPath0.get()[2].get(), "ccc");
@@ -500,7 +500,7 @@ TEST(stribohBaseTests, testSplit) {
     {
         string myPathStr0("/aa/bbb/ccc/");
         Path myPath0 = Broker::split(myPathStr0, "/");
-        ASSERT_EQ(myPath0.get().size(), 3);
+        ASSERT_EQ(myPath0.get().size(), 3UL);
         ASSERT_EQ(myPath0.get()[0].get(), "aa");
         ASSERT_EQ(myPath0.get()[1].get(), "bbb");
         ASSERT_EQ(myPath0.get()[2].get(), "ccc");
@@ -508,7 +508,7 @@ TEST(stribohBaseTests, testSplit) {
     {
         string myPathStr0("aa/bbb/");
         Path myPath0 = Broker::split(myPathStr0, "/");
-        ASSERT_EQ(myPath0.get().size(), 2);
+        ASSERT_EQ(myPath0.get().size(), 2UL);
         ASSERT_EQ(myPath0.get()[0].get(), "aa");
         ASSERT_EQ(myPath0.get()[1].get(), "bbb");
     }
@@ -535,7 +535,7 @@ Interface createTestInterface() {
                            ParameterDescriptionList{
                                    {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](const Message &pIncoming, Context pCtx) -> Message {
+                           [](const Message &pIncoming, Context /*pCtx*/) -> Message {
                                Message myReturn(Value{std::string("Server greats ")
                                                       + pIncoming.getParameters()[0].getValue().get<std::string>()},
                                                 getLog()
@@ -564,22 +564,22 @@ TEST(stribohBaseTests, testResolve) {
     {
         ResolvedResult myResolved0 = aBroker.resolve("/");
         ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        ASSERT_EQ(1, myResolved0.mModules.size());
+        ASSERT_EQ(1UL, myResolved0.mModules.size());
         auto myModulesIt = myResolved0.mModules.begin();
         EXPECT_EQ(string("m0"), myModulesIt->get());
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/m0");
         ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        ASSERT_EQ(1, myResolved0.mModules.size());
+        ASSERT_EQ(1UL, myResolved0.mModules.size());
         auto myModulesIt = myResolved0.mModules.begin();
         EXPECT_EQ(string("m1"), myModulesIt->get());
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/m0/m1");
         ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        EXPECT_EQ(0, myResolved0.mModules.size());
-        ASSERT_EQ(1, myResolved0.mInterfaces.size());
+        EXPECT_EQ(0UL, myResolved0.mModules.size());
+        ASSERT_EQ(1UL, myResolved0.mInterfaces.size());
         auto myInterfaceIt = myResolved0.mInterfaces.begin();
         EXPECT_EQ(string("Hello"), myInterfaceIt->get());
     }
@@ -616,7 +616,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
                            ParameterDescriptionList{
                                    {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
-                           [](const Message &pIncoming, Context pCtx) -> Message {
+                           [](const Message &pIncoming, Context /*pCtx*/) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.asJsonString();
                                string p0(pIncoming.getParameters()[0].get<std::string>());
                                Message myRetVal(Value{"Server greats " + p0}, getLog());
@@ -632,7 +632,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.asJsonString();
     myMsg.setInstanceId(myUuid);
     Message myReply = aBroker.invokeMethod(std::forward<Message>(myMsg));
-    EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list should be empty on return message!";
+    EXPECT_EQ(0UL, myReply.getParameters().size()) << "Parameter list should be empty on return message!";
     EXPECT_EQ(EMessageType::K_RETURN, myReply.getType());
     EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
     aBroker.shutdown();
@@ -649,12 +649,12 @@ TEST(stribohBaseTests, testSerailization) {
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
     EXPECT_EQ(myIId, myInputValues.getInstanceId());
-    EXPECT_EQ(4, myInputValues.getParameters().size());
+    EXPECT_EQ(4UL, myInputValues.getParameters().size());
     Buffer myBuff;
     myInputValues.packToBuffer(myBuff);
     Message myOutputValues(getLog());
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
-    EXPECT_EQ(4, myOutputValues.getParameters().size());
+    EXPECT_EQ(4UL, myOutputValues.getParameters().size());
     EXPECT_EQ("Echo string.", myOutputValues.getParameters()[0].get<string>());
     EXPECT_EQ(42L, myOutputValues.getParameters()[1].getValue().get<int64_t>());
     EXPECT_EQ("end.", myOutputValues.getParameters()[2].get<string>());
@@ -693,7 +693,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         auto myResult0 = myProxy
                 ->invokeMethod(Message("echo", {{"p0", "Peter"}}, getLog()));
         Message myReply = myResult0->getReturnValue();
-        EXPECT_EQ(0, myReply.getParameters().size()) << "Parameter list is empty, should have 1 element!";
+        EXPECT_EQ(0UL, myReply.getParameters().size()) << "Parameter list is empty, should have 1 element!";
         EXPECT_EQ(std::string("Server greats Peter!"), myReply.getReturn().get<std::string>());
         EXPECT_EQ(EMessageType::K_RETURN, myReply.getType());
     }
@@ -701,7 +701,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         auto myResult2 = myProxy
                 ->invokeMethod(Message("echo", {{"p0", "Paul"}}, getLog()));
         Message myReply2 = myResult2->getReturnValue();
-        EXPECT_EQ(0, myReply2.getParameters().size()) << "Parameter list is empty, should have 1 element!";
+        EXPECT_EQ(0UL, myReply2.getParameters().size()) << "Parameter list is empty, should have 1 element!";
         EXPECT_EQ(std::string("Server greats Paul!"), myReply2.getReturn().get<std::string>());
         EXPECT_EQ(EMessageType::K_RETURN, myReply2.getType());
     }
@@ -709,7 +709,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         auto myResult1 = myProxy
                 ->invokeMethod(Message("shutdown", {}, getLog()));
         Message myReply1 = myResult1->getReturnValue();
-        EXPECT_EQ(0, myReply1.getParameters().size());
+        EXPECT_EQ(0UL, myReply1.getParameters().size());
         EXPECT_EQ(EMessageType::K_RETURN, myReply1.getType());
     }
     if (myServerChildProcess) {

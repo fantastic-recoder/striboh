@@ -50,8 +50,8 @@ namespace striboh {
                     return mMethods;
                 }
 
-                virtual std::string
-                getValueStr() const {
+                virtual std::string_view
+                getValueStr() const final {
                     return getValue();
                 }
 
@@ -64,6 +64,13 @@ namespace striboh {
                 void setUuid(const boost::uuids::uuid &pUuid) {
                     mUuid = pUuid;
                 }
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "InterfaceNode";
+                    return K_IDENTIFIER_NODE;
+                }
+
             };
 
             InterfaceNode& operator+=(InterfaceNode& pInterfaceNode, const IdentifierNode& pIdentifier);

@@ -431,7 +431,7 @@ int main( const int argc, const char* argv[]) {
 
     myLog.debug("Adding echo servant...") ;
     InstanceId  myUuid = aBroker.addServant(theEchoServant.getInterface() );
-    myLog.info( "Test echo servant added." );
+    myLog.info( "Test echo servant added. UUID={}", toString(myUuid) );
     int mySecondsCounter=0;
     int myStep=1;
     do {

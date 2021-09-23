@@ -389,25 +389,11 @@ namespace striboh {
 
             struct InterfaceListNode : public BaseListNode<InterfaceNode> {
 
-                InterfaceListNode()
-                        : BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE) {}
-
-                InterfaceListNode(const InterfaceListNode& pInterfaceListNode)
-                        : BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE, pInterfaceListNode) {}
-
-                InterfaceListNode(InterfaceListNode&& pInterfaceListNode)
-                        : BaseListNode<InterfaceNode>(K_INTERFACE_LIST_NODE, pInterfaceListNode) {}
-
-                InterfaceListNode& operator=(InterfaceListNode&& pInterfaceListNode) {
-                    type_t::operator=(pInterfaceListNode);
-                    return *this;
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "InterfaceListNode";
+                    return K_IDENTIFIER_NODE;
                 }
-
-                InterfaceListNode& operator=(const InterfaceListNode& pInterfaceListNode) {
-                    type_t::operator=(pInterfaceListNode);
-                    return *this;
-                }
-
             };
 
             InterfaceListNode& operator+=(InterfaceListNode& pInterfaceNode, const InterfaceNode& pIdentifierNode);

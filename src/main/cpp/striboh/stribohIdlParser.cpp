@@ -377,6 +377,16 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/include/phoenix_fusion.hpp>
+#include <boost/spirit/include/phoenix_stl.hpp>
+#include <boost/spirit/include/qi_eol.hpp>
+#include <boost/spirit/include/support_line_pos_iterator.hpp>
+#include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
+
 #include "stribohIdlParser.hpp"
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlAstImportNode.hpp"
@@ -397,16 +407,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <filesystem>
 #include <algorithm>
 
-#include <boost/spirit/include/qi.hpp>
-#include <boost/spirit/include/phoenix_core.hpp>
-#include <boost/spirit/include/phoenix_operator.hpp>
-#include <boost/spirit/include/phoenix_fusion.hpp>
-#include <boost/spirit/include/phoenix_stl.hpp>
-#include <boost/spirit/include/qi_eol.hpp>
-#include <boost/spirit/include/support_line_pos_iterator.hpp>
-#include <boost/variant/recursive_variant.hpp>
-#include <boost/foreach.hpp>
-#include <boost/filesystem.hpp>
 
 #include <fmt/format.h>
 
@@ -569,15 +569,17 @@ namespace striboh {
                 on_success(type, set_location_info);
                 BOOST_SPIRIT_DEBUG_NODES((idl)(import)(quoted_file_name)(identifier)(module)
                                                  (method)(type)(typedIdentifier)(importList))
+
             }
 
             phx::function<error_handler_f> handler;
+
             phx::function<annotation_f<Iterator>> annotate;
 
-            qi::rule<Iterator, ast::RootNode(), ascii::space_type> idl;
-            qi::rule<Iterator, ast::ImportNode(), ascii::space_type> import;
             qi::rule<Iterator, std::string(), ascii::space_type> quoted_file_name;
             qi::rule<Iterator, ast::IdentifierNode(), ascii::space_type> identifier;
+            qi::rule<Iterator, ast::RootNode(), ascii::space_type> idl;
+            qi::rule<Iterator, ast::ImportNode(), ascii::space_type> import;
             qi::rule<Iterator, ast::ModuleNode(), ascii::space_type> module;
             qi::rule<Iterator, ast::MethodNode(), ascii::space_type> method;
             qi::rule<Iterator, ast::TypeNode(), ascii::space_type> type;
@@ -589,9 +591,10 @@ namespace striboh {
             qi::rule<Iterator, ast::InterfaceNode(), ascii::space_type> interface;
             qi::rule<Iterator, ast::ParameterList(), ascii::space_type> methodParameters;
             qi::rule<Iterator, ascii::space_type> unknownType;
+
         }; // end IdlGrammar
 
-        std::string readFile(const Includes &pIncludes, const fs::path &pInputFile, ast::RootNode &pIdlDoc) {
+        std::string readFile(const Includes &/*pIncludes*/, const fs::path &pInputFile, ast::RootNode &pIdlDoc) {
             auto myFilename = fs::absolute(pInputFile);
             if (!fs::exists(myFilename)) {
                 pIdlDoc.pushBackError(str(format("File %s does not exists.") % myFilename));
@@ -689,7 +692,7 @@ namespace striboh {
         }
 
         IdlGenerated
-        IdlContext::generateCode(const Includes &pIncludes,
+        IdlContext::generateCode(const Includes &/*pIncludes*/,
                                  const EGenerateParts pWhichParts2Generate,
                                  const std::vector<ast::RootNode> &pParsed,
                                  const chaiscript::Exception_Handler &pExceptionHandler,

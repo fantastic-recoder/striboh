@@ -387,15 +387,20 @@ namespace striboh {
         namespace ast {
 
             struct TypeNode : public BaseNode {
-                constexpr static const char *const theTYPE_NAME = "TypeNode";
 
                 EBuildinTypes mBuildinType = EBuildinTypes::K_NONE_TYPE;
 
-                TypeNode() : BaseNode(theTYPE_NAME) {}
+                TypeNode() = default;
 
                 TypeNode(const striboh::idl::ast::ErrorNode&);
 
-                operator const EBuildinTypes() const {
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr static const char *const theTYPE_NAME = "TypeNode";
+                    return theTYPE_NAME;
+                }
+
+                operator EBuildinTypes() const {
                     return mBuildinType;
                 }
 
@@ -403,7 +408,7 @@ namespace striboh {
                     return mBuildinType;
                 }
 
-                const EBuildinTypes getType() const {
+                EBuildinTypes getType() const {
                     return mBuildinType;
                 }
 
@@ -417,8 +422,8 @@ namespace striboh {
                 }
 
 
-                std::string
-                getValueStr() const override;
+                std::string_view
+                getValueStr() const final;
 
             };
         }

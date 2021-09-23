@@ -24,9 +24,9 @@ namespace striboh {
 
         namespace ast {
 
-            static const char *const K_ROOT_NODE = "RootNode";
-
             struct RootNode : public BaseTupleNode<ImportListNode, ModuleListNode> {
+                RootNode() {}
+
                 typedef ModuleNode value_type;
                 std::vector<std::string> mErrors;
 
@@ -37,12 +37,6 @@ namespace striboh {
                 const ModuleListNode& getModules() const { return getSubNode2(); }
 
                 ModuleListNode& getModules() { return getSubNode2(); }
-
-                RootNode()
-                        : BaseTupleNode<ImportListNode, ModuleListNode>(K_ROOT_NODE) {}
-
-                RootNode(const RootNode::type_t& pBase)
-                        : BaseTupleNode<ImportListNode, ModuleListNode>(K_ROOT_NODE, pBase) {}
 
                 const std::vector<std::string>& getErrors() const {
                     return mErrors;
@@ -60,8 +54,8 @@ namespace striboh {
 
                 void mergeSubtree(const RootNode& pSubtree);
 
-                std::string
-                getValueStr() const override;
+                std::string_view
+                getValueStr() const final;
 
                 void visit(striboh::idl::AstVisitor &pVisitor);
 
@@ -70,6 +64,12 @@ namespace striboh {
                 RootNode& operator += (const ModuleBodyNode& );
 
                 RootNode& operator += (const std::vector<std::string>& );
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "RootNode";
+                    return K_IDENTIFIER_NODE;
+                }
             };
 
             std::ostream& operator<<(std::ostream& pOstream, const RootNode& pNode) ;

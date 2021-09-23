@@ -394,14 +394,12 @@ namespace striboh {
         namespace ast {
 
             struct TypedIdentifierNode : public BaseNode, public boost::fusion::tuple<EBuildinTypes, IdentifierNode> {
-                TypedIdentifierNode()
-                        : BaseNode("TypedIdentifierNode") {}
 
                 size_t getSubNodeCount() const override {
                     return 1UL;
                 }
 
-                const BaseNode& getSubNode(size_t pIdx) const {
+                const BaseNode& getSubNode(size_t ) const final {
                     return boost::fusion::at_c<1>(*this);
                 }
 
@@ -417,9 +415,15 @@ namespace striboh {
                     return toString(boost::fusion::at_c<0>(*this));
                 }
 
-                virtual std::string
-                getValueStr() const override {
+                virtual std::string_view
+                getValueStr() const final {
                     return getName();
+                }
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "TypedIdentifierNode";
+                    return K_IDENTIFIER_NODE;
                 }
 
             };

@@ -397,9 +397,9 @@ namespace striboh::idl {
                     IdlContext &pIdlCtx,
                     const chaiscript::Exception_Handler &pExceptionHandler,
                     const string &pReport
-            ) : mExceptionHandler(pExceptionHandler),
-                mReport(pReport),
-                mIdlCtx(pIdlCtx) {
+            ) : mIdlCtx(pIdlCtx),
+                mExceptionHandler(pExceptionHandler),
+                mReport(pReport) {
     }
 
     void AstVisitorClientBackend::beginModule(std::string_view pModuleName) {

@@ -390,14 +390,18 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            constexpr const char *const K_IMPORT_LIST_NODE = "ImportListNode";
-
             struct ImportListNode : BaseListNode<ImportNode> {
-                ImportListNode() : BaseListNode<ImportNode>(K_IMPORT_LIST_NODE) {}
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "ImportListNode";
+                    return K_IDENTIFIER_NODE;
+                }
             };
 
             ImportListNode& operator+= (ImportListNode&, const ImportNode&);
-        }
+
+    }
 
     }
 }

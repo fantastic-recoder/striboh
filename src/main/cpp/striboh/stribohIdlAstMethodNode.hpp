@@ -388,17 +388,19 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            constexpr const char *const K_METHOD_NODE = "MethodNode";
-
             struct MethodNode : BaseListNode<TypedIdentifierNode> {
-
-                MethodNode() : BaseListNode<TypedIdentifierNode>(K_METHOD_NODE) {}
 
                 const std::string& getMethodName() const;
 
-                const EBuildinTypes getMethodReturnType() const;
+                EBuildinTypes getMethodReturnType() const;
 
                 MethodNode& operator+=(const std::vector<TypedIdentifierNode>& pParameterList);
+
+                virtual std::string_view
+                getNodeType() const final {
+                    constexpr const char *const K_IDENTIFIER_NODE = "MethodNode";
+                    return K_IDENTIFIER_NODE;
+                }
             };
 
         }

@@ -13,13 +13,12 @@ namespace striboh {
         namespace ast {
 
 
-            IdentifierNode::IdentifierNode()
-                    : BaseValueNode<std::string>(K_IDENTIFIER_NODE) {
+            IdentifierNode::IdentifierNode() noexcept {
                 BOOST_LOG_TRIVIAL(trace) << "Creating empty identifier";
             }
 
             IdentifierNode::IdentifierNode(const std::string& pIdentifierName)
-                    : BaseValueNode<std::string>(K_IDENTIFIER_NODE, pIdentifierName) {
+                    : BaseValueNode<std::string>(pIdentifierName) {
                 BOOST_LOG_TRIVIAL(trace) << "Creating identifier \"" << getValue() << "\".";
             }
 

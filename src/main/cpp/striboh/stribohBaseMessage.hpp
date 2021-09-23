@@ -449,8 +449,8 @@ namespace striboh::base {
         template<typename T> T get()
                 const { return getValue().get<T>(); }
     private:
-        Value mValue;
         std::string mName;
+        Value mValue;
     };
 
     struct Parameters : public std::vector<Parameter> {
@@ -464,8 +464,6 @@ namespace striboh::base {
     class Message {
     public:
 
-        Message(ReadBuffer &&pBuffer, LogIface &pIface);
-
         typedef msgpack::packer<Buffer> Packer_t;
 
         static constexpr const char *const K_METHOD_NAME_KEY /*-*/= "mthd";
@@ -474,13 +472,15 @@ namespace striboh::base {
         static constexpr const char *const K_MESSAGE_TYPE_KEY /**/= "type";
         static constexpr const char *const K_INSTANCE_ID_KEY /*-*/= "siid";
 
+        Message(const ReadBuffer &pBuffer, LogIface &pIface);
+
         explicit Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog);
 
         explicit Message(Value &&pReturn, LogIface &pLog);
 
         explicit Message(LogIface &pLog);
 
-        bool unpackFromBuffer(ReadBuffer&& myBuff);
+        bool unpackFromBuffer(const ReadBuffer& myBuff);
 
         const std::string &getMethodName() const {
             return mMethodName;
@@ -536,12 +536,12 @@ namespace striboh::base {
         std::string asJsonString() const;
 
     private:
+        LogIface & /*----*/ mLog;
         std::string /*---*/ mMethodName;
         EMessageType /*--*/ mType;
         Parameters /*----*/ mParameters;
         Value /*---------*/ mReturn;
         InstanceId /*----*/ mInstanceId;
-        LogIface & /*----*/ mLog;
 
         inline void packReturnValue(msgpack::packer<Buffer> &myPacker) const;
 

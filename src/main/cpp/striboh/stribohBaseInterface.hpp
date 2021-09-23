@@ -433,10 +433,10 @@ namespace striboh::base {
         ServantBase &getObject();
 
     private:
-        Methods_t mMethods;
+        ServantBase& mObject;
         Path_t mPath;
         InterfaceName mName;
-        ServantBase& mObject;
+        Methods_t mMethods;
     };
 
     static const constexpr char *const K_TAG_SVC = "svc";

@@ -467,7 +467,7 @@ namespace striboh::base {
             void
             addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
 
-            idl::ast::ModuleBodyNode *const
+            idl::ast::ModuleBodyNode *
             addServantModule(ModuleListNode* myChildNodes, std::string &mDir) const;
 
             static ResolvedService

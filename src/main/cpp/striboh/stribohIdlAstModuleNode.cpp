@@ -409,7 +409,7 @@ namespace striboh {
             }
 
             ModuleNode::ModuleNode(const ModuleNode& pModuleNode) :
-                BaseValueNode<IdentifierNode>(K_MODULE_NODE, pModuleNode.getValue()),
+                BaseValueNode<IdentifierNode>(pModuleNode.getValue()),
                 mBody(new ModuleBodyNode(pModuleNode.getModuleBody())) {
             }
 
@@ -419,13 +419,12 @@ namespace striboh {
                 return *this;
             }
 
-            ModuleNode::ModuleNode()
-                : BaseValueNode<IdentifierNode>(K_MODULE_NODE)
-                        , mBody(new ModuleBodyNode()) {
+            ModuleNode::ModuleNode(const IdentifierNode &pSubNode)
+                : BaseValueNode<IdentifierNode>(pSubNode), mBody(new ModuleBodyNode()) {
             }
 
             ModuleNode::ModuleNode(const std::string &pIdent)
-                : BaseValueNode<IdentifierNode>(K_MODULE_NODE,IdentifierNode(pIdent))
+                : BaseValueNode<IdentifierNode>(IdentifierNode(pIdent))
                         , mBody(new ModuleBodyNode()) {
                 BOOST_LOG_TRIVIAL(trace) << "Created ModuleNode ("<< this << ") with identifier \"" << getIdentifierStr() << "\".";
             }
@@ -439,4 +438,4 @@ namespace striboh {
 
         }
     }
-};
+}

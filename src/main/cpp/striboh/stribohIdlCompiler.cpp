@@ -379,9 +379,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/expressions.hpp>
+#include <numeric>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseLogBoostImpl.hpp"
@@ -484,16 +486,17 @@ namespace striboh::idl {
         myIdlContext.loadBackend(myBackend);
 
         chaiscript::Exception_Handler myReport;
-        const auto myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles, myReport);
+        const auto myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles,
+                                                              myReport);
         if (myVarMap.count("stdout")) {
-            for( const auto& pMapElement: myIdlGenerated ) {
+            for (const auto &pMapElement: myIdlGenerated) {
                 cout << "file: " << pMapElement.first << endl
                      << "*******************************************" << endl
                      << pMapElement.second << endl
                      << "*******************************************" << endl;
             }
         }
-        for( const auto& pMapElement: myIdlGenerated ) {
+        for (const auto &pMapElement: myIdlGenerated) {
             fs::path myOutFile = myOutdir / pMapElement.first;
             ofstream myOutput(myOutFile, std::ios::out);
             if (!myOutput) {
@@ -506,7 +509,7 @@ namespace striboh::idl {
     }
 
     int Compiler::parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogIface &pLog,
-                        vector<RootNode> &pParsedInputFiles) {
+                                  vector<RootNode> &pParsedInputFiles) {
         int myRetVal = 0;
         if (pVarMap.count("input-file")) {
             myRetVal = processInputIdlFiles(pVarMap, pIncludes, pParsedInputFiles, pLog);
@@ -514,11 +517,16 @@ namespace striboh::idl {
         return myRetVal;
     }
 
-    int Compiler::processInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogIface &pLog,
-                          vector<string> &pInputFiles) {
+    int Compiler::processInputFiles(const po::variables_map &pVarMap, const vector<string> &/*pIncludes*/
+            , LogIface &pLog, vector<string> &pInputFiles) {
         int myRetVal = 0;
         if (pVarMap.count("input-file")) {
             pInputFiles = pVarMap["input-file"].as<std::vector<string> >();
+            pLog.debug("Input files: {}.",
+                       std::accumulate(pInputFiles.begin(), pInputFiles.end(), std::string(""),
+                                       [](const std::string &p0, const std::string &p1) -> std::string {
+                                           return p0 + ", " + p1;
+                                       }));
         }
         return myRetVal;
     }
@@ -559,7 +567,7 @@ namespace striboh::idl {
     }
 
     void Compiler::dumpTree(LogIface &pLog, vector<RootNode> &pParsedIdls) {
-        for (auto &myNode:pParsedIdls) {
+        for (auto &myNode: pParsedIdls) {
             pLog.info("---> {}", myNode.getValueStr());
             std::cout << myNode;
             pLog.info("<--- {}", myNode.getValueStr());
@@ -567,9 +575,9 @@ namespace striboh::idl {
     }
 
     int Compiler::processInputIdlFiles(const po::variables_map &pVariablesMap, const striboh::idl::Includes &pIncludes,
-                             vector<RootNode> &pParsedInputs, LogIface &pLog) {
+                                       vector<RootNode> &pParsedInputs, LogIface &pLog) {
         auto myInputs = pVariablesMap["input-file"].as<vector<string> >();
-        for (const auto &myInput:myInputs) {
+        for (const auto &myInput: myInputs) {
             pLog.info("Processing {}", myInput);
             try {
                 const RootNode myParseIdl = striboh::idl::parseIdlFile(pIncludes, fs::path(myInput));
@@ -596,10 +604,10 @@ namespace striboh::idl {
         myCompilerDir = myCompilerDir.remove_filename();
         const string myCompilerDirStr(myCompilerDir.string());
         pLog.debug("Setting current directory:{}.", myCompilerDirStr);
-        if(myCompilerDirStr==myOldCompilerDir) {
+        if (myCompilerDirStr == myOldCompilerDir) {
             pLog.debug("Compiler dir is current dir.");
         } else {
-            if(myCompilerDir.empty()) {
+            if (myCompilerDir.empty()) {
                 pLog.debug("Current directory is empty.");
             } else {
                 current_path(myCompilerDir);

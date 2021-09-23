@@ -382,7 +382,7 @@ namespace striboh::base {
     exceptions::InMessageParserError::InMessageParserError(
             std::string_view pCause,
             size_t pOffset, std::string_view pWrongPart, std::string_view pRest)
-    : mMsg
+    : std::runtime_error(mMsg), mMsg
     (
             std::forward<std::string>
             (
@@ -391,6 +391,6 @@ namespace striboh::base {
                             pCause, pOffset, pWrongPart, pRest
                     )
             )
-    ), std::runtime_error(mMsg) {}
+    ) {}
 
 }

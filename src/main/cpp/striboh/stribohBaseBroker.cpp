@@ -409,7 +409,7 @@ namespace striboh::base {
             getLog().warn("ORB is not ready.");
         } else {
             setState(EServerState::K_STARTING);
-            mReceiver = std::async(std::launch::async, [this]() -> void { std::launch::async, this->dispatch(); });
+            mReceiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });
             if (getServer()) {
                 getLog().debug("We have a server attached, going to run it.");
                 getServer()->run();
@@ -479,7 +479,7 @@ namespace striboh::base {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
                 try {
-                    return myMethodIt->invoke(myInterfaceIt->second.getObject(), pValues, Context(*this));
+                    return myMethodIt->invoke(pValues, Context(*this));
                 } catch (std::exception& pException) {
                     getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), pException.what());
                 } catch( ... ) {
@@ -517,7 +517,7 @@ namespace striboh::base {
         return myUuid;
     }
 
-    idl::ast::ModuleBodyNode *const
+    idl::ast::ModuleBodyNode *
     Broker::addServantModule(ModuleListNode *const myChildNodes, string &mDir) const {
         auto myBegin = myChildNodes->begin();
         auto myEnd = myChildNodes->end();
@@ -546,7 +546,7 @@ namespace striboh::base {
         if (pSegmentPtr == pSegmentEnd) {
             return nullptr;
         }
-        for (const ModuleNode &myCurrentModule : pModuleListNode) {
+        for (const ModuleNode &myCurrentModule: pModuleListNode) {
             if (myCurrentModule.getValueStr() == pSegmentPtr->get()) {
                 // if this is the last
                 ++pSegmentPtr;
@@ -571,7 +571,7 @@ namespace striboh::base {
     Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleListNode &pModules) const {
         pRetVal.mResult = EResolveResult::OK;
         for (const auto &mySubNodeRef : pModules) {
-            pRetVal.mModules.emplace(PathSegment(mySubNodeRef.getValueStr()));
+            pRetVal.mModules.emplace(PathSegment(std::string(mySubNodeRef.getValueStr())));
         }
     }
 
@@ -585,7 +585,7 @@ namespace striboh::base {
 
     ResolvedResult
     Broker::resolve(std::string_view pPath) const {
-        ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
+        ResolvedResult myRetVal;
         Path myPathToResolve;
         if (pPath == K_SEPARATOR) {
             addSubmodulesToResult(myRetVal, mRoot.getModules());
@@ -623,7 +623,7 @@ namespace striboh::base {
 
     ResolvedService
     Broker::resolveService(std::string_view pPath) const {
-        ResolvedResult myRetVal{EResolveResult::NOT_FOUND, PathSegments()};
+        ResolvedResult myRetVal;
         Path myPathToResolve = split(pPath, K_SEPARATOR);
         if (myPathToResolve.get().empty()) {
             return theNullService;

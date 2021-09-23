@@ -397,7 +397,7 @@ namespace striboh {
         using std::string_view;
 
         HostConnection::HostConnection(std::string_view pHost, unsigned short pPort, LogIface &pLog)
-        : mHost(pHost), mPort(pPort), mLog(pLog), mPortStr(boost::lexical_cast<std::string>(mPort))
+        : mLog(pLog), mHost(pHost), mPort(pPort), mPortStr(boost::lexical_cast<std::string>(mPort))
         {}
 
         std::shared_ptr<ObjectProxy>
@@ -445,12 +445,13 @@ namespace striboh {
             const Message& pValues,
             LogIface &pLog
         )
-        : mObjectProxy(pObjectProxy)
+        : mLog(pLog)
+        , mObjectProxy(pObjectProxy)
         , mIoContext(pIoContext)
         , mValues(pValues)
-        , mLog(pLog)
         , mReturnValues(Value(),mLog)
         {
+            mLog.debug("InvocationContext::InvocationContext mLog=={}.",(void*)(&mLog));
         }
 
         void
@@ -677,15 +678,17 @@ namespace striboh {
         void InvocationContext::onReadWebSocket(beast::error_code ec, std::size_t pBytesTransferred) {
             if(ec)
                 return fail(ec, "InvocationContext::onReadWebSocket");
-            auto aConstBuffer(mReadBuffer.cdata());
-            mLog.debug("Read {}({}) bytes.",aConstBuffer.size(),pBytesTransferred);
-            mReturnValues.unpackFromBuffer(ReadBuffer(aConstBuffer.data(),aConstBuffer.size()));
-            if(mReturnValues.getType() == EMessageType::K_CLOSE) {
-                // Close the WebSocket connection
-                mObjectProxy.getWebSocket().async_close(websocket::close_code::normal,
-                                       beast::bind_front_handler(
-                                               &InvocationContext::onCloseWebSocket,
-                                                     shared_from_this()));
+            else {
+                const ReadBuffer myReadBuffer(mReadBuffer.cdata().data(), mReadBuffer.size());
+                mLog.debug("Read {}({}) bytes.", myReadBuffer.size(), pBytesTransferred);
+                mReturnValues.unpackFromBuffer(myReadBuffer);
+                if (mReturnValues.getType() == EMessageType::K_CLOSE) {
+                    // Close the WebSocket connection
+                    mObjectProxy.getWebSocket().async_close(websocket::close_code::normal,
+                                                            beast::bind_front_handler(
+                                                                    &InvocationContext::onCloseWebSocket,
+                                                                    shared_from_this()));
+                }
             }
         }
 

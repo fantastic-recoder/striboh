@@ -384,11 +384,11 @@ namespace striboh {
         namespace ast {
             using std::string;
 
-            std::string TypeNode::getValueStr() const {
+            std::string_view TypeNode::getValueStr() const {
                 return toString(getType());
             }
 
-            TypeNode::TypeNode(const ErrorNode &pNode) : BaseNode(theTYPE_NAME) {
+            TypeNode::TypeNode(const ErrorNode &pNode) {
                 throw std::runtime_error("Unknown type: "+pNode.getMessage()+".");
             }
         }
