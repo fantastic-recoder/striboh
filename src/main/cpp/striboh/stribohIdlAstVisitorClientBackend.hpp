@@ -397,6 +397,8 @@ namespace striboh::idl {
 
         ~AstVisitorClientBackend() override = default;
 
+        void beginRun( int pRunNum ) override;
+
         void beginModule(std::string_view pModuleName) override;
 
         void endModule(std::string_view pModuleName) override;

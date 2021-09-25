@@ -734,8 +734,7 @@ namespace striboh {
                 evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
                 for (int myRun = 1; myRun <= mAstVisitorServantBackend->getRuns(); myRun++) {
-                    myChaiServantBackendCallback = fmt::format("stribohIdlServantBeginRun({})", myRun);
-                    evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
+                    mAstVisitorServantBackend->beginRun(myRun);
                     myAstTree.visit(*mAstVisitorServantBackend);
                 }
             }
@@ -755,8 +754,7 @@ namespace striboh {
                 evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
                 for (int myRun = 1; myRun <= mAstVisitorClientBackend->getRuns(); myRun++) {
-                    myChaiClientBackendCallback = fmt::format("stribohIdlClientBeginRun({})", myRun);
-                    evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
+                    mAstVisitorClientBackend->beginRun(myRun);
                     myAstTree.visit(*mAstVisitorClientBackend);
                 }
             }

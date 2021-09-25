@@ -437,4 +437,9 @@ namespace striboh::idl {
         mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
     }
 
+    void AstVisitorServantBackend::beginRun(int pRunNum) {
+        string myChaiBackendCallback = format("stribohIdlServantBeginRun(\"{}\")",pRunNum);
+        mIdlCtx.evalChaiscript(myChaiBackendCallback, mExceptionHandler, mReport);
+    }
+
 }

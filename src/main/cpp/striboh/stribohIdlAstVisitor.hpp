@@ -392,6 +392,7 @@ namespace striboh::idl {
     struct AstVisitor {
         AstVisitor() = default;
         virtual ~AstVisitor() = default;
+        virtual void beginRun( int pRunNum ) = 0;
         virtual void beginModule( std::string_view pModuleName ) = 0;
         virtual void endModule( std::string_view pModuleName ) = 0;
         virtual void beginInterface( std::string_view pInterfaceName ) = 0;

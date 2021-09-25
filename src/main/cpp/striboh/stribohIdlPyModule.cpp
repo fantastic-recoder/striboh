@@ -395,6 +395,8 @@ namespace {
 
         ~PyAstVisitor() override = default;
 
+        void beginRun( int pRunNum ) override;
+
         void beginModule(std::string_view pModuleName) override;
 
         void endModule(std::string_view pModuleName) override;
@@ -471,6 +473,16 @@ namespace {
                 beginParameter, /* Name of function in C++ (must match Python name) */
                 pPar  /* Argument(s) */
         );
+    }
+
+    void PyAstVisitor::beginRun(int pRunNum) {
+        PYBIND11_OVERRIDE_PURE(
+                void, /*        Return type */
+                AstVisitor, /*  Parent class */
+                beginRun, /* Name of function in C++ (must match Python name) */
+                pRunNum  /* Argument(s) */
+        );
+
     }
 
     const char *const version() {
