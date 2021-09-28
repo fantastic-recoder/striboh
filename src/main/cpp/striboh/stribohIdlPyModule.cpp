@@ -535,7 +535,14 @@ PYBIND11_MODULE(stribohIdl, pPyModule)
 
     py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(pPyModule, "AstVisitor")
             .def(py::init<>())
+            .def("beginRun",&AstVisitor::beginRun)
             .def("beginModule", &AstVisitor::beginModule)
-            .def("endModule", &AstVisitor::endModule);
+            .def("endModule", &AstVisitor::endModule)
+            .def("beginInterface", &AstVisitor::beginInterface)
+            .def("endInterface", &AstVisitor::endInterface)
+            .def("beginMethod", &AstVisitor::beginMethod)
+            .def("endMethod", &AstVisitor::endMethod)
+            .def("beginParameter", &AstVisitor::beginParameter)
+            .def("addCode",&AstVisitor::addCode)
+            ;
 }
-
