@@ -444,19 +444,6 @@ namespace striboh {
         ast::RootNode
         parseIdlStr(const Includes &pIncludes, const std::string &pInputStr) noexcept;
 
-        /**
-         * What parts should be generated.
-         * EGeneratedParts.EClient generate only client part.
-         * EGeneratedParts.EServant generate only servant part
-         * EGeneratedParts.EBoth generate both parts.
-         */
-        enum class EGenerateParts : uint8_t {
-            EClient /*---001-*/ = 1,
-            EServant /*--010-*/ = 2,
-            EBoth /*-----011-*/ = 3,
-            ENone /*-----000-*/ = 0
-        };
-
         inline bool operator&(const EGenerateParts p0, const EGenerateParts p1) {
             return uint8_t(p0) & uint8_t(p1);
         }
@@ -548,6 +535,11 @@ namespace striboh {
             std::string &loadBackend(std::string_view pBackendName);
 
             /**
+             * @param pBackendName The name of the backend generator script like for example "cpp".
+             */
+            void loadPyBackend(std::string_view pBackendName);
+
+            /**
              * Sets the backend script content alternative to loadBackend.
              *
              * @param pNewBackend the new content - script to be called by IdlContext::generateCode()
@@ -589,6 +581,7 @@ namespace striboh {
 
             std::unique_ptr<AstVisitorServantBackend> mAstVisitorServantBackend;
             std::unique_ptr<AstVisitorClientBackend> mAstVisitorClientBackend;
+
         };
 
         IdlGenerated operator+(const IdlGenerated &p1, const IdlGenerated &p2);

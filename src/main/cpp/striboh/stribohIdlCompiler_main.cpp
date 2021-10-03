@@ -377,6 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 #include "stribohIdlCompiler.hpp"
+#include "stribohIdlAstRootNode.hpp"
 
 int main(int pArgc, char *pArgV[]) {
     striboh::idl::Compiler myIdlCompiler;

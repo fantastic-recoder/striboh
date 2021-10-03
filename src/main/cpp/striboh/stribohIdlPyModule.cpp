@@ -379,9 +379,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "stribohIdlCompiler.hpp"
-#include "stribohIdlAstVisitor.hpp"
-#include "stribohIdlAstTypedIdentifierNode.hpp"
+#include <fmt/format.h>
+#include "striboh/stribohIdlCompiler.hpp"
+#include "striboh/stribohIdlAstVisitor.hpp"
+#include "striboh/stribohIdlAstTypedIdentifierNode.hpp"
+#include "striboh/stribohIdlParser.hpp"
+#include "striboh/stribohBaseExceptionsFileNotFound.hpp"
+#include "striboh/stribohBaseLogIface.hpp"
 
 namespace py = pybind11;
 
@@ -508,6 +512,21 @@ namespace {
 
     }
 }
+
+void
+IdlContext::loadPyBackend(std::string_view pBackendName) {
+    std::filesystem::path myFilename(fmt::format("../share/striboh/striboh_backend.{}.py",
+                                                 pBackendName));
+    mBackendScript.clear();
+    if (!std::filesystem::exists(myFilename)) {
+        static base::exceptions::FileNotFound myExcept(myFilename, "Backend script not be loaded.");
+        throw myExcept;
+    }
+    mLog.debug("Going to open backend: {}.", myFilename.string());
+    mBackendState = EBackendState::ELoaded;
+    return;
+}
+
 
 using ast::TypedIdentifierNode;
 

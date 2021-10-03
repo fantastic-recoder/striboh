@@ -377,14 +377,17 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOHIDLCOMPILER_HPP
-#define STRIBOH_STRIBOHIDLCOMPILER_HPP
+#ifndef STRIBOH_IDL_COMPILER_HPP
+#define STRIBOH_IDL_COMPILER_HPP
 
 #include <string>
 #include <vector>
+#include <filesystem>
+#include "stribohIdlEGenerateParts.hpp"
 
 namespace boost::program_options {
     class options_description;
+
     class variables_map;
 }
 
@@ -419,7 +422,8 @@ namespace striboh {
 
             int processInputIdlFiles(const ::boost::program_options::variables_map &pVariablesMap,
                                      const ::striboh::idl::Includes &pIncludes,
-                                     ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputs, ::striboh::base::LogIface &pLog);
+                                     ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputs,
+                                     ::striboh::base::LogIface &pLog);
 
             void dumpTree(::striboh::base::LogIface &pLog, ::std::vector<::striboh::idl::ast::RootNode> &pParsedIdls);
 
@@ -432,21 +436,34 @@ namespace striboh {
             ::std::vector<std::string>
             processIncludes(const ::boost::program_options::variables_map &pVarMap, ::striboh::base::LogIface &pLog);
 
-            int parseInputFiles(const ::boost::program_options::variables_map &pVarMap, const ::std::vector<std::string> &pIncludes,
+            int parseInputFiles(const ::boost::program_options::variables_map &pVarMap,
+                                const ::std::vector<std::string> &pIncludes,
                                 ::striboh::base::LogIface &pLog,
                                 ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputFiles);
 
-            int processInputFiles(const ::boost::program_options::variables_map &pVarMap, const std::vector<std::string> &pIncludes,
+            int processInputFiles(const ::boost::program_options::variables_map &pVarMap,
+                                  const std::vector<std::string> &pIncludes,
                                   ::striboh::base::LogIface &pLog,
-                                  ::std::vector<::std::string> &pInputFiles) ;
+                                  ::std::vector<::std::string> &pInputFiles);
 
-            void setCurrentDirectoryToCompilerDirectory(::striboh::base::LogIface &pLog, const char *const pCompileFilename);
+            void
+            setCurrentDirectoryToCompilerDirectory(::striboh::base::LogIface &pLog, const char *const pCompileFilename);
+
+            int processCommandLine(int pArgC, char **pArgV);
+
+            std::string /*-----------------*/ m_Backend;
+            std::vector<std::string> /*----*/ m_Includes;
+            EGenerateParts /*--------------*/ m_Parts2Generate;
+            bool /*------------------------*/ m_Print2Out = false;
+            std::vector<ast::RootNode> /*--*/ m_ParsedInputFiles;
+            std::filesystem::path /*-------*/ m_Outdir;
 
         public:
             int process(int pArgC, char **pArgV);
+
         };
-    }
-}
+    } // namespace idl
+} // namespace striboh
 
 
-#endif //STRIBOH_STRIBOHIDLCOMPILER_HPP
+#endif //STRIBOH_IDL_COMPILER_HPP

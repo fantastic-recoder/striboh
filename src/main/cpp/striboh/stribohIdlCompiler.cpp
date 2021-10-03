@@ -416,7 +416,7 @@ namespace {
 
 namespace striboh::idl {
 
-    int Compiler::process(int pArgC, char **pArgV) {
+    int Compiler::processCommandLine( int pArgC, char **pArgV ) {
         // set current directory to executable
         setCurrentDirectoryToCompilerDirectory(aLog, pArgV[0]);
         // Declare the supported options.
@@ -447,48 +447,54 @@ namespace striboh::idl {
         myRetVal = processHelp(myVarMap, myOptDesc);
         if (myRetVal != 0) return myRetVal;
 
-        vector<string> myIncludes = processIncludes(myVarMap, aLog);
+        m_Includes = processIncludes(myVarMap, aLog);
 
-        vector<RootNode> myParsedInputFiles;
-        myRetVal = parseInputFiles(myVarMap, myIncludes, aLog, myParsedInputFiles);
+        myRetVal = parseInputFiles(myVarMap, m_Includes, aLog, m_ParsedInputFiles);
         if (myRetVal != 0) return myRetVal;
 
         if (myVarMap.count("dump-tree")) {
-            dumpTree(aLog, myParsedInputFiles);
+            dumpTree(aLog, m_ParsedInputFiles);
         }
 
-        string myBackend;
+        if (myVarMap.count("out-dir") > 0) {
+            m_Outdir = myVarMap["out-dir"].as<string>();
+        }
+
+        m_Parts2Generate = EGenerateParts::ENone;
+        if (myVarMap.count("servant")) {
+            m_Parts2Generate = EGenerateParts::EServant;
+        }
+        if (myVarMap.count("client")) {
+            if (m_Parts2Generate == EGenerateParts::EServant) {
+                m_Parts2Generate = EGenerateParts::EBoth;
+            } else {
+                m_Parts2Generate = EGenerateParts::EClient;
+            }
+        }
         if (myVarMap.count("backend") > 0) {
-            myBackend = myVarMap["backend"].as<string>();
+            m_Backend = myVarMap["backend"].as<string>();
         } else {
             aLog.error("No backend specified.");
             return K_RET_VAL_NO_BACKEND;
         }
-        aLog.info("Backend specified:{}.", myBackend);
+        aLog.info("Backend specified:{}.", m_Backend);
+        m_Print2Out = myVarMap.count("stdout");
+        return myRetVal;
+    }
 
-        fs::path myOutdir;
-        if (myVarMap.count("out-dir") > 0) {
-            myOutdir = myVarMap["out-dir"].as<string>();
-        }
+    int Compiler::process(int pArgC, char **pArgV) {
 
-        EGenerateParts myGeneratedParts = EGenerateParts::ENone;
-        if (myVarMap.count("servant")) {
-            myGeneratedParts = EGenerateParts::EServant;
-        }
-        if (myVarMap.count("client")) {
-            if (myGeneratedParts == EGenerateParts::EServant) {
-                myGeneratedParts = EGenerateParts::EBoth;
-            } else {
-                myGeneratedParts = EGenerateParts::EClient;
-            }
+        int myRetVal = processCommandLine(pArgC,pArgV);
+        if( myRetVal != 0) {
+            return myRetVal;
         }
         striboh::idl::IdlContext myIdlContext(aLog);
-        myIdlContext.loadBackend(myBackend);
+        myIdlContext.loadBackend(m_Backend);
 
         chaiscript::Exception_Handler myReport;
-        const auto myIdlGenerated = myIdlContext.generateCode(myIncludes, myGeneratedParts, myParsedInputFiles,
+        const auto myIdlGenerated = myIdlContext.generateCode(m_Includes, m_Parts2Generate, m_ParsedInputFiles,
                                                               myReport);
-        if (myVarMap.count("stdout")) {
+        if (m_Print2Out) {
             for (const auto &pMapElement: myIdlGenerated) {
                 cout << "file: " << pMapElement.first << endl
                      << "*******************************************" << endl
@@ -497,7 +503,7 @@ namespace striboh::idl {
             }
         }
         for (const auto &pMapElement: myIdlGenerated) {
-            fs::path myOutFile = myOutdir / pMapElement.first;
+            std::filesystem::path myOutFile = m_Outdir / pMapElement.first;
             ofstream myOutput(myOutFile, std::ios::out);
             if (!myOutput) {
                 aLog.error("Failed to open \"{}\".", pMapElement.first);
