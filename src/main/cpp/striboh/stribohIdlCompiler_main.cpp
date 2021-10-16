@@ -378,8 +378,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 */
 #include "stribohIdlCompiler.hpp"
 #include "stribohIdlAstRootNode.hpp"
+#include "stribohBaseLogIface.hpp"
 
 int main(int pArgc, char *pArgV[]) {
-    striboh::idl::Compiler myIdlCompiler;
+    striboh::idl::Compiler myIdlCompiler(striboh::base::getGlobalLog());
     return myIdlCompiler.process(pArgc,pArgV);
 }

@@ -380,10 +380,12 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #ifndef STRIBOH_IDL_COMPILER_HPP
 #define STRIBOH_IDL_COMPILER_HPP
 
+#include <map>
 #include <string>
 #include <vector>
 #include <filesystem>
 #include "stribohIdlEGenerateParts.hpp"
+#include "stribohIdlAstVisitor.hpp"
 
 namespace boost::program_options {
     class options_description;
@@ -403,8 +405,15 @@ namespace striboh {
             struct RootNode;
         }
 
+        class IdlContext;
+
         using Includes = std::vector<std::string>;
 
+        typedef std::unique_ptr<striboh::idl::IdlContext> IdlContextPtr;
+
+        /**
+         * All switches of the compiler are here.
+         */
         class Compiler {
             constexpr static const int K_RET_VAL_HELP /*...............*/= 100;
             constexpr static const int K_RET_VAL_PARSE_ERROR /*........*/= 200;
@@ -420,46 +429,76 @@ namespace striboh {
                     {K_RET_VAL_PARSE_ERROR, "Parse error"}
             };
 
-            int processInputIdlFiles(const ::boost::program_options::variables_map &pVariablesMap,
-                                     const ::striboh::idl::Includes &pIncludes,
-                                     ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputs,
-                                     ::striboh::base::LogIface &pLog);
+            static int processInputIdlFiles(const ::boost::program_options::variables_map &pVariablesMap,
+                                            const ::striboh::idl::Includes &pIncludes,
+                                            ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputs,
+                                            ::striboh::base::LogIface &pLog);
 
-            void dumpTree(::striboh::base::LogIface &pLog, ::std::vector<::striboh::idl::ast::RootNode> &pParsedIdls);
+            static void
+            dumpTree(::striboh::base::LogIface &pLog, ::std::vector<::striboh::idl::ast::RootNode> &pParsedSources);
 
-            int
+            static int
             processVerbose(::striboh::base::LogIface &pLog, const ::boost::program_options::variables_map &pVarMap);
 
-            int processHelp(const ::boost::program_options::variables_map &pVarMap,
-                            const ::boost::program_options::options_description &pOptDesc);
+            static int processHelp(const ::boost::program_options::variables_map &pVarMap,
+                                   const ::boost::program_options::options_description &pOptDesc);
 
-            ::std::vector<std::string>
+            static ::std::vector<std::string>
             processIncludes(const ::boost::program_options::variables_map &pVarMap, ::striboh::base::LogIface &pLog);
 
-            int parseInputFiles(const ::boost::program_options::variables_map &pVarMap,
-                                const ::std::vector<std::string> &pIncludes,
-                                ::striboh::base::LogIface &pLog,
-                                ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputFiles);
-
-            int processInputFiles(const ::boost::program_options::variables_map &pVarMap,
-                                  const std::vector<std::string> &pIncludes,
-                                  ::striboh::base::LogIface &pLog,
-                                  ::std::vector<::std::string> &pInputFiles);
+            static int parseInputFiles(const ::boost::program_options::variables_map &pVarMap,
+                                       const ::std::vector<std::string> &pIncludes,
+                                       ::striboh::base::LogIface &pLog,
+                                       ::std::vector<::striboh::idl::ast::RootNode> &pParsedInputFiles);
 
             void
             setCurrentDirectoryToCompilerDirectory(::striboh::base::LogIface &pLog, const char *const pCompileFilename);
 
-            int processCommandLine(int pArgC, char **pArgV);
+            int
+            processCommandLine(int pArgC, char **pArgV);
 
-            std::string /*-----------------*/ m_Backend;
-            std::vector<std::string> /*----*/ m_Includes;
-            EGenerateParts /*--------------*/ m_Parts2Generate;
-            bool /*------------------------*/ m_Print2Out = false;
-            std::vector<ast::RootNode> /*--*/ m_ParsedInputFiles;
-            std::filesystem::path /*-------*/ m_Outdir;
+            std::string /*-----------------*/ m_Backend /*----------*/;
+            std::vector<std::string> /*----*/ m_Includes /*---------*/;
+            EGenerateParts /*--------------*/ m_Parts2Generate /*---*/;
+            bool /*------------------------*/ m_Print2Out /*--------*/= false;
+            std::vector<ast::RootNode> /*--*/ m_ParsedInputFiles /*-*/;
+            std::filesystem::path /*-------*/ m_Outdir /*-----------*/;
+            std::string /*-----------------*/ m_CompilerDir /*------*/;
+            IdlContextPtr /*---------------*/ m_IdlContextPtr /*----*/;
+            base::LogIface & /*------------*/ m_Log /*--------------*/;
 
         public:
+            explicit Compiler(base::LogIface &pLog);
+
+            virtual ~Compiler();
+
             int process(int pArgC, char **pArgV);
+
+            /**
+             * Process the passed input files with passed options with the help of the python backend generator-visitor.
+             *
+             * @param pArgC argument count - passed in main()
+             * @param pArgV parameter array - passed in main()
+             * @return 0 on success ( as main() )
+             */
+            int pyProcess(int pArgC, char **pArgV);
+
+            /**
+             * As the name suggests, whe the user has specified, it will print out the generated code to standard out.
+             *
+             * @param pIdlGenerated the generated code.
+             */
+            void print2StdOutWhenRequested(const std::map<std::string, std::string> &pIdlGenerated) const;
+
+            /**
+             * Dump the generated code.
+             *
+             * @param myIdlGenerated the generated code (snippets). Pairs filename:snipped.
+             * @return 0 on success, unix style
+             */
+            int outputGeneratedCode(const std::map<std::string, std::string> &myIdlGenerated);
+
+            void setVisitors(striboh::idl::AstVisitor *pClientVisitor, striboh::idl::AstVisitor *pServantVisitor);
 
         };
     } // namespace idl

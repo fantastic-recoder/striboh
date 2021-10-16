@@ -451,7 +451,7 @@ namespace striboh {
         , mValues(pValues)
         , mReturnValues(Value(),mLog)
         {
-            mLog.debug("InvocationContext::InvocationContext mLog=={}.",(void*)(&mLog));
+            mLog.debug("InvocationContext::InvocationContext m_Log=={}.",(void*)(&mLog));
         }
 
         void

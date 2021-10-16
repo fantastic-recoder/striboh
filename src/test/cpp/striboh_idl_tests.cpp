@@ -414,7 +414,7 @@ module m0 {
             }
             BOOST_LOG_TRIVIAL(error) << myErrorTxt;
         }
-        EXPECT_EQ(0,myErrorCount) << "There are IDL parsing errors:[ " << myConcateatedErrors << " ].";
+        EXPECT_EQ(0UL,myErrorCount) << "There are IDL parsing errors:[ " << myConcateatedErrors << " ].";
     }
 
     static striboh::base::LogBoostImpl theLog;
@@ -427,30 +427,30 @@ module m0 {
 TEST(stribohIdlTests, testInvalid) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, " Wahnsinn! ");
-    EXPECT_EQ(1, myIdlAst.getErrors().size()) << "Parsed successfully wrong IDL!";
+    EXPECT_EQ(1UL, myIdlAst.getErrors().size()) << "Parsed successfully wrong IDL!";
     myIdlAst = parseIdlStr(myIncludes, " module myFirstModule { }};");
-    EXPECT_EQ(1, myIdlAst.getErrors().size()) << "Parsed successfully wrong module!";
+    EXPECT_EQ(1UL, myIdlAst.getErrors().size()) << "Parsed successfully wrong module!";
 }
 
 TEST(stribohIdlTests, testModule) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, " module myFirstModule { interface Test{ string hello(); }; };");
     printErrors(myIdlAst);
-    EXPECT_EQ(0, myIdlAst.getErrors().size());
-    ASSERT_EQ(1, myIdlAst.getModules().size());
+    EXPECT_EQ(0UL, myIdlAst.getErrors().size());
+    ASSERT_EQ(1UL, myIdlAst.getModules().size());
     EXPECT_EQ(string("myFirstModule"), myIdlAst.getModules()[0].getIdentifierStr());
-    EXPECT_EQ(1, myIdlAst.getModules().size());
+    EXPECT_EQ(1UL, myIdlAst.getModules().size());
 }
 
 TEST(stribohIdlTests, testNestedModules) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_MOD01);
     printErrors(myIdlAst);
-    EXPECT_EQ(0, myIdlAst.getErrors().size());
-    ASSERT_EQ(1, myIdlAst.getModules().size());
+    EXPECT_EQ(0UL, myIdlAst.getErrors().size());
+    ASSERT_EQ(1UL, myIdlAst.getModules().size());
     const ast::ModuleNode &myM0ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("m0"), myM0ModuleNode.getIdentifierStr());
-    ASSERT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
+    ASSERT_EQ(1UL, myM0ModuleNode.getModuleBody().getModules().size());
     const ast::ModuleNode &myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("m1"), myM1ModuleNode.getIdentifierStr());
     const ast::ModuleNode &myM2ModuleNode = myM1ModuleNode.getModuleBody().getModules()[0];
@@ -474,17 +474,17 @@ TEST(stribohIdlTests, testSerialModules) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_MOD02);
     printErrors(myIdlAst);
-    EXPECT_EQ(0, myIdlAst.getErrors().size());
+    EXPECT_EQ(0UL, myIdlAst.getErrors().size());
     unsigned const long mySize = myIdlAst.getModules().size();
-    ASSERT_EQ(2, mySize);
+    ASSERT_EQ(2UL, mySize);
 
     const ast::ModuleNode &myM00ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("m001"), myM00ModuleNode.getIdentifierStr());
-    EXPECT_EQ(0, myM00ModuleNode.getModuleBody().getModules().size());
+    EXPECT_EQ(0UL, myM00ModuleNode.getModuleBody().getModules().size());
 
     const ast::ModuleNode &myM01ModuleNode = myIdlAst.getModules()[1];
     EXPECT_EQ(string("m002"), myM01ModuleNode.getIdentifierStr());
-    ASSERT_EQ(1, myM01ModuleNode.getModuleBody().getModules().size());
+    ASSERT_EQ(1UL, myM01ModuleNode.getModuleBody().getModules().size());
 
     const ast::ModuleNode &myM10ModuleNode = myM01ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("m10"), myM10ModuleNode.getIdentifierStr());
@@ -505,13 +505,13 @@ TEST(stribohIdlTests, testHelloWorldInterface) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_INT00);
     printErrors(myIdlAst);
-    EXPECT_EQ(0, myIdlAst.getErrors().size());
+    EXPECT_EQ(0UL, myIdlAst.getErrors().size());
     unsigned const long mySize = myIdlAst.getModules().size();
-    ASSERT_EQ(1, mySize);
+    ASSERT_EQ(1UL, mySize);
 
     const ast::ModuleNode &myM0ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("mod0"), myM0ModuleNode.getIdentifierStr());
-    EXPECT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
+    EXPECT_EQ(1UL, myM0ModuleNode.getModuleBody().getModules().size());
 
     const ast::ModuleNode &myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("mod1"), myM1ModuleNode.getIdentifierStr());
@@ -540,13 +540,13 @@ TEST(stribohIdlTests, test2MethodInterface) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_INT01);
     printErrors(myIdlAst);
-    EXPECT_EQ(0, myIdlAst.getErrors().size());
+    EXPECT_EQ(0UL, myIdlAst.getErrors().size());
     unsigned const long mySize = myIdlAst.getModules().size();
-    ASSERT_EQ(1, mySize);
+    ASSERT_EQ(1UL, mySize);
 
     const ast::ModuleNode &myM0ModuleNode = myIdlAst.getModules()[0];
     EXPECT_EQ(string("mod02"), myM0ModuleNode.getIdentifierStr());
-    EXPECT_EQ(1, myM0ModuleNode.getModuleBody().getModules().size());
+    EXPECT_EQ(1UL, myM0ModuleNode.getModuleBody().getModules().size());
 
     const ast::ModuleNode &myM1ModuleNode = myM0ModuleNode.getModuleBody().getModules()[0];
     EXPECT_EQ(string("mod12"), myM1ModuleNode.getIdentifierStr());
@@ -556,7 +556,7 @@ TEST(stribohIdlTests, test2MethodInterface) {
     ASSERT_EQ(2UL, myHelloWorldIFace.getMethods().size());
 
     const auto myMethod1 = myHelloWorldIFace.getMethods()[0];
-    ASSERT_EQ(2,myMethod1.size()) << "Method parameter list parsing is wrong.";
+    ASSERT_EQ(2UL,myMethod1.size()) << "Method parameter list parsing is wrong.";
     EXPECT_EQ(string("echo"), myMethod1.getMethodName());
     EXPECT_EQ( string("p0"), myMethod1[1].getName());
     EXPECT_EQ(EBuildinTypes::K_STRING, myMethod1[1].getType());
@@ -578,7 +578,7 @@ module mod02 {
 TEST(stribohIdlTests, testUnknownType) {
     Includes myIncludes;
     auto myIdlAst = parseIdlStr(myIncludes, K_TST_IDL_INT02);
-    EXPECT_EQ(1, myIdlAst.getErrors().size());
+    EXPECT_EQ(1UL, myIdlAst.getErrors().size());
 }
 
 TEST(stribohIdlTests, testChaiscriptBasics) {
@@ -695,7 +695,7 @@ MOD_END_mod0
             EGenerateParts::EServant,
             std::vector<ast::RootNode>{aRootNode}
             );
-    ASSERT_EQ(1, myGeneratedSnippets.size());
+    ASSERT_EQ(1UL, myGeneratedSnippets.size());
     ASSERT_EQ(K_GENERATED, myGeneratedSnippets.find("HelloWorld.hpp")->second);
 }
 
@@ -711,4 +711,3 @@ TEST(stribohIdlTests, testNotExistentBackend) {
     }
     FAIL() << "Expected file not found exceptions.";
 }
-

@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('../lib', '../../../cmake-build-debug/lib')
+sys.path.append(['../lib', '../../../cmake-build-debug/lib'])
 import stribohIdl
 
 theIncludeGuard = 'K_ECHO_SERVANT_GUARD_HPP'
@@ -21,7 +21,7 @@ def striboh_type_to_TypeName(p_striboh_type: str) -> str:
     raise RuntimeError('Unknown striboh type ' + p_striboh_type)
 
 
-def striboh_type_to_cpp(p_striboh_type):
+def striboh_type_to_cpp(p_striboh_type: str):
     if p_striboh_type == "STRING":
         return "std::string"
     if p_striboh_type == "INT":
@@ -31,14 +31,14 @@ def striboh_type_to_cpp(p_striboh_type):
 
 def concat_string_list(p_list: []):
     my_ret_val = ''
-    for ii in range(p_list.size()):
+    for ii in range(len(p_list)):
         if ii > 0:
             my_ret_val = my_ret_val + ','
         my_ret_val = my_ret_val + '"' + p_list[ii] + '"'
     return my_ret_val
 
 
-class ServantVisitor(stribohIdl.PyAstVisitor):
+class ServantVisitor(stribohIdl.AstVisitor):
     __the_run_no: int = 0
     __header_code: str = ""
     __module_depth: int = 0
@@ -65,16 +65,17 @@ class ServantVisitor(stribohIdl.PyAstVisitor):
             self.addCode(self.__filename, "} // end namespace \n")
 
     def __init__(self):
-        stribohIdl.stribohIdlSetRuns(2)  # set tree visitor runs
+        stribohIdl.AstVisitor.__init__(self)
+        self.setRuns(2)
 
     def beginRun(self, p_run_num):
         self.__the_run_no = p_run_num
 
-    def stribohIdlServantBeginModule(self, pModuleName):
+    def beginModule(self, pModuleName):
         self.__module_names.append(pModuleName)
         self.__module_depth += 1
 
-    def stribohIdlServantEndModule(self, p_module_name):
+    def endModule(self, p_module_name):
         self.__module_depth += 1
         del self.__module_names[-1]
 
@@ -98,88 +99,90 @@ class ServantVisitor(stribohIdl.PyAstVisitor):
             self.__filename = '{}.hpp'.format(p_interface_name)
             self.addCode(self.__filename, self.__header_code);
             self.generate_namespace(p_interface_name);
-            self.addCode(self.__filename, '{myPrefix} class {pInterfaceName} : public striboh::base::ServantBase {\n'
+            self.addCode(self.__filename, '{myPrefix} class {pInterfaceName} : public striboh::base::ServantBase {{\n'
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
             self.addCode(self.__filename, '{} public:\n'.format(my_prefix))
         if self.__the_run_no == 2:
             my_module_list = concat_string_list(self.__module_names)
             print('Module list:{}'.format(my_module_list))
             self.addCode(self.__filename, """
-{myPrefix}\t virtual const striboh::base::Interface& getInterface() const override { return mInterface; }
+{myPrefix}\t virtual const striboh::base::Interface& getInterface() const override {{ return mInterface; }}
 
 {myPrefix} private:
-{myPrefix}\t striboh::base::Interface mInterface{
+{myPrefix}\t striboh::base::Interface mInterface{{
 {myPrefix}\t\t *this
-{myPrefix}\t\t { {myModuleList} }
-{myPrefix}\t\t striboh::base::InterfaceName{"{pInterfaceName}"}
-{myPrefix}\t\t {""".format(myPrefix=my_prefix, myModuleList=my_module_list, pInterfaceName=p_interface_name))
+{myPrefix}\t\t {{ {myModuleList} }}
+{myPrefix}\t\t striboh::base::InterfaceName{{"{pInterfaceName}"}}
+{myPrefix}\t\t {{""".format(myPrefix=my_prefix, myModuleList=my_module_list, pInterfaceName=p_interface_name))
         self.__module_depth += 1
 
-    def endInterface(self, pInterfaceName):
+    def endInterface(self, pInterfaceName:str):
         self.__module_depth += 1
         my_prefix = concat_prefix(self.__module_depth);
         if self.__the_run_no == 2:
-            self.addCode(self.__filename, """${myPrefix}\t\t }
-${myPrefix}\t }
+            self.addCode(self.__filename, """{myPrefix}\t\t }}
+{myPrefix}\t }}
 
-${myPrefix}};
-\n} // end namespace
-#endif // ${theIncludeGuard}
+{myPrefix} }};
+
+}} // end namespace
+#endif // {theIncludeGuard}
 """.format(myPrefix=my_prefix, theIncludeGuard=self.__include_guard))
 
-    def beginMethod(self, p_method_name, p_return_type):
+    def beginMethod(self, p_identifier: stribohIdl.TypedIdentifierNode):
         self.__par_no = 0
         self.__lambda_parameter_list = ""
         if self.__the_run_no == 1:
             my_prefix = concat_prefix(self.__module_depth)
-            my_cpp_type = striboh_type_to_cpp(p_return_type)
+            my_cpp_type = striboh_type_to_cpp(p_identifier.getTypeString())
             self.addCode(self.__filename, '\n{myPrefix} virtual {myCppType} {pMethodName}('
-                         .format(myPrefix=my_prefix, myCppType=my_cpp_type, pMethodName=p_method_name));
+                         .format(myPrefix=my_prefix, myCppType=my_cpp_type, pMethodName=p_identifier.getName()));
         if self.__the_run_no == 2:
             my_prefix = concat_prefix(self.__module_depth + 1)
             if self.__method_no > 0:
                 self.addCode(self.__filename, "${myPrefix}\t ,\n".format(myPrefix=my_prefix))
-            self.addCode(self.__filename, """{myPrefix}\t striboh::base::Method{\"${pMethodName}\",
-{myPrefix}\t\t striboh::base::ParameterDescriptionList{
-{myPrefix}\t\t\t {
-""".format(myPrefix=my_prefix, pMethodName=p_method_name))
+            self.addCode(self.__filename, """{myPrefix}\t striboh::base::Method{{"{pMethodName}",
+{myPrefix}\t\t striboh::base::ParameterDescriptionList{{
+{myPrefix}\t\t\t {{
+""".format(myPrefix=my_prefix, pMethodName=p_identifier.getName()))
 
-    def endMethod(self, pMethodName, pMethodType):
+    def endMethod(self, p_identifier: stribohIdl.TypedIdentifierNode):
         if self.__the_run_no == 1:
             self.addCode(self.__filename, " ) = 0;\n")
         if self.__the_run_no == 2:
             my_prefix = concat_prefix(self.__module_depth + 1)
-            self.addCode(self.__filename, """${myPrefix}\t\t\t }
-"${myPrefix}\t\t },
-"${myPrefix}\t\t [this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {
+            self.addCode(self.__filename, """{myPrefix}\t\t\t }}
+"${myPrefix}\t\t }},
+"${myPrefix}\t\t [this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {{
 "${myPrefix}\t\t\t auto myRetVal={pMethodName}({theLambdaParameterList});
 "${myPrefix}\t\t\t );
 "${myPrefix}\t\t\t return striboh::base::Message(striboh::base::Value( myRetVal ),getLog());
-"${myPrefix}\t\t },
+"${myPrefix}\t\t }},
 "${myPrefix}\t\t getLog()
-"${myPrefix}\t }
-""".format(myPrefix=my_prefix, pMethodName=pMethodName, theLambdaParameterList=self.__lambda_parameter_list))
+"${myPrefix}\t }}
+""".format(myPrefix=my_prefix, pMethodName=p_identifier.getName(), theLambdaParameterList=self.__lambda_parameter_list))
         self.__method_no += 1
 
-    def beginParameter(self, pParameterName, pType):
-        my_cpp_type = striboh_type_to_cpp(pType)
+    def beginParameter(self, p_identifier: stribohIdl.TypedIdentifierNode):
+        my_cpp_type = striboh_type_to_cpp(p_identifier.getTypeString())
         if self.__the_run_no == 1:
             if self.__par_no > 0:
                 self.addCode(self.__filename, ", ")
             self.addCode(self.__filename, "const ${myCppType} & ${pParameterName}"
-                         .format(myCppType=my_cpp_type, pParameterName=pParameterName))
+                         .format(myCppType=my_cpp_type, pParameterName=p_identifier.getName()))
         if self.__the_run_no == 2:
             my_prefix = concat_prefix(self.__module_depth + 1)
-            my_parameter_type_name = striboh_type_to_TypeName(pType)
+            my_parameter_type_name = striboh_type_to_TypeName(p_identifier.getTypeString())
             if self.__par_no > 0:
                 self.__lambda_parameter_list += "${myPrefix}\t\t\t ,\n".format(myPrefix=my_prefix)
             self.addCode(self.__filename, "${myPrefix}\t\t\t\t\t ,\n".format(myPrefix=my_prefix))
             self.__lambda_parameter_list += "${myPrefix}\t\t\t pIncoming.getParameters()[${theParNo}].getValue().get<${myCppType}>()\n" \
                 .format(myPrefix=my_prefix, theParNo=self.__par_no, myCppType=my_cpp_type)
             self.addCode(self.__filename,
-                         "${myPrefix}\t\t\t\t\t striboh::base::ParameterDescription{striboh::base::EDirection::K_IN, ${myParameterTypeName}, \"${pParameterName}\"}\n"
+                         """{myPrefix}\t\t\t\t\t striboh::base::ParameterDescription{{striboh::base::EDirection::K_IN, {myParameterTypeName}, "{pParameterName}"}}
+"""
                          .format(myPrefix=my_prefix, myParameterTypeName=my_parameter_type_name,
-                                 pParameterName=pParameterName))
+                                 pParameterName=p_identifier.getName()))
         self.__par_no = self.__par_no + 1
 
 
@@ -197,7 +200,7 @@ def generate_module_path(p_module_names: [str]):
     return my_module_path
 
 
-class ClientVisitor(stribohIdl.PyAstVisitor):
+class ClientVisitor(stribohIdl.AstVisitor):
     __include_guard: str
     __module_names: [str] = []
     __method_message_code: [str] = []
@@ -206,8 +209,12 @@ class ClientVisitor(stribohIdl.PyAstVisitor):
     __par_no: int = -1;
 
     def __init__(self):
+        stribohIdl.AstVisitor.__init__(self)
+        self.setRuns(2)
         self.__run_no = 0
-        stribohIdl.stribohIdlSetRuns(2)  # set tree visitor runs
+
+    def getRuns(self)->int:
+        return 2
 
     def beginRun(self, pRunNo: int):
         self.__run_no = self.__run_no + 1
@@ -253,7 +260,7 @@ class ClientVisitor(stribohIdl.PyAstVisitor):
                          .format(myPrefix=my_prefix, myModulePath=my_module_path, pInterfaceName=p_interface_name))
         self.theModuleDepth += 1
 
-    def stribohIdlClientEndInterface(self, p_interface_name):
+    def endInterface(self, p_interface_name):
         my_prefix = concat_prefix(self.theModuleDepth)
         if self.__run_no == 2:
             self.addCode(self.__filename, "${myPrefix} };// end class ${pInterfaceName}\n".format(myPrefix=my_prefix,
@@ -262,7 +269,7 @@ class ClientVisitor(stribohIdl.PyAstVisitor):
             self.addCode(self.__filename, "#endif // ${theIncludeGuard}\n".format(theIncludeGuard=self.__include_guard))
         self.theModuleDepth -= 1
 
-    def stribohIdlClientBeginMethod(self, pMethodName, pReturnType):
+    def beginMethod(self, pMethodName, pReturnType):
         myMethodType = striboh_type_to_cpp(pReturnType)
         myPrefix = concat_prefix(self.theModuleDepth)
         if self.__run_no == 1:
@@ -314,3 +321,9 @@ class ClientVisitor(stribohIdl.PyAstVisitor):
                 self.addCode(self.__filename, "${myParameterType} ${pParameterName}"
                              .format(myParameterType=my_parameter_type, pParameterName=p_parameter_name))
         self.__par_no += 1
+
+my_client_visitor = ClientVisitor()
+my_servant_visitor = ServantVisitor()
+
+def register():
+    stribohIdl.setBackendVisitors(my_client_visitor,my_servant_visitor)

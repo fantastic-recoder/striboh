@@ -379,19 +379,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <string>
 #include <vector>
-#include <algorithm>
+#include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/log/expressions.hpp>
-#include <numeric>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseLogBoostImpl.hpp"
 #include "stribohIdlAstTypedIdentifierNode.hpp"
 #include "stribohIdlCompiler.hpp"
 #include "stribohIdlParser.hpp"
-#include "stribohIdlAstVisitorClientBackend.hpp"
-#include "stribohIdlAstVisitorServantBackend.hpp"
 
 using std::string;
 using std::vector;
@@ -410,15 +406,11 @@ using std::filesystem::path;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
-namespace {
-    LogBoostImpl aLog;
-}
-
 namespace striboh::idl {
 
     int Compiler::processCommandLine( int pArgC, char **pArgV ) {
         // set current directory to executable
-        setCurrentDirectoryToCompilerDirectory(aLog, pArgV[0]);
+        setCurrentDirectoryToCompilerDirectory(m_Log, pArgV[0]);
         // Declare the supported options.
         po::options_description myOptDesc(fs::basename(pArgV[0]) + string(" options"));
         po::positional_options_description myPosOpt;
@@ -441,19 +433,19 @@ namespace striboh::idl {
         po::notify(myVarMap);
 
         int myRetVal = 0;
-        myRetVal = processVerbose(aLog, myVarMap);
+        myRetVal = processVerbose(m_Log, myVarMap);
         if (myRetVal != 0) return myRetVal;
 
         myRetVal = processHelp(myVarMap, myOptDesc);
         if (myRetVal != 0) return myRetVal;
 
-        m_Includes = processIncludes(myVarMap, aLog);
+        m_Includes = processIncludes(myVarMap, m_Log);
 
-        myRetVal = parseInputFiles(myVarMap, m_Includes, aLog, m_ParsedInputFiles);
+        myRetVal = parseInputFiles(myVarMap, m_Includes, m_Log, m_ParsedInputFiles);
         if (myRetVal != 0) return myRetVal;
 
         if (myVarMap.count("dump-tree")) {
-            dumpTree(aLog, m_ParsedInputFiles);
+            dumpTree(m_Log, m_ParsedInputFiles);
         }
 
         if (myVarMap.count("out-dir") > 0) {
@@ -474,10 +466,10 @@ namespace striboh::idl {
         if (myVarMap.count("backend") > 0) {
             m_Backend = myVarMap["backend"].as<string>();
         } else {
-            aLog.error("No backend specified.");
+            m_Log.error("No backend specified.");
             return K_RET_VAL_NO_BACKEND;
         }
-        aLog.info("Backend specified:{}.", m_Backend);
+        m_Log.info("Backend specified:{}.", m_Backend);
         m_Print2Out = myVarMap.count("stdout");
         return myRetVal;
     }
@@ -488,30 +480,58 @@ namespace striboh::idl {
         if( myRetVal != 0) {
             return myRetVal;
         }
-        striboh::idl::IdlContext myIdlContext(aLog);
-        myIdlContext.loadBackend(m_Backend);
+        m_IdlContextPtr->loadBackend(m_Backend);
 
         chaiscript::Exception_Handler myReport;
-        const auto myIdlGenerated = myIdlContext.generateCode(m_Includes, m_Parts2Generate, m_ParsedInputFiles,
-                                                              myReport);
+        const auto myIdlGenerated = m_IdlContextPtr->generateCode(m_Includes, m_Parts2Generate, m_ParsedInputFiles,
+                                                                  myReport);
+        print2StdOutWhenRequested(myIdlGenerated);
+
+        myRetVal = outputGeneratedCode(myIdlGenerated);
+
+        return myRetVal;
+    }
+
+    int Compiler::pyProcess(int pArgC, char **pArgV) {
+        m_Log.debug(__func__);
+        int myRetVal = processCommandLine(pArgC,pArgV);
+        if( myRetVal != 0) {
+            return myRetVal;
+        }
+        m_IdlContextPtr->loadPyBackend(m_Backend,m_CompilerDir);
+
+        const auto myIdlGenerated = m_IdlContextPtr->pyGenerateCode(m_Includes, m_Parts2Generate, m_ParsedInputFiles);
+        print2StdOutWhenRequested(myIdlGenerated);
+
+        myRetVal = outputGeneratedCode(myIdlGenerated);
+
+        return myRetVal;
+    }
+
+    int Compiler::outputGeneratedCode(const IdlGenerated &myIdlGenerated) {
+        int myRetVal;
+        for (const auto &pMapElement: myIdlGenerated) {
+            std::filesystem::path myOutFile = m_Outdir / pMapElement.first;
+            ofstream myOutput(myOutFile, std::ios::out);
+            if (!myOutput) {
+                m_Log.error("Failed to open \"{}\".", pMapElement.first);
+                myRetVal=K_RET_VAL_BAD_OUTPUT;
+                break;
+            }
+            myOutput << pMapElement.second << endl;
+        }
+        return myRetVal;
+    }
+
+    void Compiler::print2StdOutWhenRequested(const IdlGenerated &pIdlGenerated) const {
         if (m_Print2Out) {
-            for (const auto &pMapElement: myIdlGenerated) {
+            for (const auto &pMapElement: pIdlGenerated) {
                 cout << "file: " << pMapElement.first << endl
                      << "*******************************************" << endl
                      << pMapElement.second << endl
                      << "*******************************************" << endl;
             }
         }
-        for (const auto &pMapElement: myIdlGenerated) {
-            std::filesystem::path myOutFile = m_Outdir / pMapElement.first;
-            ofstream myOutput(myOutFile, std::ios::out);
-            if (!myOutput) {
-                aLog.error("Failed to open \"{}\".", pMapElement.first);
-                return K_RET_VAL_BAD_OUTPUT;
-            }
-            myOutput << pMapElement.second << endl;
-        }
-        return myRetVal;
     }
 
     int Compiler::parseInputFiles(const po::variables_map &pVarMap, const vector<string> &pIncludes, LogIface &pLog,
@@ -523,26 +543,12 @@ namespace striboh::idl {
         return myRetVal;
     }
 
-    int Compiler::processInputFiles(const po::variables_map &pVarMap, const vector<string> &/*pIncludes*/
-            , LogIface &pLog, vector<string> &pInputFiles) {
-        int myRetVal = 0;
-        if (pVarMap.count("input-file")) {
-            pInputFiles = pVarMap["input-file"].as<std::vector<string> >();
-            pLog.debug("Input files: {}.",
-                       std::accumulate(pInputFiles.begin(), pInputFiles.end(), std::string(""),
-                                       [](const std::string &p0, const std::string &p1) -> std::string {
-                                           return p0 + ", " + p1;
-                                       }));
-        }
-        return myRetVal;
-    }
-
     vector<string> Compiler::processIncludes(const po::variables_map &pVarMap, LogIface &pLog) {
         std::vector<string> myIncludes;
         if (pVarMap.count("include-path")) {
             myIncludes = pVarMap["include-path"].as<std::vector<string> >();
             pLog.info("Include paths are:");
-            for (auto myInclude: myIncludes) {
+            for (const auto& myInclude: myIncludes) {
                 pLog.info("\t\t{}", myInclude);
             }
         }
@@ -572,8 +578,8 @@ namespace striboh::idl {
         return myRetVal;
     }
 
-    void Compiler::dumpTree(LogIface &pLog, vector<RootNode> &pParsedIdls) {
-        for (auto &myNode: pParsedIdls) {
+    void Compiler::dumpTree(LogIface &pLog, vector<RootNode> &pParsedSources) {
+        for (auto &myNode: pParsedSources) {
             pLog.info("---> {}", myNode.getValueStr());
             std::cout << myNode;
             pLog.info("<--- {}", myNode.getValueStr());
@@ -604,13 +610,13 @@ namespace striboh::idl {
     }
 
     void Compiler::setCurrentDirectoryToCompilerDirectory(LogIface &pLog, const char *const pCompilerFilename) {
-        const string myOldCompilerDir(current_path().string());
-        pLog.debug("Old current directory:{}.", myOldCompilerDir);
+        m_CompilerDir=current_path().string();
+        pLog.debug("Old current directory:{}.", m_CompilerDir);
         path myCompilerDir(pCompilerFilename);
         myCompilerDir = myCompilerDir.remove_filename();
         const string myCompilerDirStr(myCompilerDir.string());
         pLog.debug("Setting current directory:{}.", myCompilerDirStr);
-        if (myCompilerDirStr == myOldCompilerDir) {
+        if (myCompilerDirStr == m_CompilerDir) {
             pLog.debug("Compiler dir is current dir.");
         } else {
             if (myCompilerDir.empty()) {
@@ -622,4 +628,17 @@ namespace striboh::idl {
         pLog.debug("New current directory:{}.", current_path().string());
     }
 
+    void Compiler::setVisitors(AstVisitor *pClientVisitor, AstVisitor *pServantVisitor) {
+        m_Log.debug("setBackendVisitors clt={}, srv={}",static_cast<void*>(pClientVisitor),
+                   static_cast<void*>(pServantVisitor));
+        m_IdlContextPtr->setBackendVisitors(pClientVisitor,pServantVisitor);
+    }
+
+    Compiler::Compiler(LogIface &pLog):m_Log(pLog){
+        m_IdlContextPtr = std::make_unique<IdlContext>(pLog);
+    }
+
+    Compiler::~Compiler() {
+        m_Log.debug("Compiler::~Compiler()");
+    }
 }

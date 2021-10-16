@@ -389,6 +389,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <NamedType/named_type.hpp>
 #include <chaiscript/chaiscript.hpp>
 
+#include <pybind11/pybind11.h>
+
 #include "stribohIdlAstRootNode.hpp"
 #include "stribohIdlCompiler.hpp"
 #include "stribohIdlAstVisitor.hpp"
@@ -419,11 +421,8 @@ namespace striboh {
 
         class IdlContext;
 
-        class AstVisitorClientBackend;
+        struct AstVisitor;
 
-        class AstVisitorServantBackend;
-
-        using IdlContextPtr = std::shared_ptr<IdlContext>;
         using ChaiScriptPtr = std::shared_ptr<chaiscript::ChaiScript>;
 
         /**
@@ -462,13 +461,13 @@ namespace striboh {
              *
              * @param pCtxName a uniq name for this context.
              */
-            IdlContext(::striboh::base::LogIface &pLog);
+            explicit IdlContext(::striboh::base::LogIface &pLog);
 
             /**
              * Used to exchange infos between Chaiscript and C++
              * @return the value the backend writes sets in Chaiscript.
              */
-            bool isOk() { return mIsOk; }
+            bool isOk() const { return mIsOk; }
 
             /**
              * @see IdlContext::isOk()
@@ -512,13 +511,6 @@ namespace striboh {
                          const std::string &pReport = "__EVAL__") noexcept;
 
             /**
-             *
-             * @param pName Instances name.
-             * @return found instance or empty pointer.
-             */
-            static IdlContext &findInstance(std::string_view pName);
-
-            /**
              * Get the Chaiscript interpreter.
              * @begin
              */
@@ -537,7 +529,7 @@ namespace striboh {
             /**
              * @param pBackendName The name of the backend generator script like for example "cpp".
              */
-            void loadPyBackend(std::string_view pBackendName);
+            void loadPyBackend(std::string_view pBackendName, std::string_view pCompilerDir);
 
             /**
              * Sets the backend script content alternative to loadBackend.
@@ -548,18 +540,27 @@ namespace striboh {
                 mBackendScript = pNewBackend;
             }
 
-            ::striboh::base::LogIface &getLog() { return mLog; }
+            ::striboh::base::LogIface &getLog() { return m_Log; }
 
-            const ::striboh::base::LogIface &getLog() const { return mLog; }
+            const ::striboh::base::LogIface &getLog() const { return m_Log; }
+
+            IdlGenerated
+            pyGenerateCode(const Includes &, const EGenerateParts pWhichParts2Generate,
+                           const std::vector<ast::RootNode> &pParsed) noexcept;
+
+            void setBackendVisitors(AstVisitor *pClientVisitor, AstVisitor *pServantVisitor);
+
+            virtual ~IdlContext();
 
         private:
-            using IdlContextList = std::vector<IdlContextPtr>;
-
-            bool /*-----------------*/ mIsOk /*---------*/ = false;
-            ChaiScriptPtr /*--------*/ mInterpreter /*--*/ ;
-            base::LogIface & /*-----*/ mLog /*----------*/ ;
-            std::string /*----------*/ mBackendScript /**/ ;
-            EBackendState /*--------*/ mBackendState /*-*/ = EBackendState::EInitial;
+            bool /*-----------------*/ mIsOk /*---------------*/ = false;
+            ChaiScriptPtr /*--------*/ mInterpreter /*--------*/ ;
+            base::LogIface & /*-----*/ m_Log /*----------------*/ ;
+            std::string /*----------*/ mBackendScript /*------*/ ;
+            EBackendState /*--------*/ mBackendState /*-------*/ = EBackendState::EInitial;
+            pybind11::object /*-----*/ mBackendModule /*------*/ ;
+            AstVisitor* /*----------*/ m_AstServantVisitor /*-*/ = nullptr;
+            AstVisitor* /*----------*/ m_AstClientVisitor /*--*/ = nullptr;
 
             std::string &doLoadBackend(const std::filesystem::path &myFilename);
 
@@ -579,9 +580,9 @@ namespace striboh {
 
             const std::string &addServantCode(const std::string &pFilename, std::string pGenerated);
 
-            std::unique_ptr<AstVisitorServantBackend> mAstVisitorServantBackend;
-            std::unique_ptr<AstVisitorClientBackend> mAstVisitorClientBackend;
+            void pyGenerateClientCode(const std::vector<ast::RootNode> &pParsed);
 
+            void pyGenerateServantCode(const std::vector<ast::RootNode> &pParsed);
         };
 
         IdlGenerated operator+(const IdlGenerated &p1, const IdlGenerated &p2);

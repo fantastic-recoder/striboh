@@ -490,6 +490,8 @@ namespace striboh {
             virtual void doWarn( const std::string pMsg ) = 0;
             virtual void doInfo( const std::string pMsg ) = 0;
         };
+
+        LogIface& getGlobalLog();
     }
 }
 

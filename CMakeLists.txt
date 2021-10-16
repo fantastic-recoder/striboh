@@ -13,7 +13,7 @@ endif()
 
 enable_testing()
 
-find_package(PythonLibs 3.8 REQUIRED)
+find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter Development)
 
 if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)

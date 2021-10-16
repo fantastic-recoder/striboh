@@ -411,11 +411,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <fmt/format.h>
 
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <fstream>
 #include <array>
 
 namespace striboh {
@@ -661,7 +658,7 @@ namespace striboh {
             return myIdlDoc;
         }
 
-        IdlContext::IdlContext(::striboh::base::LogIface &pLog) : mLog(pLog) {
+        IdlContext::IdlContext(::striboh::base::LogIface &pLog) : m_Log(pLog) {
             mInterpreter = std::make_unique<chaiscript::ChaiScript>();
             mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
             mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
@@ -705,15 +702,42 @@ namespace striboh {
             }
             static const IdlGenerated theEmptySnippedMap;
             const IdlGenerated &myServantSnippets =
-                    mAstVisitorServantBackend
+                    m_AstServantVisitor
                     ?
-                    mAstVisitorServantBackend->getGeneratedSnippets()
+                    m_AstServantVisitor->getGeneratedSnippets()
                     :
                     theEmptySnippedMap;
             const IdlGenerated &myClientSnippets =
-                    mAstVisitorClientBackend
+                    m_AstClientVisitor
                     ?
-                    mAstVisitorClientBackend->getGeneratedSnippets()
+                    m_AstClientVisitor->getGeneratedSnippets()
+                    :
+                    theEmptySnippedMap;
+            auto myGenerated = myServantSnippets + myClientSnippets;
+            return myGenerated;
+        }
+
+        IdlGenerated
+        IdlContext::pyGenerateCode(const Includes &/*pIncludes*/,
+                                 const EGenerateParts pWhichParts2Generate,
+                                 const std::vector<ast::RootNode> &pParsed) noexcept {
+            if (pWhichParts2Generate & EGenerateParts::EServant) {
+                pyGenerateServantCode(pParsed);
+            }
+            if (pWhichParts2Generate & EGenerateParts::EClient) {
+                pyGenerateClientCode(pParsed);
+            }
+            static const IdlGenerated theEmptySnippedMap;
+            const IdlGenerated &myServantSnippets =
+                    m_AstServantVisitor
+                    ?
+                    m_AstServantVisitor->getGeneratedSnippets()
+                    :
+                    theEmptySnippedMap;
+            const IdlGenerated &myClientSnippets =
+                    m_AstClientVisitor
+                    ?
+                    m_AstClientVisitor->getGeneratedSnippets()
                     :
                     theEmptySnippedMap;
             auto myGenerated = myServantSnippets + myClientSnippets;
@@ -726,36 +750,62 @@ namespace striboh {
         void IdlContext::generateServantCode(const vector<ast::RootNode> &pParsed,
                                              const chaiscript::Exception_Handler &pExceptionHandler,
                                              const string &pReport) {
-            mAstVisitorServantBackend = std::make_unique<AstVisitorServantBackend>(*this, pExceptionHandler, pReport);
+            if(!m_AstServantVisitor)
+                m_AstServantVisitor = new AstVisitorServantBackend(*this, pExceptionHandler, pReport);
             std::string myChaiServantBackendCallback =
                     (mBackendState == EBackendState::EProcessed)
                     ? K_CALL_SERVANT_INIT : mBackendScript + K_CALL_SERVANT_INIT;
             for (auto myAstTree: pParsed) {
                 evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
-                for (int myRun = 1; myRun <= mAstVisitorServantBackend->getRuns(); myRun++) {
-                    mAstVisitorServantBackend->beginRun(myRun);
-                    myAstTree.visit(*mAstVisitorServantBackend);
+                for (int myRun = 1; myRun <= m_AstServantVisitor->getRuns(); myRun++) {
+                    m_AstServantVisitor->beginRun(myRun);
+                    myAstTree.visit(*m_AstServantVisitor);
                 }
             }
         }
 
         static constexpr const char *K_CALL_CLIENT_INIT = "\nstribohIdlClientInit()";
 
+        void IdlContext::setBackendVisitors(AstVisitor* pClientVisitor, AstVisitor* pServantVisitor) {
+            m_AstClientVisitor=pClientVisitor;
+            m_AstServantVisitor=pServantVisitor;
+        }
+
         void IdlContext::generateClientCode(const vector<ast::RootNode> &pParsed,
                                             const chaiscript::Exception_Handler &pExceptionHandler,
                                             const string &pReport) {
-            mAstVisitorClientBackend = std::make_unique<AstVisitorClientBackend>(*this, pExceptionHandler,
-                                                                                      pReport);
+            if(!m_AstClientVisitor)
+                m_AstClientVisitor = new AstVisitorClientBackend(*this, pExceptionHandler, pReport);
             std::string myChaiClientBackendCallback =
                     (mBackendState == EBackendState::EProcessed)
                     ? K_CALL_CLIENT_INIT : mBackendScript + K_CALL_CLIENT_INIT;
             for (auto myAstTree: pParsed) {
                 evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
                 mBackendState = EBackendState::EProcessed;
-                for (int myRun = 1; myRun <= mAstVisitorClientBackend->getRuns(); myRun++) {
-                    mAstVisitorClientBackend->beginRun(myRun);
-                    myAstTree.visit(*mAstVisitorClientBackend);
+                for (int myRun = 1; myRun <= m_AstClientVisitor->getRuns(); myRun++) {
+                    m_AstClientVisitor->beginRun(myRun);
+                    myAstTree.visit(*m_AstClientVisitor);
+                }
+            }
+        }
+
+        void IdlContext::pyGenerateClientCode(const vector<ast::RootNode> &pParsed) {
+            for (auto myAstTree: pParsed) {
+                mBackendState = EBackendState::EProcessed;
+                for (int myRun = 1; myRun <= m_AstClientVisitor->getRuns(); myRun++) {
+                    m_AstClientVisitor->beginRun(myRun);
+                    myAstTree.visit(*m_AstClientVisitor);
+                }
+            }
+        }
+
+        void IdlContext::pyGenerateServantCode(const vector<ast::RootNode> &pParsed) {
+            for (auto myAstTree: pParsed) {
+                mBackendState = EBackendState::EProcessed;
+                for (int myRun = 1; myRun <= m_AstServantVisitor->getRuns(); myRun++) {
+                    m_AstServantVisitor->beginRun(myRun);
+                    myAstTree.visit(*m_AstServantVisitor);
                 }
             }
         }
@@ -769,7 +819,7 @@ namespace striboh {
                 static FileNotFound myExcept(myFilename, "Backend script not be loaded.");
                 throw myExcept;
             }
-            mLog.debug("Going to open backend: {}.", myFilename.string());
+            m_Log.debug("Going to open backend: {}.", myFilename.string());
             mBackendState = EBackendState::ELoaded;
             return doLoadBackend(myFilename);
         }
@@ -784,35 +834,39 @@ namespace striboh {
         }
 
         void IdlContext::setClientRuns(int pRunCount) {
-            if (mAstVisitorClientBackend) {
-                mAstVisitorClientBackend->setRuns(pRunCount);
+            if (m_AstClientVisitor) {
+                m_AstClientVisitor->setRuns(pRunCount);
             } else {
                 throw std::runtime_error("Client visitor not yet initialized");
             }
         }
 
         void IdlContext::setServantRuns(int pRunCount) {
-            if (mAstVisitorServantBackend) {
-                mAstVisitorServantBackend->setRuns(pRunCount);
+            if (m_AstServantVisitor) {
+                m_AstServantVisitor->setRuns(pRunCount);
             } else {
                 throw std::runtime_error("Servant visitor not yet initialized");
             }
         }
 
         const std::string &IdlContext::addClientCode(const string &pFilename, std::string pGenerated) {
-            if (mAstVisitorClientBackend) {
-                return mAstVisitorClientBackend->addCode(pFilename, pGenerated);
+            if (m_AstClientVisitor) {
+                return m_AstClientVisitor->addCode(pFilename, pGenerated);
             } else {
                 throw std::runtime_error("Client visitor not yet initialized");
             }
         }
 
         const std::string &IdlContext::addServantCode(const string &pFilename, std::string pGenerated) {
-            if (mAstVisitorServantBackend) {
-                return mAstVisitorServantBackend->addCode(pFilename, pGenerated);
+            if (m_AstServantVisitor) {
+                return m_AstServantVisitor->addCode(pFilename, pGenerated);
             } else {
                 throw std::runtime_error("Servant visitor not yet initialized");
             }
+        }
+
+        IdlContext::~IdlContext() {
+            m_Log.debug("IdlContext::~IdlContext()");
         }
 
     } // end namespace idl

@@ -384,10 +384,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "striboh/stribohIdlAstVisitor.hpp"
 #include "striboh/stribohIdlAstTypedIdentifierNode.hpp"
 #include "striboh/stribohIdlParser.hpp"
-#include "striboh/stribohBaseExceptionsFileNotFound.hpp"
 #include "striboh/stribohBaseLogIface.hpp"
 
 namespace py = pybind11;
+
+namespace {
+    striboh::base::LogIface& m_Log=striboh::base::getGlobalLog();
+}
 
 namespace {
 
@@ -493,6 +496,8 @@ namespace {
         return "0.0.2-SNAPSHOT";
     }
 
+    striboh::idl::Compiler theCompiler(striboh::base::getGlobalLog());
+
     /**
      * Pass the command line arguments and run the compiler ( process the input files ).
      *
@@ -501,30 +506,27 @@ namespace {
     int process(std::vector<std::string> pArg) {
         const size_t mySz = pArg.size();
         std::unique_ptr<char*> myArgs(new char*[mySz]);
-        for (int pII=0; pII<mySz; pII++) {
+        for (size_t pII=0; pII<mySz; pII++) {
             myArgs.get()[pII]=pArg[pII].data();
         }
-        striboh::idl::Compiler myCompiler;
-        return myCompiler.process(mySz,myArgs.get());
+        return theCompiler.pyProcess(mySz, myArgs.get());
     }
 
     void setBackendVisitors( AstVisitor& pClientBackend, AstVisitor& pServantBackend) {
-
+        theCompiler.setVisitors(&pClientBackend, &pServantBackend);
     }
 }
 
 void
-IdlContext::loadPyBackend(std::string_view pBackendName) {
-    std::filesystem::path myFilename(fmt::format("../share/striboh/striboh_backend.{}.py",
-                                                 pBackendName));
+IdlContext::loadPyBackend(std::string_view pBackendName, std::string_view pCompilerDir) {
+    std::filesystem::path myFilename(fmt::format("striboh_backend_{}",pBackendName));
     mBackendScript.clear();
-    if (!std::filesystem::exists(myFilename)) {
-        static base::exceptions::FileNotFound myExcept(myFilename, "Backend script not be loaded.");
-        throw myExcept;
-    }
-    mLog.debug("Going to open backend: {}.", myFilename.string());
+    m_Log.debug("Going to open backend: {}{}.", pCompilerDir, myFilename.string());
+    std::filesystem::current_path(pCompilerDir);
+    mBackendModule = pybind11::module_::import(myFilename.c_str());
+    mBackendModule.attr("register")();
     mBackendState = EBackendState::ELoaded;
-    return;
+    return ;
 }
 
 
@@ -554,6 +556,7 @@ PYBIND11_MODULE(stribohIdl, pPyModule)
 
     py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(pPyModule, "AstVisitor")
             .def(py::init<>())
+            .def("setRuns",&AstVisitor::setRuns)
             .def("beginRun",&AstVisitor::beginRun)
             .def("beginModule", &AstVisitor::beginModule)
             .def("endModule", &AstVisitor::endModule)

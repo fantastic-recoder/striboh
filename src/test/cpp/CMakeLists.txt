@@ -7,7 +7,7 @@ target_include_directories(striboh_test_utils PRIVATE ${CONAN_INCLUDE_DIRS_GTEST
 add_executable(striboh_idl_tests striboh_idl_tests.cpp)
 target_include_directories(striboh_idl_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
 target_include_directories(striboh_idl_tests PRIVATE ${CONAN_INCLUDE_DIRS_CHAISCRIPT})
-target_link_libraries(striboh_idl_tests striboh_base_library striboh_idl_library ${CONAN_LIBS_GTEST} ${STRIBOH_LIBS})
+target_link_libraries(striboh_idl_tests striboh_base_library striboh_idl_library ${CONAN_LIBS_GTEST} ${STRIBOH_LIBS} ${Python3_LIBRARIES})
 target_link_directories(striboh_idl_tests PRIVATE ${CONAN_LIB_DIRS_GTEST} ${STRIBOH_LIB_DIRS})
 add_test(NAME striboh_idl_tests COMMAND striboh_idl_tests)
 

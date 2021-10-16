@@ -407,5 +407,12 @@ namespace striboh {
         void LogBoostImpl::doInfo(const std::string pMsg) {
             BOOST_LOG_TRIVIAL(info) << pMsg;
         }
+
+        striboh::base::LogIface& getGlobalLog() {
+            static striboh::base::LogBoostImpl* theDefaultLog=new striboh::base::LogBoostImpl();
+            return *theDefaultLog;
+        }
+
     }
 }
+
