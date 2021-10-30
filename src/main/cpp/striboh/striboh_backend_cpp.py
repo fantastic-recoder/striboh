@@ -3,8 +3,6 @@ import sys
 sys.path.append(['../lib', '../../../cmake-build-debug/lib'])
 import stribohIdl
 
-theIncludeGuard = 'K_ECHO_SERVANT_GUARD_HPP'
-
 
 def concat_prefix(p_depth: int) -> str:
     my_prefix: str = ''
@@ -13,7 +11,7 @@ def concat_prefix(p_depth: int) -> str:
     return my_prefix
 
 
-def striboh_type_to_TypeName(p_striboh_type: str) -> str:
+def striboh_type_to_type_name(p_striboh_type: str) -> str:
     if p_striboh_type == 'STRING':
         return 'striboh::base::ETypes::K_STRING'
     if p_striboh_type == "INT":
@@ -39,6 +37,7 @@ def concat_string_list(p_list: []):
 
 
 class ServantVisitor(stribohIdl.AstVisitor):
+    __include_guard: str
     __the_run_no: int = 0
     __header_code: str = ""
     __module_depth: int = 0
@@ -49,7 +48,7 @@ class ServantVisitor(stribohIdl.AstVisitor):
     __par_no = -1
     __lambda_parameter_list: str
 
-    def generate_namespace(self, pInterfaceName):
+    def generate_namespace(self):
         if len(self.__module_names) == 0:
             self.addCode(self.__filename, "namespace ")
         for ii in range(len(self.__module_names)):
@@ -81,7 +80,7 @@ class ServantVisitor(stribohIdl.AstVisitor):
 
     def beginInterface(self, p_interface_name):
         self.__method_no = 0
-        self.__include_guard = "${pInterfaceName}_SERVANT_GUARD_HPP".format(pInterfaceName=p_interface_name)
+        self.__include_guard = "{pInterfaceName}_SERVANT_GUARD_HPP".format(pInterfaceName=p_interface_name)
         if self.__the_run_no == 1:
             self.__header_code += """#ifndef ${theIncludeGuard}
 #define ${theIncludeGuard}
@@ -98,13 +97,13 @@ class ServantVisitor(stribohIdl.AstVisitor):
         if self.__the_run_no == 1:
             self.__filename = '{}.hpp'.format(p_interface_name)
             self.addCode(self.__filename, self.__header_code);
-            self.generate_namespace(p_interface_name);
+            self.generate_namespace();
             self.addCode(self.__filename, '{myPrefix} class {pInterfaceName} : public striboh::base::ServantBase {{\n'
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
             self.addCode(self.__filename, '{} public:\n'.format(my_prefix))
         if self.__the_run_no == 2:
             my_module_list = concat_string_list(self.__module_names)
-            print('Module list:{}'.format(my_module_list))
+            # print('Module list:{}'.format(my_module_list))
             self.addCode(self.__filename, """
 {myPrefix}\t virtual const striboh::base::Interface& getInterface() const override {{ return mInterface; }}
 
@@ -116,7 +115,7 @@ class ServantVisitor(stribohIdl.AstVisitor):
 {myPrefix}\t\t {{""".format(myPrefix=my_prefix, myModuleList=my_module_list, pInterfaceName=p_interface_name))
         self.__module_depth += 1
 
-    def endInterface(self, pInterfaceName:str):
+    def endInterface(self, pInterfaceName: str):
         self.__module_depth += 1
         my_prefix = concat_prefix(self.__module_depth);
         if self.__the_run_no == 2:
@@ -141,7 +140,8 @@ class ServantVisitor(stribohIdl.AstVisitor):
             my_prefix = concat_prefix(self.__module_depth + 1)
             if self.__method_no > 0:
                 self.addCode(self.__filename, "${myPrefix}\t ,\n".format(myPrefix=my_prefix))
-            self.addCode(self.__filename, """{myPrefix}\t striboh::base::Method{{"{pMethodName}",
+            self.addCode(self.__filename, """
+{myPrefix}\t striboh::base::Method{{"{pMethodName}",
 {myPrefix}\t\t striboh::base::ParameterDescriptionList{{
 {myPrefix}\t\t\t {{
 """.format(myPrefix=my_prefix, pMethodName=p_identifier.getName()))
@@ -151,15 +151,16 @@ class ServantVisitor(stribohIdl.AstVisitor):
             self.addCode(self.__filename, " ) = 0;\n")
         if self.__the_run_no == 2:
             my_prefix = concat_prefix(self.__module_depth + 1)
-            self.addCode(self.__filename, """{myPrefix}\t\t\t }}
-"${myPrefix}\t\t }},
-"${myPrefix}\t\t [this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {{
-"${myPrefix}\t\t\t auto myRetVal={pMethodName}({theLambdaParameterList});
-"${myPrefix}\t\t\t );
-"${myPrefix}\t\t\t return striboh::base::Message(striboh::base::Value( myRetVal ),getLog());
-"${myPrefix}\t\t }},
-"${myPrefix}\t\t getLog()
-"${myPrefix}\t }}
+            self.addCode(self.__filename, """
+{myPrefix}\t\t\t }}
+{myPrefix}\t\t }},
+{myPrefix}\t\t [this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {{
+{myPrefix}\t\t\t auto myRetVal={pMethodName}({theLambdaParameterList});
+{myPrefix}\t\t\t );
+{myPrefix}\t\t\t return striboh::base::Message(striboh::base::Value( myRetVal ),getLog());
+{myPrefix}\t\t }},
+{myPrefix}\t\t getLog()
+{myPrefix}\t }}
 """.format(myPrefix=my_prefix, pMethodName=p_identifier.getName(), theLambdaParameterList=self.__lambda_parameter_list))
         self.__method_no += 1
 
@@ -172,15 +173,14 @@ class ServantVisitor(stribohIdl.AstVisitor):
                          .format(myCppType=my_cpp_type, pParameterName=p_identifier.getName()))
         if self.__the_run_no == 2:
             my_prefix = concat_prefix(self.__module_depth + 1)
-            my_parameter_type_name = striboh_type_to_TypeName(p_identifier.getTypeString())
+            my_parameter_type_name = striboh_type_to_type_name(p_identifier.getTypeString())
             if self.__par_no > 0:
                 self.__lambda_parameter_list += "${myPrefix}\t\t\t ,\n".format(myPrefix=my_prefix)
             self.addCode(self.__filename, "${myPrefix}\t\t\t\t\t ,\n".format(myPrefix=my_prefix))
             self.__lambda_parameter_list += "${myPrefix}\t\t\t pIncoming.getParameters()[${theParNo}].getValue().get<${myCppType}>()\n" \
                 .format(myPrefix=my_prefix, theParNo=self.__par_no, myCppType=my_cpp_type)
             self.addCode(self.__filename,
-                         """{myPrefix}\t\t\t\t\t striboh::base::ParameterDescription{{striboh::base::EDirection::K_IN, {myParameterTypeName}, "{pParameterName}"}}
-"""
+                         "{myPrefix}\t\t\t\t\t striboh::base::ParameterDescription{{striboh::base::EDirection::K_IN, {myParameterTypeName}, \"{pParameterName}\"}}\n"
                          .format(myPrefix=my_prefix, myParameterTypeName=my_parameter_type_name,
                                  pParameterName=p_identifier.getName()))
         self.__par_no = self.__par_no + 1
@@ -201,40 +201,57 @@ def generate_module_path(p_module_names: [str]):
 
 
 class ClientVisitor(stribohIdl.AstVisitor):
+    __filename: str
     __include_guard: str
     __module_names: [str] = []
     __method_message_code: [str] = []
     __method_counter: int = 0
     __run_no: int = 0
     __par_no: int = -1;
+    __module_depth: int = 0;
+
+    def generate_namespace(self, pInterfaceName: str):
+        if len(self.__module_names) == 0:
+            self.addCode(self.__filename, "namespace ")
+        for ii in range(len(self.__module_names)):
+            if ii > 0:
+                self.addCode(self.__filename, "::")
+            my_namespace = self.__module_names[ii]
+            self.addCode(self.__filename, my_namespace)
+        if len(self.__module_names) == 0:
+            self.addCode(self.__filename, " {\n")
+
+    def generate_namespace_closing(self):
+        if len(self.__module_names) > 0:
+            self.addCode(self.__filename, "} // end namespace \n")
 
     def __init__(self):
         stribohIdl.AstVisitor.__init__(self)
         self.setRuns(2)
         self.__run_no = 0
 
-    def getRuns(self)->int:
+    def getRuns(self) -> int:
         return 2
 
     def beginRun(self, pRunNo: int):
         self.__run_no = self.__run_no + 1
 
-    def beginModule(self, p_module_name):
+    def beginModule(self, p_module_name: str):
         self.__module_names.append(p_module_name)
 
     def endModule(self, p_module_name):
         del self.__module_names[-1]
 
     def beginInterface(self, p_interface_name: str):
-        self.__include_guard = "${pInterfaceName}_CLIENT_GUARD_HPP".format(pInterfaceName=p_interface_name)
-        my_prefix = concat_prefix(self.theModuleDepth)
+        self.__include_guard = "{pInterfaceName}_CLIENT_GUARD_HPP".format(pInterfaceName=p_interface_name)
+        my_prefix = concat_prefix(self.__module_depth)
         self.__method_counter = 0
         if self.__run_no == 1:
             self.__method_message_code.clear()
-            self.__filename = "${pInterfaceName}Clt.hpp".format(pInterfaceName=p_interface_name)
+            self.__filename = "{pInterfaceName}Clt.hpp".format(pInterfaceName=p_interface_name)
         if self.__run_no == 2:
-            self.addCode(self.__filename, "#ifndef ${theIncludeGuard}\n".format(theIncludeGuard=self.__include_guard))
-            self.addCode(self.__filename, "#define ${theIncludeGuard}\n".format(theIncludeGuard=self.__include_guard))
+            self.addCode(self.__filename, "#ifndef {theIncludeGuard}\n".format(theIncludeGuard=self.__include_guard))
+            self.addCode(self.__filename, "#define {theIncludeGuard}\n".format(theIncludeGuard=self.__include_guard))
             self.addCode(self.__filename, "#include <string>\n")
             self.addCode(self.__filename, "#include <vector>\n")
             self.addCode(self.__filename, "#include <striboh/stribohBaseEMessageType.hpp>\n")
@@ -245,85 +262,91 @@ class ClientVisitor(stribohIdl.AstVisitor):
             self.addCode(self.__filename, "#include <striboh/stribohBaseProxyBase.hpp>\n")
             self.addCode(self.__filename, "#include <striboh/stribohBaseBroker.hpp>\n")
             self.addCode(self.__filename, "\n")
-            self.generateNamespace(p_interface_name)
+            self.generate_namespace(p_interface_name)
             my_module_path = generate_module_path(self.__module_names)
             self.addCode(self.__filename,
-                         "{myPrefix}\t class ${pInterfaceName}Proxy : public striboh::base::ProxyBase {\n\");"
-                         "// starting class ${pInterfaceName}Proxy\n"
+                         "{myPrefix}\t class {pInterfaceName}Proxy : public striboh::base::ProxyBase {{\n\");"
+                         "// starting class {pInterfaceName}Proxy\n"
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
             self.addCode(self.__filename, "{myPrefix}\t public:\n".format(myPrefix=my_prefix));
             self.addCode(self.__filename, "{myPrefix}\t\t ${pInterfaceName}Proxy(  std::string_view pHost, short pPort,"
                                           " striboh::base::LogIface& pLogIface )\n"
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
             self.addCode(self.__filename, '{myPrefix}\t\t\t : striboh::base::ProxyBase(pHost, pPort, '
-                                          '"/{myModulePath}{pInterfaceName}", pLogIface ) {}\n'
+                                          '"/{myModulePath}{pInterfaceName}", pLogIface ) {{}}\n'
                          .format(myPrefix=my_prefix, myModulePath=my_module_path, pInterfaceName=p_interface_name))
-        self.theModuleDepth += 1
+        self.__module_depth += 1
 
-    def endInterface(self, p_interface_name):
-        my_prefix = concat_prefix(self.theModuleDepth)
+    def endInterface(self, p_interface_name: stribohIdl.TypedIdentifierNode):
+        my_prefix = concat_prefix(self.__module_depth)
         if self.__run_no == 2:
-            self.addCode(self.__filename, "${myPrefix} };// end class ${pInterfaceName}\n".format(myPrefix=my_prefix,
-                                                                                                  pInterfaceName=p_interface_name))
-            self.generateNamespaceClosing()
-            self.addCode(self.__filename, "#endif // ${theIncludeGuard}\n".format(theIncludeGuard=self.__include_guard))
-        self.theModuleDepth -= 1
+            self.addCode(self.__filename, "${myPrefix} }};// end class {pInterfaceName}\n"
+                         .format(myPrefix=my_prefix,
+                                 pInterfaceName=p_interface_name))
+            self.generate_namespace_closing()
+            self.addCode(self.__filename, "#endif // {includeGuard}\n".format(includeGuard=self.__include_guard))
+        self.__module_depth -= 1
 
-    def beginMethod(self, pMethodName, pReturnType):
-        myMethodType = striboh_type_to_cpp(pReturnType)
-        myPrefix = concat_prefix(self.theModuleDepth)
+    def beginMethod(self, p_identifier: stribohIdl.TypedIdentifierNode):
+        myMethodType = striboh_type_to_cpp(p_identifier.getTypeString())
+        myPrefix = concat_prefix(self.__module_depth)
         if self.__run_no == 1:
             self.__par_no = 0
             self.__method_message_code.append(
-                "{myPrefix} striboh::base::Message {pMethodName}Msg(\"{pMethodName}\", {\n".format(myPrefix=myPrefix,
-                                                                                                   pMethodName=pMethodName,
-                                                                                                   myMethodType=myMethodType))
+                "{myPrefix} striboh::base::Message {pMethodName}Msg(\"{pMethodName}\", {{\n"
+                    .format(myPrefix=myPrefix, pMethodName=p_identifier.getName(), myMethodType=myMethodType))
         if self.__run_no == 2:
             self.__par_no = 0
             self.addCode(self.__filename,
-                         "{myPrefix}\t striboh::base::RetValProxy<{myMethodType}> {pMethodName}(".format(
-                             myPrefix=myPrefix, pMethodName=pMethodName, myMethodType=myMethodType))
+                         "{myPrefix}\t striboh::base::RetValProxy<{myMethodType}> {pMethodName}("
+                         .format(myPrefix=myPrefix, pMethodName=p_identifier.getName(), myMethodType=myMethodType))
 
-    def stribohIdlClientEndMethod(self, p_method_name, p_return_type):
-        my_prefix = concat_prefix(self.theModuleDepth)
+    def endMethod(self, p_identifier: stribohIdl.TypedIdentifierNode):
+        my_prefix = concat_prefix(self.__module_depth)
         if self.__run_no == 1:
-            self.__method_message_code[self.__method_counter].append(
-                "\n{myPrefix}\t\t } , getLog() ); // end method message".format(myPrefix=my_prefix))
-        if self.__run_no == 2:
-            my_cpp_type = striboh_type_to_cpp(p_return_type)
+            self.__method_message_code[
+                self.__method_counter] += ("\n{myPrefix}\t\t }} , getLog() ); // end method message"
+                                           .format(myPrefix=my_prefix))
+            if self.__run_no == 2:
+                my_cpp_type = striboh_type_to_cpp(p_identifier.getTypeString)
             self.addCode(self.__filename, "){\n")
             self.addCode(self.__filename, "{myPrefix}\t {my_method_message}\n"
                          .format(myPrefix=my_prefix,
                                  my_method_message=self.__method_message_code[self.__method_counter]))
             self.addCode(self.__filename, "{myPrefix}\t\t return invoke("
-                                          "std::forward<striboh::base::Message>({pMethodName}Msg), {myCppType}{} );"
+                                          "std::forward<striboh::base::Message>({pMethodName}Msg), {myCppType}{{}} );"
                                           " // send request\n"
-                         .format(myPrefix=my_prefix, pMethodName=p_method_name, myCppType=my_cpp_type))
-            self.addCode(self.__filename, "{myPrefix}\t } // end method\n".format(myPrefix=my_prefix))
+                         .format(myPrefix=my_prefix, pMethodName=p_identifier.getName(),
+                                 myCppType=striboh_type_to_cpp(p_identifier.getTypeString())))
+        self.addCode(self.__filename, "{myPrefix}\t }} // end method\n".format(myPrefix=my_prefix))
         self.__method_counter += 1
 
-    def stribohIdlClientBeginParameter(self, p_parameter_name, p_parameter_type):
-        my_parameter_type = striboh_type_to_cpp(p_parameter_type)
-        my_prefix = concat_prefix(self.theModuleDepth)
+    def beginParameter(self, p_identifier: stribohIdl.TypedIdentifierNode):
+        my_parameter_type = striboh_type_to_cpp(p_identifier.getTypeString())
+        my_prefix = concat_prefix(self.__module_depth)
         if self.__run_no == 1:
             if self.__par_no == 0:
                 self.__method_message_code[
-                    self.__method_counter] += "${myPrefix}\t\t\t{ \"${pParameterName}\", ${pParameterName} }" \
-                    .format(myParameterType=my_parameter_type, pParameterName=p_parameter_name, myPrefix=my_prefix)
+                    self.__method_counter] += "{myPrefix}\t\t\t{{ \"${pParameterName}\", ${pParameterName} }}" \
+                    .format(myParameterType=my_parameter_type, pParameterName=p_identifier.getName(),
+                            myPrefix=my_prefix)
             else:
                 self.__method_message_code[
-                    self.__method_counter] += ",\n${myPrefix}\t\t\t{ \"${pParameterName}\", ${pParameterName} }" \
-                    .format(myParameterType=my_parameter_type, pParameterName=p_parameter_name, myPrefix=my_prefix)
+                    self.__method_counter] += ",\n${myPrefix}\t\t\t{{ \"${pParameterName}\", ${pParameterName} }}" \
+                    .format(myParameterType=my_parameter_type, pParameterName=p_identifier.getName(),
+                            myPrefix=my_prefix)
             self.__par_no += 1
         if self.__run_no == 2:
             if self.__par_no > 0:
                 self.addCode(self.__filename, ", ")
-                self.addCode(self.__filename, "${myParameterType} ${pParameterName}"
-                             .format(myParameterType=my_parameter_type, pParameterName=p_parameter_name))
+                self.addCode(self.__filename, "{myParameterType} {pParameterName}"
+                             .format(myParameterType=my_parameter_type, pParameterName=p_identifier.getName()))
         self.__par_no += 1
+
 
 my_client_visitor = ClientVisitor()
 my_servant_visitor = ServantVisitor()
 
+
 def register():
-    stribohIdl.setBackendVisitors(my_client_visitor,my_servant_visitor)
+    stribohIdl.setBackendVisitors(my_client_visitor, my_servant_visitor)

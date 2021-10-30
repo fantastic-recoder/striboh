@@ -408,8 +408,10 @@ namespace striboh {
             BOOST_LOG_TRIVIAL(info) << pMsg;
         }
 
+        static striboh::base::LogBoostImpl* theDefaultLog = 0;
+
         striboh::base::LogIface& getGlobalLog() {
-            static striboh::base::LogBoostImpl* theDefaultLog=new striboh::base::LogBoostImpl();
+            theDefaultLog=new striboh::base::LogBoostImpl();
             return *theDefaultLog;
         }
 

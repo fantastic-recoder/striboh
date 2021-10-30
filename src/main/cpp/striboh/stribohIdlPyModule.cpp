@@ -496,7 +496,12 @@ namespace {
         return "0.0.2-SNAPSHOT";
     }
 
-    striboh::idl::Compiler theCompiler(striboh::base::getGlobalLog());
+    using striboh::idl::Compiler;
+
+    std::unique_ptr<Compiler>& getCompilerPtr() {
+        static std::unique_ptr<Compiler> theCompiler= std::make_unique<Compiler>(striboh::base::getGlobalLog());
+        return theCompiler;
+    }
 
     /**
      * Pass the command line arguments and run the compiler ( process the input files ).
@@ -509,11 +514,13 @@ namespace {
         for (size_t pII=0; pII<mySz; pII++) {
             myArgs.get()[pII]=pArg[pII].data();
         }
-        return theCompiler.pyProcess(mySz, myArgs.get());
+        const int myRetVal=getCompilerPtr()->pyProcess(mySz, myArgs.get());
+        getCompilerPtr().release();
+        return myRetVal;
     }
 
     void setBackendVisitors( AstVisitor& pClientBackend, AstVisitor& pServantBackend) {
-        theCompiler.setVisitors(&pClientBackend, &pServantBackend);
+        getCompilerPtr()->setVisitors(&pClientBackend, &pServantBackend);
     }
 }
 

@@ -408,7 +408,7 @@ namespace fs = boost::filesystem;
 
 namespace striboh::idl {
 
-    int Compiler::processCommandLine( int pArgC, char **pArgV ) {
+    int Compiler::processCommandLine(int pArgC, char **pArgV) {
         // set current directory to executable
         setCurrentDirectoryToCompilerDirectory(m_Log, pArgV[0]);
         // Declare the supported options.
@@ -476,8 +476,8 @@ namespace striboh::idl {
 
     int Compiler::process(int pArgC, char **pArgV) {
 
-        int myRetVal = processCommandLine(pArgC,pArgV);
-        if( myRetVal != 0) {
+        int myRetVal = processCommandLine(pArgC, pArgV);
+        if (myRetVal != 0) {
             return myRetVal;
         }
         m_IdlContextPtr->loadBackend(m_Backend);
@@ -494,28 +494,28 @@ namespace striboh::idl {
 
     int Compiler::pyProcess(int pArgC, char **pArgV) {
         m_Log.debug(__func__);
-        int myRetVal = processCommandLine(pArgC,pArgV);
-        if( myRetVal != 0) {
+        int myRetVal = processCommandLine(pArgC, pArgV);
+        if (myRetVal != 0) {
             return myRetVal;
         }
-        m_IdlContextPtr->loadPyBackend(m_Backend,m_CompilerDir);
+        m_IdlContextPtr->loadPyBackend(m_Backend, m_CompilerDir);
 
         const auto myIdlGenerated = m_IdlContextPtr->pyGenerateCode(m_Includes, m_Parts2Generate, m_ParsedInputFiles);
         print2StdOutWhenRequested(myIdlGenerated);
 
         myRetVal = outputGeneratedCode(myIdlGenerated);
-
+        m_IdlContextPtr.release();
         return myRetVal;
     }
 
     int Compiler::outputGeneratedCode(const IdlGenerated &myIdlGenerated) {
-        int myRetVal;
+        int myRetVal = 0;
         for (const auto &pMapElement: myIdlGenerated) {
             std::filesystem::path myOutFile = m_Outdir / pMapElement.first;
             ofstream myOutput(myOutFile, std::ios::out);
             if (!myOutput) {
                 m_Log.error("Failed to open \"{}\".", pMapElement.first);
-                myRetVal=K_RET_VAL_BAD_OUTPUT;
+                myRetVal = K_RET_VAL_BAD_OUTPUT;
                 break;
             }
             myOutput << pMapElement.second << endl;
@@ -526,9 +526,12 @@ namespace striboh::idl {
     void Compiler::print2StdOutWhenRequested(const IdlGenerated &pIdlGenerated) const {
         if (m_Print2Out) {
             for (const auto &pMapElement: pIdlGenerated) {
-                cout << "file: " << pMapElement.first << endl
+                cout << "*******************************************" << endl
+                     << "file: " << pMapElement.first << " begin" << endl
                      << "*******************************************" << endl
                      << pMapElement.second << endl
+                     << "*******************************************" << endl
+                     << "file: " << pMapElement.first << " end" << endl
                      << "*******************************************" << endl;
             }
         }
@@ -548,7 +551,7 @@ namespace striboh::idl {
         if (pVarMap.count("include-path")) {
             myIncludes = pVarMap["include-path"].as<std::vector<string> >();
             pLog.info("Include paths are:");
-            for (const auto& myInclude: myIncludes) {
+            for (const auto &myInclude: myIncludes) {
                 pLog.info("\t\t{}", myInclude);
             }
         }
@@ -610,7 +613,7 @@ namespace striboh::idl {
     }
 
     void Compiler::setCurrentDirectoryToCompilerDirectory(LogIface &pLog, const char *const pCompilerFilename) {
-        m_CompilerDir=current_path().string();
+        m_CompilerDir = current_path().string();
         pLog.debug("Old current directory:{}.", m_CompilerDir);
         path myCompilerDir(pCompilerFilename);
         myCompilerDir = myCompilerDir.remove_filename();
@@ -629,12 +632,12 @@ namespace striboh::idl {
     }
 
     void Compiler::setVisitors(AstVisitor *pClientVisitor, AstVisitor *pServantVisitor) {
-        m_Log.debug("setBackendVisitors clt={}, srv={}",static_cast<void*>(pClientVisitor),
-                   static_cast<void*>(pServantVisitor));
-        m_IdlContextPtr->setBackendVisitors(pClientVisitor,pServantVisitor);
+        m_Log.debug("setBackendVisitors clt={}, srv={}", static_cast<void *>(pClientVisitor),
+                    static_cast<void *>(pServantVisitor));
+        m_IdlContextPtr->setBackendVisitors(pClientVisitor, pServantVisitor);
     }
 
-    Compiler::Compiler(LogIface &pLog):m_Log(pLog){
+    Compiler::Compiler(LogIface &pLog) : m_Log(pLog) {
         m_IdlContextPtr = std::make_unique<IdlContext>(pLog);
     }
 
