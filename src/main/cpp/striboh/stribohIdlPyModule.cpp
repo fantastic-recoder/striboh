@@ -498,8 +498,18 @@ namespace {
 
     using striboh::idl::Compiler;
 
-    std::unique_ptr<Compiler>& getCompilerPtr() {
-        static std::unique_ptr<Compiler> theCompiler= std::make_unique<Compiler>(striboh::base::getGlobalLog());
+    using CompilerPtr = std::unique_ptr<Compiler> ;
+
+    /**
+     * Compiler factory, ensure there is instance...
+     *
+     * @return the compiler instance.
+     */
+    CompilerPtr & getCompilerPtr() {
+        static CompilerPtr theCompiler;
+        if(!theCompiler) {
+            theCompiler = std::make_unique<Compiler>(striboh::base::getGlobalLog());
+        }
         return theCompiler;
     }
 
