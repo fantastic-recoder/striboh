@@ -396,106 +396,102 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-        using ::striboh::idl::ast::RootNode;
-        using ::striboh::idl::ast::ModuleListNode;
-        using ::striboh::idl::ast::ModuleBodyNode;
-        using ::striboh::idl::ast::ModuleNode;
+    using ::striboh::idl::ast::RootNode;
+    using ::striboh::idl::ast::ModuleListNode;
+    using ::striboh::idl::ast::ModuleBodyNode;
+    using ::striboh::idl::ast::ModuleNode;
 
-        class Interface;
-
-
-        class Broker : public BrokerIface {
-        public:
-            typedef std::map<InstanceId ,Interface> Instances_t;
-
-            explicit Broker( LogIface& pLogIface ):
-            BrokerIface(pLogIface){}
-
-            void
-            initialize() override;
-
-            const std::atomic<EServerState>&
-            serveOnce() override;
-
-            std::future<void>
-            shutdown() override;
-
-            Message
-            invokeMethod(Message&& pInvocation) override;
-
-            InstanceId
-            addServant(const Interface& pMethodSignature) override;
-
-            ResolvedResult
-            resolve(std::string_view pPath ) const override;
-
-            ResolvedService
-            resolveService(std::string_view pPath ) const override;
-
-            std::string
-            resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc ) const override;
-
-            static Path split(std::string_view pPathStr, std::string_view pSeparator) ;
-
-            static constexpr const char *const K_SEPARATOR = "/";
-
-            static ResolvedService
-            resolveServiceFromStr(const std::string& pJson);
-
-            virtual ~Broker();
-
-            void serve();
-
-        private:
-
-            Instances_t /*---------------*/ mInstances;
-            RootNode /*------------------*/ mRoot;
-            std::future<void> /*---------*/ mReceiver;
-            std::chrono::seconds /*------*/ mStep /*----------*/ = std::chrono::seconds(10);
-            std::chrono::milliseconds /*-*/ mDispatchSleep /*-*/ = std::chrono::milliseconds(10);
-
-            void
-            dispatch();
-
-            const ModuleNode * resolveSubNodes(PathIterator &pSegmentPtr,
-                                               PathIterator pSegmentEnd,
-                                               ResolvedResult &pRetVal,
-                                               const ModuleListNode& pModuleListNode) const;
-            void
-            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
-
-            void
-            addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
-
-            idl::ast::ModuleBodyNode *
-            addServantModule(ModuleListNode* myChildNodes, std::string &mDir) const;
-
-            static ResolvedService
-            resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode& pNode) ;
-
-            void doShutdown();
-
-        public:
-
-            const std::chrono::milliseconds &getDispatchSleep() const {
-                return mDispatchSleep;
-            }
-
-            void setDispatchSleep(const std::chrono::milliseconds &pDispatchSleep) {
-                mDispatchSleep = pDispatchSleep;
-            }
+    class Interface;
 
 
-            const std::chrono::seconds &getStep() const {
-                return mStep;
-            }
+    class Broker : public BrokerIface {
+    public:
+        typedef std::map<InstanceId, Interface> Instances_t;
 
-            void setStep(const std::chrono::seconds &pStep) {
-                mStep = pStep;
-            }
+        explicit Broker(LogIface &pLogIface) :
+                BrokerIface(pLogIface) {}
 
-        };
+        void
+        initialize() override;
 
-    }
+        const std::atomic<EServerState> &
+        serveOnce() override;
+
+        std::future<void>
+        shutdown() override;
+
+        Message
+        invokeMethod(Message &&pInvocation) override;
+
+        InstanceId
+        addServant(const Interface &pMethodSignature) override;
+
+        ResolvedResult
+        resolve(std::string_view pPath) const override;
+
+        ResolvedService
+        resolveService(std::string_view pPath) const override;
+
+        std::string
+        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const override;
+
+        static Path split(std::string_view pPathStr, std::string_view pSeparator);
+
+        static constexpr const char *const K_SEPARATOR = "/";
+
+        static ResolvedService
+        resolveServiceFromStr(const std::string &pJson);
+
+        virtual ~Broker();
+
+        void serve();
+
+    private:
+
+        Instances_t /*---------------*/ m_Instances;
+        RootNode /*------------------*/ m_RootNode;
+        std::future<void> /*---------*/ m_Receiver;
+        std::chrono::seconds /*------*/ m_Step /*----------*/ = std::chrono::seconds(10);
+        std::chrono::milliseconds /*-*/ m_DispatchSleep /*-*/ = std::chrono::milliseconds(10);
+
+        void dispatch();
+
+        const ModuleNode *resolveSubNodes(PathIterator &pSegmentPtr,
+                                          PathIterator pSegmentEnd,
+                                          ResolvedResult &pRetVal,
+                                          const ModuleListNode &pModuleListNode) const;
+
+        void addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
+
+        void addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
+
+        idl::ast::ModuleBodyNode *addServantModule(ModuleListNode *myChildNodes, std::string &mDir) const;
+
+        static ResolvedService resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode &pNode);
+
+        void doShutdown();
+
+    public:
+
+        const std::chrono::milliseconds &getDispatchSleep() const {
+            return m_DispatchSleep;
+        }
+
+        void setDispatchSleep(const std::chrono::milliseconds &pDispatchSleep) {
+            m_DispatchSleep = pDispatchSleep;
+        }
+
+
+        const std::chrono::seconds &getStep() const {
+            return m_Step;
+        }
+
+        void setStep(const std::chrono::seconds &pStep) {
+            m_Step = pStep;
+        }
+
+    };
+
+}
 
 #endif //STRIBOH_BASE_ORB_HPP

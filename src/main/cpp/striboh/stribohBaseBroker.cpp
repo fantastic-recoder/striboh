@@ -409,7 +409,7 @@ namespace striboh::base {
             getLog().warn("ORB is not ready.");
         } else {
             setState(EServerState::K_STARTING);
-            mReceiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });
+            m_Receiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });
             if (getServer()) {
                 getLog().debug("We have a server attached, going to run it.");
                 getServer()->run();
@@ -421,7 +421,7 @@ namespace striboh::base {
                     getLog().debug("Waiting for main servant. state = {}",
                                    toString(getState()));
                 }
-                mReceiver.wait_for(std::chrono::duration<int, std::milli>(mDispatchSleep));
+                m_Receiver.wait_for(std::chrono::duration<int, std::milli>(m_DispatchSleep));
             } while (getState() != EServerState::K_STARTED);
         }
         return getState();
@@ -432,7 +432,7 @@ namespace striboh::base {
         do {
             setState(EServerState::K_STARTED);
             getLog().debug("Going to sleep. state = {}", toString(getState()));
-            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(mDispatchSleep));
+            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(m_DispatchSleep));
         } while (getState() == EServerState::K_STARTED);
         getLog().info("Shutdown completed. state = {}", toString(getState()));
     }
@@ -453,7 +453,7 @@ namespace striboh::base {
         setState(EServerState::K_SHUTTING_DOWN);
         getLog().info("Going to shutdown. state = {}", toString(getState()));
         if (myShutdownStateWas != EServerState::K_NOMINAL) {
-            mReceiver.wait();
+            m_Receiver.wait();
         }
         if (getServer()) {
             getLog().debug("We have a server attached, going to shutdown it.");
@@ -474,8 +474,8 @@ namespace striboh::base {
         const InstanceId aInstanceId(pValues.getInstanceId());
         getLog().debug("Calling instance \"{}\" method \"{}\".",
                        toString(aInstanceId), pValues.getMethodName());
-        auto myInterfaceIt = mInstances.find(aInstanceId);
-        if (myInterfaceIt != mInstances.end()) {
+        auto myInterfaceIt = m_Instances.find(aInstanceId);
+        if (myInterfaceIt != m_Instances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
             if (myMethodIt != myInterfaceIt->second.end()) {
                 try {
@@ -499,8 +499,8 @@ namespace striboh::base {
     InstanceId
     Broker::addServant(const Interface &pInterface) {
         InstanceId myUuid = generateInstanceId();
-        const auto myPair = mInstances.try_emplace(myUuid, pInterface);
-        ModuleListNode *myChildModules = &mRoot.getModules();
+        const auto myPair = m_Instances.try_emplace(myUuid, pInterface);
+        ModuleListNode *myChildModules = &m_RootNode.getModules();
         ModuleBodyNode *myModuleBodyNode = nullptr;
         for (string myModuleName : myPair.first->second.getPath()) {
             myModuleBodyNode = addServantModule(myChildModules, myModuleName);
@@ -588,10 +588,10 @@ namespace striboh::base {
         ResolvedResult myRetVal;
         Path myPathToResolve;
         if (pPath == K_SEPARATOR) {
-            addSubmodulesToResult(myRetVal, mRoot.getModules());
+            addSubmodulesToResult(myRetVal, m_RootNode.getModules());
         } else {
             myPathToResolve = split(pPath, K_SEPARATOR);
-            auto mySubmodules = mRoot.getModules();
+            auto mySubmodules = m_RootNode.getModules();
             auto myPathBegin = myPathToResolve.get().begin();
             resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
         }
@@ -630,7 +630,7 @@ namespace striboh::base {
         }
         PathSegment myInterfaceName{myPathToResolve.get().back()};
         myPathToResolve.get().pop_back();
-        auto mySubmodules = mRoot.getModules();
+        auto mySubmodules = m_RootNode.getModules();
         auto myPathBegin = myPathToResolve.get().begin();
         auto myModulePtr = resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
         if (myModulePtr == nullptr) {
@@ -676,7 +676,7 @@ namespace striboh::base {
             setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
         }
         for (; getState() != striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
-            std::this_thread::sleep_for(mDispatchSleep);
+            std::this_thread::sleep_for(m_DispatchSleep);
         }
     }
 
