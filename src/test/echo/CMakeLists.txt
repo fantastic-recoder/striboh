@@ -3,7 +3,7 @@ set(IdlName Echo)
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Echo.hpp ${CMAKE_CURRENT_BINARY_DIR}/EchoClt.hpp
         COMMAND ${Python3_EXECUTABLE} ${striboh_BINARY_DIR}/bin/striboh_idl.py --backend cpp --servant --client --out-dir ${CMAKE_CURRENT_BINARY_DIR} --stdout ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
-        DEPENDS ${striboh_BINARY_DIR}/bin/striboh_idl_compiler ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
+        DEPENDS ${Python3_EXECUTABLE} ${striboh_BINARY_DIR}/bin/striboh_idl.py ${striboh_BINARY_DIR}/bin/striboh_backend_cpp.py ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
         COMMENT "Generating code with ${Python3_EXECUTABLE} ${striboh_BINARY_DIR}/bin/striboh_idl.py --backend cpp --servant --client --out-dir ${CMAKE_CURRENT_BINARY_DIR} --stdout ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl"
 )
 

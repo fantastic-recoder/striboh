@@ -1,9 +1,6 @@
 message(STATUS "Python include dirs:${Python3_INCLUDE_DIRS}.")
 message(STATUS "Python include libs:${Python3_LIBRARIES}.")
 
-configure_file(striboh_backend.cpp.chai ${striboh_BINARY_DIR}/share/striboh/striboh_backend.cpp.chai
-        COPYONLY)
-
 set(STRIBOH_LIBS_INCLUDES ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON}
         ${CONAN_INCLUDE_DIRS_FMT} ${CONAN_INCLUDE_DIRS_CHAISCRIPT} ${CONAN_INCLUDE_DIRS_BOOST} ${Python3_INCLUDE_DIRS})
 

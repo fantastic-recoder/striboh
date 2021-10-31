@@ -377,12 +377,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "Echo.hpp"
-
 #include <string>
 #include <striboh/stribohBaseBroker.hpp>
 #include <striboh/stribohBaseBeastServer.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
+
+#include "Echo.hpp"
+
 
 namespace {
     static striboh::base::LogBoostImpl theLog;

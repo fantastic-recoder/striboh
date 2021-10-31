@@ -732,7 +732,7 @@ namespace striboh::base {
         mLog.debug("Message::Message(Return) &m_Log={}",(void*)(&mLog));
     }
 
-    Message::Message(LogIface &pLog) : mType(EMessageType::K_UNKNOWN), mLog(pLog) {
+    Message::Message(LogIface &pLog) :  mLog(pLog), mType(EMessageType::K_UNKNOWN) {
         mLog.debug("Message::Message(Unknown) &m_Log={}",(void*)(&mLog));
     }
 

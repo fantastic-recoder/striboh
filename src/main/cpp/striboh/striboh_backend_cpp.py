@@ -84,24 +84,25 @@ SERVANT_CLOSE_METHOD = """
 {myPrefix}\t\t\t\treturn striboh::base::Message(striboh::base::Value( myRetVal ),getLog());
 {myPrefix}\t\t\t}},
 {myPrefix}\t\t\tgetLog()
-{myPrefix}\t\t}}
+{myPrefix}\t\t}} // end servant method
 """
 
 SERVANT_HEAD_: str = """
-{myPrefix} virtual const striboh::base::Interface& getInterface() const override {{ return mInterface; }}
+{myPrefix}virtual const striboh::base::Interface& getInterface() const override {{ return mInterface; }}
 
-{myPrefix} private:
+{myPrefix}private:
 
-{myPrefix} striboh::base::Interface mInterface{{
-{myPrefix}\t *this,
-{myPrefix}\t {{ {myModuleList} }},
-{myPrefix}\t striboh::base::InterfaceName{{"{pInterfaceName}"}},
-{myPrefix}\t {{"""
+{myPrefix}striboh::base::Interface mInterface{{
+{myPrefix}\t*this,
+{myPrefix}\t{{ {myModuleList} }},
+{myPrefix}\tstriboh::base::InterfaceName{{"{pInterfaceName}"}},
+{myPrefix}\t{{"""
 
-SERVANT_END_INTERFACE = """{myPrefix}\t\t }}
-{myPrefix}\t }}
+SERVANT_END_INTERFACE = """
+{myPrefix}\t}} // end methods init list
+{myPrefix}}}; // end Interface definition
 
-{myPrefix} }};
+{myPrefix}}}; // end servant
 
 }} // end namespace
 #endif // {theIncludeGuard}
