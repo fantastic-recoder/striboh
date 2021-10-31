@@ -18,7 +18,7 @@ def striboh_type_to_cpp(p_striboh_type: str):
         return "std::string"
     if p_striboh_type == "INT":
         return "int64_t"
-    raise RuntimeError("Unknown striboh type ${pStribohType}".format(pStribohType=p_striboh_type))
+    raise RuntimeError("Unknown striboh type {pStribohType}".format(pStribohType=p_striboh_type))
 
 
 def concat_string_list(p_list: []):
@@ -234,7 +234,7 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
         return 2
 
     def beginRun(self, p_run_no: int):
-        self.m_run_no = self.m_run_no + 1
+        self.m_run_no = p_run_no;
 
     def beginModule(self, p_module_name: str):
         self.m_module_names.append(p_module_name)
@@ -262,14 +262,14 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
             self.addCode(self.m_filename, "#include <striboh/stribohBaseProxyBase.hpp>\n")
             self.addCode(self.m_filename, "#include <striboh/stribohBaseBroker.hpp>\n")
             self.addCode(self.m_filename, "\n")
-            self.addCode(self.m_filename, self.generate_namespace());
+            self.addCode(self.m_filename, self.generate_namespace())
             my_module_path = generate_module_path(self.m_module_names)
             self.addCode(self.m_filename,
-                         "{myPrefix}\t class {pInterfaceName}Proxy : public striboh::base::ProxyBase {{\n\");"
-                         "// starting class {pInterfaceName}Proxy\n"
+                         '{myPrefix}\tclass {pInterfaceName}Proxy : public striboh::base::ProxyBase {{ '
+                         '// starting class {pInterfaceName}Proxy\n'
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
-            self.addCode(self.m_filename, "{myPrefix}\t public:\n".format(myPrefix=my_prefix));
-            self.addCode(self.m_filename, "{myPrefix}\t\t ${pInterfaceName}Proxy(  std::string_view pHost, short pPort,"
+            self.addCode(self.m_filename, "{myPrefix}\tpublic:\n".format(myPrefix=my_prefix));
+            self.addCode(self.m_filename, "{myPrefix}\t\t{pInterfaceName}Proxy(  std::string_view pHost, short pPort,"
                                           " striboh::base::LogIface& pLogIface )\n"
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
             self.addCode(self.m_filename, '{myPrefix}\t\t\t : striboh::base::ProxyBase(pHost, pPort, '
@@ -288,27 +288,27 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
         self.__module_depth -= 1
 
     def beginMethod(self, p_identifier: stribohIdl.TypedIdentifierNode):
-        myMethodType = striboh_type_to_cpp(p_identifier.getTypeString())
-        myPrefix = self.__module_depth * '\t'
+        my_method_type = striboh_type_to_cpp(p_identifier.getTypeString())
+        my_prefix = self.__module_depth * '\t'
         if self.m_run_no == 1:
             self.__par_no = 0
             self.__method_message_code.append(
-                "{myPrefix} striboh::base::Message {pMethodName}Msg(\"{pMethodName}\", {{\n"
-                    .format(myPrefix=myPrefix, pMethodName=p_identifier.getName(), myMethodType=myMethodType))
+                '{myPrefix}\tstriboh::base::Message {pMethodName}Msg("{pMethodName}", {{\n'
+                    .format(myPrefix=my_prefix, pMethodName=p_identifier.getName(), myMethodType=my_method_type))
         if self.m_run_no == 2:
             self.__par_no = 0
             self.addCode(self.m_filename,
-                         "{myPrefix}\t striboh::base::RetValProxy<{myMethodType}> {pMethodName}("
-                         .format(myPrefix=myPrefix, pMethodName=p_identifier.getName(), myMethodType=myMethodType))
+                         "\n{myPrefix}\t striboh::base::RetValProxy<{myMethodType}> {pMethodName}("
+                         .format(myPrefix=my_prefix, pMethodName=p_identifier.getName(), myMethodType=my_method_type))
 
     def endMethod(self, p_identifier: stribohIdl.TypedIdentifierNode):
         my_prefix = self.__module_depth * '\t'
         if self.m_run_no == 1:
-            self.__method_message_code[
-                self.__method_counter] += ("\n{myPrefix}\t\t }} , getLog() ); // end method message"
-                                           .format(myPrefix=my_prefix))
-            if self.m_run_no == 2:
-                my_cpp_type = striboh_type_to_cpp(p_identifier.getTypeString)
+            self.__method_message_code[self.__method_counter] += (
+                "\n{myPrefix}\t\t }} , getLog() ); // end method message"
+                .format(myPrefix=my_prefix))
+        if self.m_run_no == 2:
+            my_cpp_type = striboh_type_to_cpp(p_identifier.getTypeString())
             self.addCode(self.m_filename, "){\n")
             self.addCode(self.m_filename, "{myPrefix}\t {my_method_message}\n"
                          .format(myPrefix=my_prefix,
@@ -318,7 +318,7 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
                                           " // send request\n"
                          .format(myPrefix=my_prefix, pMethodName=p_identifier.getName(),
                                  myCppType=striboh_type_to_cpp(p_identifier.getTypeString())))
-        self.addCode(self.m_filename, "{myPrefix}\t }} // end method\n".format(myPrefix=my_prefix))
+            self.addCode(self.m_filename, "{myPrefix}\t }} // end method\n".format(myPrefix=my_prefix))
         self.__method_counter += 1
 
     def beginParameter(self, p_identifier: stribohIdl.TypedIdentifierNode):
@@ -339,8 +339,8 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
         if self.m_run_no == 2:
             if self.__par_no > 0:
                 self.addCode(self.m_filename, ", ")
-                self.addCode(self.m_filename, "{myParameterType} {pParameterName}"
-                             .format(myParameterType=my_parameter_type, pParameterName=p_identifier.getName()))
+            self.addCode(self.m_filename, "{myParameterType} {pParameterName}"
+                         .format(myParameterType=my_parameter_type, pParameterName=p_identifier.getName()))
         self.__par_no += 1
 
 
