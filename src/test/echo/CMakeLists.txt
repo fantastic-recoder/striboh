@@ -2,9 +2,9 @@ set(IdlName Echo)
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Echo.hpp ${CMAKE_CURRENT_BINARY_DIR}/EchoClt.hpp
-        COMMAND ${striboh_BINARY_DIR}/bin/striboh_idl_compiler --backend cpp --servant --client --out-dir ${CMAKE_CURRENT_BINARY_DIR} --stdout ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
+        COMMAND ${Python3_EXECUTABLE} ${striboh_BINARY_DIR}/bin/striboh_idl.py --backend cpp --servant --client --out-dir ${CMAKE_CURRENT_BINARY_DIR} --stdout ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
         DEPENDS ${striboh_BINARY_DIR}/bin/striboh_idl_compiler ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl
-        COMMENT "Generating code with ${striboh_BINARY_DIR}/bin/striboh_idl_compiler ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl."
+        COMMENT "Generating code with ${Python3_EXECUTABLE} ${striboh_BINARY_DIR}/bin/striboh_idl.py --backend cpp --servant --client --out-dir ${CMAKE_CURRENT_BINARY_DIR} --stdout ${CMAKE_CURRENT_SOURCE_DIR}/Echo.striboh.idl"
 )
 
 add_executable(striboh_generated_echo_server striboh_generated_echo_server.cpp ${CMAKE_CURRENT_BINARY_DIR}/Echo.hpp)

@@ -1,6 +1,15 @@
 import sys
+import os
 
-sys.path.append('../lib')
+my_skript_dir=os.path.dirname(sys.argv[0])
+
+print("Skript dir {my_skript_dir}".format(my_skript_dir=my_skript_dir))
+
+sys.path += [my_skript_dir+'/../lib', my_skript_dir+'../../../cmake-build-debug/lib']
+
+print("Current directory {my_cur_dir}".format(my_cur_dir=os.path.abspath(os.curdir)))
+print("Current path {my_cur_path}".format(my_cur_path=sys.path))
+
 import stribohIdl
 
 

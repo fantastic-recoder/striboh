@@ -5,7 +5,7 @@
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
-      <env name="PYTHONPATH" value="$PROJECT_DIR$/cmake-build-debug/lib/" />
+      <env name="PYTHONPATH" value="../lib/" />
     </envs>
     <option name="SDK_HOME" value="/usr/bin/python3.8" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/cmake-build-debug/bin" />
