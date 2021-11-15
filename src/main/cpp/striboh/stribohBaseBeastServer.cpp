@@ -575,6 +575,7 @@ namespace striboh {
             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
             res.set(http::field::content_type, theAppJson);
             res.set(http::field::content_encoding, "UTF-8");
+            res.set(http::field::access_control_allow_origin, "*");
             res.content_length(theResponse.length());
             res.keep_alive(pRequest.keep_alive());
             return pSend(std::move(res));
@@ -756,7 +757,7 @@ namespace striboh {
                     auto myConstBuf(mReadBuffer.cdata());
                     myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
                     mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
-                    const Message myReply = mBroker.invokeMethod(std::forward<Message &&>(myMsg));
+                    const Message myReply = mBroker.invokeMethod(std::forward<Message>(myMsg));
                     mWriteBuffer.clear();
                     myReply.packToBuffer(mWriteBuffer);
                     doWriteBufferToWebSocket();

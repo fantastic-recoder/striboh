@@ -1,4 +1,14 @@
 <div id="ngStribohHello">
-    <h3>Send echo to Striboh server</h3>
-    <label>Text to be send:<input type="text" #ngStribohHelloInput (keyup)="updateTextToSend(ngStribohHelloInput.value)"></label><button (click)="sendToServer()">Send</button>
+  <h3>Send echo to Striboh server</h3>
+  <p>
+    <label
+      >Text to be send:<input
+        type="text"
+        #ngStribohHelloInput
+        (keyup)="updateTextToSend(ngStribohHelloInput.value)" /></label
+    ><button (click)="sendToServer()">Send</button>
+  </p>
+  <p>
+    <label>Server returns:</label><label id=idSrvReturn>{{m_ServerReturned}}</label>
+  </p>
 </div>
