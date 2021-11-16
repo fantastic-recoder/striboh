@@ -13,13 +13,6 @@ interface EchoUuidResponse {
     };
 }
 
-interface EchoResponse {
-    siid: string;
-    mthd: string;
-    prms: { p0: string };
-    type: 1;
-}
-
 type EchoReturnFunction = (pReturn: string) => void;
 
 @Injectable({
@@ -31,6 +24,10 @@ export class HelloService {
     private mWebSocket: WebSocket | undefined;
     private mEchoPar: string | undefined;
     private mEchoReturn: EchoReturnFunction | undefined;
+
+    private static onUiidReceiveError(pError: any): void {
+        console.log('problem with request: ' + pError.message);
+    }
 
     private onWsMessage(pEvent: MessageEvent): void {
         const myBlob: Blob = pEvent.data;
@@ -59,10 +56,9 @@ export class HelloService {
     }
 
     private doSendEcho(pP0: string): void {
-        if(this.mWebSocket !== undefined) {
+        if (this.mWebSocket !== undefined) {
             const data = {siid: this.mUuid, mthd: 'echo', prms: {p0: pP0}, type: 1};
-            const encoded = encode(data);
-            this.mWebSocket.send(encoded);
+            this.mWebSocket.send(encode(data));
             console.log('Sending:' + JSON.stringify(data) + '.');
         }
     }
@@ -82,13 +78,10 @@ export class HelloService {
         this.mWebSocket.onmessage = (pEvent: MessageEvent) => {this.onWsMessage(pEvent); };
     }
 
-    private onUiidReceiveError(pError: any): void {
-        console.log('problem with request: ' + pError.message);
-    }
-
     private retrieveUuid(): void {
         this.mHttp.get<EchoUuidResponse>('http://localhost:63898/m0/m1/Hello?svc')
-            .subscribe((pEchoUuidResponse: EchoUuidResponse) => {this.onReceiveEchoUiid(pEchoUuidResponse); }, this.onUiidReceiveError);
+            .subscribe((pEchoUuidResponse: EchoUuidResponse) => {this.onReceiveEchoUiid(pEchoUuidResponse); },
+                HelloService.onUiidReceiveError);
     }
 
     constructor(private mHttp: HttpClient) { }
@@ -97,7 +90,7 @@ export class HelloService {
         this.mEchoReturn = pReturn;
         this.mEchoPar = p0;
         console.log('p0:' + this.mEchoPar);
-        if(this.mUuid !== undefined && this.mUuid.length === 16) {
+        if (this.mUuid !== undefined && this.mUuid.length === 16) {
             this.doSendEcho(this.mEchoPar);
         } else {
             this.retrieveUuid();
