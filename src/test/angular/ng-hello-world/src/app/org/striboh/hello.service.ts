@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { encode, decode } from 'msgpack-lite';
 
 import { HttpClient } from '@angular/common/http';
-import { ClientRequest } from 'http';
 
 interface EchoUuidResponse {
     svc: {
@@ -21,6 +20,8 @@ interface EchoResponse {
     type: 1;
 }
 
+type EchoReturnFunction = (pReturn: string) => void;
+
 @Injectable({
     providedIn: 'root'
 })
@@ -29,19 +30,18 @@ export class HelloService {
     private mUuid: Uint8Array | undefined;
     private mWebSocket: WebSocket | undefined;
     private mEchoPar: string | undefined;
-    private mEchoReturn: Function | undefined;
+    private mEchoReturn: EchoReturnFunction | undefined;
 
-
-    private onWsMessage(pEvent: MessageEvent) {
+    private onWsMessage(pEvent: MessageEvent): void {
         const myBlob: Blob = pEvent.data;
         myBlob.arrayBuffer().then((pBuffer: ArrayBuffer) => {this.onBuffer(pBuffer); });
     }
 
-    onBuffer(pBuffer: ArrayBuffer) {
+    private onBuffer(pBuffer: ArrayBuffer): void {
         console.log('Received:' + pBuffer);
         const myReplyObj = decode(new Uint8Array(pBuffer));
         console.log(myReplyObj);
-        if (this.mEchoReturn != undefined) {
+        if (this.mEchoReturn !== undefined) {
             this.mEchoReturn(myReplyObj.rtrn);
         }
         else {
@@ -58,7 +58,7 @@ export class HelloService {
         }
     }
 
-    private doSendEcho(pP0: string) {
+    private doSendEcho(pP0: string): void {
         if(this.mWebSocket !== undefined) {
             const data = {siid: this.mUuid, mthd: 'echo', prms: {p0: pP0}, type: 1};
             const encoded = encode(data);
@@ -67,7 +67,7 @@ export class HelloService {
         }
     }
 
-    private onReceiveUiid(pEchoUuidResponse: EchoUuidResponse) {
+    private onReceiveEchoUiid(pEchoUuidResponse: EchoUuidResponse): void {
         this.mUuid = pEchoUuidResponse.svc.uuid_arr;
         console.log('UUID Response:' + this.mUuid);
         this.mWebSocket = new WebSocket('ws://localhost:63898/m0/m1/Hello?upgrade');
@@ -82,18 +82,18 @@ export class HelloService {
         this.mWebSocket.onmessage = (pEvent: MessageEvent) => {this.onWsMessage(pEvent); };
     }
 
-    onUiidReceiveError(e: any) {
-        console.log('problem with request: ' + e.message);
+    private onUiidReceiveError(pError: any): void {
+        console.log('problem with request: ' + pError.message);
     }
 
-    retrieveUuid() {
+    private retrieveUuid(): void {
         this.mHttp.get<EchoUuidResponse>('http://localhost:63898/m0/m1/Hello?svc')
-            .subscribe((pEchoUuidResponse: EchoUuidResponse) => {this.onReceiveUiid(pEchoUuidResponse); }, this.onUiidReceiveError);
+            .subscribe((pEchoUuidResponse: EchoUuidResponse) => {this.onReceiveEchoUiid(pEchoUuidResponse); }, this.onUiidReceiveError);
     }
 
     constructor(private mHttp: HttpClient) { }
 
-    public echo(p0: string, pReturn: Function): void {
+    public echo(p0: string, pReturn: EchoReturnFunction): void {
         this.mEchoReturn = pReturn;
         this.mEchoPar = p0;
         console.log('p0:' + this.mEchoPar);
