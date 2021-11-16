@@ -436,11 +436,13 @@ int main( const int argc, const char* argv[]) {
     int myStep=1;
     do {
         std::this_thread::sleep_for(std::chrono::seconds(myStep));
-        myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
-                    toString(aBroker.getState()),
-                    mySecondsCounter+=myStep,
-                    myTotalWorkTimeInSeconds,
-                    myStep);
+        if(mySecondsCounter % 30 ==0 ) {
+            myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
+                        toString(aBroker.getState()),
+                        mySecondsCounter += myStep,
+                        myTotalWorkTimeInSeconds,
+                        myStep);
+        }
     } while ((mySecondsCounter < myTotalWorkTimeInSeconds) &&
              (aBroker.getState()!= EServerState::K_NOMINAL));
     if(aBroker.getState()!= EServerState::K_NOMINAL) {

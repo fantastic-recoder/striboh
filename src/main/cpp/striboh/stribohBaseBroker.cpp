@@ -431,12 +431,10 @@ namespace striboh::base {
     Broker::dispatch() {
         do {
             setState(EServerState::K_STARTED);
-            getLog().debug("Going to sleep. state = {}", toString(getState()));
             std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(m_DispatchSleep));
         } while (getState() == EServerState::K_STARTED);
         getLog().info("Shutdown completed. state = {}", toString(getState()));
     }
-
     std::future<void>
     Broker::shutdown() {
         if (getState() == EServerState::K_STARTED) {
