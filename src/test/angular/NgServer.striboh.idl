@@ -1,0 +1,7 @@
+module ng_hello_world {
+   interface NgServer {
+       string echo( string pMsg );
+       int add( int pA, int pB );
+       int shutdown();
+   };
+};

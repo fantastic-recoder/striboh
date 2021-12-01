@@ -376,122 +376,52 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_ORB_HPP
-#define STRIBOH_BASE_ORB_HPP
 
-#include <array>
-#include <atomic>
-#include <thread>
-#include <future>
-#include <boost/uuid/uuid.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/foreach.hpp>
+#include <string>
+#include <striboh/stribohBaseBroker.hpp>
+#include <striboh/stribohBaseBeastServer.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
 
-#include "stribohBaseMessage.hpp"
-#include "stribohBaseBrokerIface.hpp"
-#include "stribohIdlAstRootNode.hpp"
-#include "stribohIdlAstImportListNode.hpp"
-#include "stribohIdlAstModuleNode.hpp"
-
-namespace striboh::base {
-
-    using ::striboh::idl::ast::RootNode;
-    using ::striboh::idl::ast::ModuleListNode;
-    using ::striboh::idl::ast::ModuleBodyNode;
-    using ::striboh::idl::ast::ModuleNode;
-
-    class Interface;
+#include "NgServer.hpp"
 
 
-    class Broker : public BrokerIface {
+namespace {
+    static striboh::base::LogBoostImpl theLog;
+}
+namespace ng_hello_world {
+
+    using striboh::base::BrokerIface;
+
+    class NgServant : public NgServer {
+        BrokerIface& mBroker;
     public:
-        typedef std::map<InstanceId, Interface> Instances_t;
+        NgServant( BrokerIface& pBroker ): mBroker(pBroker) {}
 
-        explicit Broker(LogIface &pLogIface) :
-                BrokerIface(pLogIface) {}
-
-        void
-        initialize() override;
-
-        const std::atomic<EServerState> &
-        serveOnce() override;
-
-        std::future<void>
-        shutdown() override;
-
-        Message
-        invokeMethod(Message &&pInvocation) override;
-
-        InstanceId
-        addServant(const Interface &pMethodSignature) override;
-
-        ResolvedResult
-        resolve(std::string_view pPath) const override;
-
-        ResolvedService
-        resolveService(std::string_view pPath) const override;
-
-        std::string
-        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const override;
-
-        static Path split(std::string_view pPathStr, std::string_view pSeparator);
-
-        static constexpr const char *const K_SEPARATOR = "/";
-
-        static ResolvedService
-        resolveServiceFromStr(const std::string &pJson);
-
-        virtual ~Broker();
-
-        void serve();
-
-
-        const std::chrono::milliseconds &getDispatchSleep() const {
-            return m_DispatchSleep;
+        virtual std::string echo(const std::string &pMsg) override {
+            theLog.info("*** Echoing {}.",pMsg);
+            return "Ng Hello " + pMsg + "!";
         }
 
-        void setDispatchSleep(const std::chrono::milliseconds &pDispatchSleep) {
-            m_DispatchSleep = pDispatchSleep;
+        virtual int64_t add(const int64_t &pA, const int64_t &pB) override {
+            theLog.info("*** Adding {} and {}.",pA,pB);
+            return pA + pB;
         }
 
-        const std::chrono::seconds &getStep() const {
-            return m_Step;
+        virtual int64_t shutdown() override {
+            theLog.info("shutdown()");
+            mBroker.shutdown();
+            return 0;
         }
-
-        void setStep(const std::chrono::seconds &pStep) {
-            m_Step = pStep;
-        }
-
-    private:
-
-        Instances_t /*---------------*/ m_Instances;
-        RootNode /*------------------*/ m_RootNode;
-        std::future<void> /*---------*/ m_Receiver;
-        std::chrono::seconds /*------*/ m_Step /*--------------*/ = std::chrono::seconds(10);
-        std::chrono::milliseconds /*-*/ m_DispatchSleep /*-----*/ = std::chrono::milliseconds(10);
-
-        void dispatch();
-
-        const ModuleNode *resolveSubNodes(PathIterator &pSegmentPtr,
-                                          PathIterator pSegmentEnd,
-                                          ResolvedResult &pRetVal,
-                                          const ModuleListNode &pModuleListNode) const;
-
-        void addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleBodyNode &pModuleListNode) const;
-
-        void addSubmodulesToResult(ResolvedResult &pRetVal, const idl::ast::ModuleListNode &pModuleListNode) const;
-
-        idl::ast::ModuleBodyNode *addServantModule(ModuleListNode *myChildNodes, std::string &mDir) const;
-
-        static ResolvedService resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode &pNode);
-
-        void doShutdown();
-
-        void doRunServer();
-
     };
-
 }
 
-#endif //STRIBOH_BASE_ORB_HPP
+using ng_hello_world::NgServant;
+
+int main() {
+    striboh::base::Broker aBroker(theLog);
+    NgServant myNgServant(aBroker);
+    auto myUiid=aBroker.addServant(myNgServant.getInterface());
+    aBroker.getLog().debug("NgServant Uiid = {}.",to_string(myUiid));
+    aBroker.serve();
+    return 0;
+}

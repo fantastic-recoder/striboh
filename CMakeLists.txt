@@ -49,5 +49,6 @@ set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_BOOST} ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LI
 add_subdirectory(src/main/cpp/striboh)
 add_subdirectory(src/test/cpp)
 add_subdirectory(src/test/echo)
+add_subdirectory(src/test/angular)
 # and this adds the doxygen folder as a CMake subdirectory.
 add_subdirectory(doxygen)

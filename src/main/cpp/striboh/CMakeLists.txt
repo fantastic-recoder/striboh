@@ -17,7 +17,7 @@ target_link_libraries(striboh_idl_compiler striboh_base_library striboh_idl_libr
 target_link_directories(striboh_idl_compiler PRIVATE ${CONAN_LIB_DIRS_FMT} ${CONAN_LIB_DIRS_BOOST}
         ${CONAN_INCLUDE_DIRS_PYBIND11})
 
-#Without this, any build libraries automatically have names "lib{x}.so"
+# Without this, any build libraries automatically have names "lib{x}.so"
 set(CMAKE_SHARED_MODULE_PREFIX "")
 # Add a shared module - modules are intended to be imported at runtime.
 add_library(stribohIdl MODULE stribohIdlPyModule.cpp stribohIdlCompiler.cpp stribohIdlCompiler.hpp)
@@ -27,7 +27,15 @@ target_link_libraries(stribohIdl ${PYTHON_LIBRARIES} boost_program_options strib
 target_include_directories(stribohIdl PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${STRIBOH_LIBS_INCLUDES})
 target_link_directories(stribohIdl PRIVATE ${CONAN_LIB_DIRS_FMT} ${CONAN_LIB_DIRS_BOOST})
 
+########################################################################################################################
+# Backends
+########################################################################################################################
 configure_file(striboh_backend_cpp.py ${striboh_BINARY_DIR}/bin/striboh_backend_cpp.py COPYONLY)
+configure_file(striboh_backend_angular.py ${striboh_BINARY_DIR}/bin/striboh_backend_angular.py COPYONLY)
+
+########################################################################################################################
+# Frontend
+########################################################################################################################
 configure_file(striboh_idl.py ${striboh_BINARY_DIR}/bin/striboh_idl.py COPYONLY)
 add_custom_target(striboh_idl.py ALL DEPENDS ${striboh_BINARY_DIR}/bin/striboh_idl.py)
 add_dependencies(striboh_idl.py stribohIdl)

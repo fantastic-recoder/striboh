@@ -399,13 +399,13 @@ using namespace striboh::test;
 
 TEST(stribohGeneratedEchoTests, testEcho) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    sleep(10);
+    sleep(3);
     EchoProxy myEchoClt(striboh::base::K_DEFAULT_HOST,striboh::base::K_DEFAULT_PORT,theLog);
     auto myEchoOp = myEchoClt.echo("John");
     auto myRetVal = myEchoOp.getVal();
     EXPECT_EQ("Hello John!",myRetVal);
     myEchoClt.shutdown();
-    sleep(10);
+    sleep(3);
     ASSERT_FALSE(myChild->running());
 }
 

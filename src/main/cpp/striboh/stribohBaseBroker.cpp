@@ -403,18 +403,24 @@ namespace striboh::base {
 
     using json = ::nlohmann::json;
 
+    void
+    Broker::doRunServer() {
+        if (getServer()) {
+            getLog().debug("We have a server attached, going to run it.");
+            getServer()->run();
+            getLog().debug("Server is running.");
+        }
+
+    }
+
     const std::atomic<EServerState> &
     Broker::serveOnce() {
-        if (getState() != EServerState::K_NOMINAL) {
-            getLog().warn("ORB is not ready.");
-        } else {
+        if (getState() != EServerState::K_STARTED) {
+            doRunServer();
+        } else if (getState() == EServerState::K_NOMINAL) {
             setState(EServerState::K_STARTING);
             m_Receiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });
-            if (getServer()) {
-                getLog().debug("We have a server attached, going to run it.");
-                getServer()->run();
-                getLog().debug("Server is running.");
-            }
+            doRunServer();
             int myCounter = 0;
             do {
                 if (++myCounter % 100 == 0) {
@@ -423,6 +429,11 @@ namespace striboh::base {
                 }
                 m_Receiver.wait_for(std::chrono::duration<int, std::milli>(m_DispatchSleep));
             } while (getState() != EServerState::K_STARTED);
+            getLog().info("ORB state is {}.", toString(getState()));
+        } else if (getState() == EServerState::K_STARTING) {
+            getLog().debug("ORB is starting.");
+        } else {
+            getLog().warn("ORB state is {}.", toString(getState()));
         }
         return getState();
     }
@@ -435,6 +446,7 @@ namespace striboh::base {
         } while (getState() == EServerState::K_STARTED);
         getLog().info("Shutdown completed. state = {}", toString(getState()));
     }
+
     std::future<void>
     Broker::shutdown() {
         if (getState() == EServerState::K_STARTED) {
@@ -478,10 +490,12 @@ namespace striboh::base {
             if (myMethodIt != myInterfaceIt->second.end()) {
                 try {
                     return myMethodIt->invoke(pValues, Context(*this));
-                } catch (std::exception& pException) {
-                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), pException.what());
-                } catch( ... ) {
-                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(), "Unknown exception caught");
+                } catch (std::exception &pException) {
+                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(),
+                                   pException.what());
+                } catch (...) {
+                    getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(),
+                                   "Unknown exception caught");
                 }
             }
         } else {
@@ -500,7 +514,7 @@ namespace striboh::base {
         const auto myPair = m_Instances.try_emplace(myUuid, pInterface);
         ModuleListNode *myChildModules = &m_RootNode.getModules();
         ModuleBodyNode *myModuleBodyNode = nullptr;
-        for (string myModuleName : myPair.first->second.getPath()) {
+        for (string myModuleName: myPair.first->second.getPath()) {
             myModuleBodyNode = addServantModule(myChildModules, myModuleName);
             myChildModules = &myModuleBodyNode->getModules();
         }
@@ -552,7 +566,7 @@ namespace striboh::base {
                     addSubmodulesToResult(pRetVal, myCurrentModule.getModuleBody());
                     return &myCurrentModule;
                 } else {
-                    for (const auto &mySubNodeRef : pModuleListNode) {
+                    for (const auto &mySubNodeRef: pModuleListNode) {
                         auto myModule = resolveSubNodes(pSegmentPtr, pSegmentEnd, pRetVal,
                                                         mySubNodeRef.getModuleBody().getModules());
                         if (myModule) {
@@ -568,7 +582,7 @@ namespace striboh::base {
     void
     Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleListNode &pModules) const {
         pRetVal.mResult = EResolveResult::OK;
-        for (const auto &mySubNodeRef : pModules) {
+        for (const auto &mySubNodeRef: pModules) {
             pRetVal.mModules.emplace(PathSegment(std::string(mySubNodeRef.getValueStr())));
         }
     }
@@ -576,7 +590,7 @@ namespace striboh::base {
     void
     Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleBodyNode &pModule) const {
         addSubmodulesToResult(pRetVal, pModule.getModules());
-        for (const auto &myInterface : pModule.getInterfaces()) {
+        for (const auto &myInterface: pModule.getInterfaces()) {
             pRetVal.mInterfaces.emplace(InterfaceName(myInterface.getName()));
         }
     }
