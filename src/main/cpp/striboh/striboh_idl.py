@@ -23,7 +23,7 @@ def main():
         print(f"\nBackend returned error # {my_ret_val}\n".format(my_ret_val=my_ret_val))
     else:
         print("Backend returned OK ({my_ret_val})\n".format(my_ret_val=my_ret_val))
-    return my_ret_val
+    sys.exit(my_ret_val)
 
 
 if __name__ == "__main__":

@@ -388,7 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace {
     static striboh::base::LogBoostImpl theLog;
 }
-namespace ng_hello_world {
+namespace ng::hello_world {
 
     using striboh::base::BrokerIface;
 
@@ -415,7 +415,7 @@ namespace ng_hello_world {
     };
 }
 
-using ng_hello_world::NgServant;
+using ng::hello_world::NgServant;
 
 int main() {
     striboh::base::Broker aBroker(theLog);

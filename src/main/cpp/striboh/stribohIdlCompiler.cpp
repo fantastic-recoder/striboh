@@ -382,6 +382,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <cstring>
+#include <cerrno>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseLogBoostImpl.hpp"
@@ -514,7 +516,7 @@ namespace striboh::idl {
             std::filesystem::path myOutFile = m_Outdir / pMapElement.first;
             ofstream myOutput(myOutFile, std::ios::out);
             if (!myOutput) {
-                m_Log.error("Failed to open \"{}\".", pMapElement.first);
+                m_Log.error("Failed to open output file \"{}\", reason: \"{}\".", myOutFile.string(),std::strerror(errno));
                 myRetVal = K_RET_VAL_BAD_OUTPUT;
                 break;
             }

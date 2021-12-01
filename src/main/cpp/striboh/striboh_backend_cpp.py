@@ -278,7 +278,7 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
                          .format(myPrefix=my_prefix, myModulePath=my_module_path, pInterfaceName=p_interface_name))
         self.__module_depth += 1
 
-    def endInterface(self, p_interface_name: stribohIdl.TypedIdentifierNode):
+    def endInterface(self, p_interface_name: str):
         my_prefix = self.__module_depth * '\t'
         if self.m_run_no == 2:
             self.addCode(self.m_filename, "{myPrefix} }};// end class {pInterfaceName}\n"

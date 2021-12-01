@@ -598,7 +598,7 @@ namespace striboh {
             }
             std::ifstream myImportFileStream(myFilename.string(), std::ios::in);
             if (!myImportFileStream) {
-                pIdlDoc.pushBackError(str(format("Failed to open %s.") % myFilename));
+                pIdlDoc.pushBackError(str(format("Failed to open input %s.") % myFilename));
             } else {
                 string myLine, myFileContent;
                 while (std::getline(myImportFileStream, myLine)) {
