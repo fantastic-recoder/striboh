@@ -416,8 +416,11 @@ namespace striboh::base {
     const std::atomic<EServerState> &
     Broker::serveOnce() {
         if (getState() == EServerState::K_STARTED) {
-            getLog().debug("ORB is started.");
-            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(m_Step));
+            static long theCounter=0;
+            // TODO: make this dependent from time, eg. á 10 sec
+            if (++theCounter % 1024 == 0) {
+                getLog().debug("ORB is started.");
+            }
         } else if (getState() == EServerState::K_NOMINAL) {
             setState(EServerState::K_STARTING);
             m_Receiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });
@@ -688,8 +691,8 @@ namespace striboh::base {
         if (!getServer()) {
             setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
         }
-        for (; getState() != striboh::base::EServerState::K_SHUTTING_DOWN; serveOnce()) {
-            std::this_thread::sleep_for(m_DispatchSleep);
+        for (EServerState currentState=getState(); currentState != striboh::base::EServerState::K_SHUTTING_DOWN; currentState=serveOnce()) {
+                std::this_thread::sleep_for(m_DispatchSleep);
         }
     }
 

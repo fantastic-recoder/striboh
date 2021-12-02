@@ -399,7 +399,7 @@ namespace striboh {
                 pLog.debug("Starting test echo server...");
                 if(!myServerChildProcess->valid())
                     throw new std::runtime_error(fmt::format("Failed to start {}.", pTestEchoServerBinary));
-                std::this_thread::sleep_for(std::chrono::seconds(5s));
+                std::this_thread::sleep_for(std::chrono::seconds(3s));
                 pLog.info("Server {} started.",pTestEchoServerBinary);
                 return myServerChildProcess;
             }
