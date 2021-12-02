@@ -415,8 +415,9 @@ namespace striboh::base {
 
     const std::atomic<EServerState> &
     Broker::serveOnce() {
-        if (getState() != EServerState::K_STARTED) {
-            //getLog().debug("ORB is started.");
+        if (getState() == EServerState::K_STARTED) {
+            getLog().debug("ORB is started.");
+            std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(m_Step));
         } else if (getState() == EServerState::K_NOMINAL) {
             setState(EServerState::K_STARTING);
             m_Receiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });

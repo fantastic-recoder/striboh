@@ -899,10 +899,9 @@ namespace striboh {
                 } else {
                     // Create the session and run it
                     std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
+                    // Accept another connection
+                    doAccept();
                 }
-
-                // Accept another connection
-                doAccept();
             }
         };
 
