@@ -463,6 +463,14 @@ namespace striboh::base {
             m_Step = pStep;
         }
 
+        static const std::chrono::duration<float> &getTraceInterval() {
+            return theirTraceInterval;
+        }
+
+        static void setTraceInterval(const std::chrono::duration<float> &pTheirTraceInterval) {
+            theirTraceInterval = pTheirTraceInterval;
+        }
+
     private:
 
         Instances_t /*---------------*/ m_Instances;
@@ -470,6 +478,8 @@ namespace striboh::base {
         std::future<void> /*---------*/ m_Receiver;
         std::chrono::seconds /*------*/ m_Step /*--------------*/ = std::chrono::seconds(10);
         std::chrono::milliseconds /*-*/ m_DispatchSleep /*-----*/ = std::chrono::milliseconds(10);
+
+        static std::chrono::duration<float> theirTraceInterval;
 
         void dispatch();
 

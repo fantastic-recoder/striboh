@@ -391,10 +391,15 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstModuleNode.hpp"
 #include "stribohIdlAstModuleBodyNode.hpp"
 
+
 namespace striboh::base {
 
-    using std::string;
-    using std::string_view;
+    using ::std::string;
+    using ::std::string_view;
+    using ::std::chrono::duration;
+    using ::std::chrono::seconds;
+    using ::std::chrono::system_clock;
+
     using ::striboh::idl::ast::ModuleNode;
     using ::striboh::idl::ast::ModuleListNode;
     using ::striboh::idl::ast::InterfaceNode;
@@ -402,6 +407,8 @@ namespace striboh::base {
     using ::striboh::idl::ast::ModuleBodyNode;
 
     using json = ::nlohmann::json;
+
+    std::chrono::duration<float> Broker::theirTraceInterval=std::chrono::duration<float>(10.0f);
 
     void
     Broker::doRunServer() {
@@ -416,10 +423,12 @@ namespace striboh::base {
     const std::atomic<EServerState> &
     Broker::serveOnce() {
         if (getState() == EServerState::K_STARTED) {
-            static long theCounter=0;
-            // TODO: make this dependent from time, eg. á 10 sec
-            if (++theCounter % 1024 == 0) {
+            static std::chrono::time_point<std::chrono::system_clock> start=system_clock::now(), end;
+            end = system_clock::now();
+            const std::chrono::duration<float> elapsed_seconds = end - start;
+            if(theirTraceInterval <= elapsed_seconds) {
                 getLog().debug("ORB is started.");
+                start=end;
             }
         } else if (getState() == EServerState::K_NOMINAL) {
             setState(EServerState::K_STARTING);
