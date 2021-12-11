@@ -491,7 +491,7 @@ namespace striboh::base {
         pegtl::memory_input myIn(pUrl, "");
         if (!pegtl::parse<url::Grammar, url::action>(myIn, *this)) {
             exceptions::WrongAddress *myExc = new exceptions::WrongAddress(pUrl);
-            throw myExc;
+            throw *myExc;
         }
     }
 

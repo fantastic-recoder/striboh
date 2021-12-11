@@ -379,9 +379,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <gtest/gtest.h>
 #include <striboh/stribohBaseAddress.hpp>
+#include <striboh/stribohBaseExceptionsWrongAdress.hpp>
 
 using striboh::base::Address;
 using striboh::base::EProtocol;
+using striboh::base::exceptions::WrongAddress;
 using std::string;
 
 TEST(testAddress,basicParsing) {
@@ -392,6 +394,27 @@ TEST(testAddress,basicParsing) {
     EXPECT_EQ(1UL,myAddress.getUri().size());
     EXPECT_EQ(string("group1"),myAddress.getUri()[0]);
 }
+
+TEST(testAddress,emptyUrl) {
+    Address myAddress("http://localhost:9991");
+    EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
+    EXPECT_EQ("localhost",myAddress.getHost()) << "Hostname parsed wrong.";
+    EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
+    EXPECT_EQ(0UL,myAddress.getUri().size());
+}
+
+TEST(testAddress,wrongUrl) {
+    EXPECT_THROW(Address myAddress("http:/:9991/"), WrongAddress);
+}
+
+TEST(testAddress,emptyUrl1) {
+    Address myAddress("http://localhost:9991/");
+    EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
+    EXPECT_EQ("localhost",myAddress.getHost()) << "Hostname parsed wrong.";
+    EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
+    EXPECT_EQ(0UL,myAddress.getUri().size());
+}
+
 
 TEST(testAddress,analyzeGrammar) {
     ASSERT_EQ(0,Address::checkGrammar())<< "Address grammar contains circles.";
