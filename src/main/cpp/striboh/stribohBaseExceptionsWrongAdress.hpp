@@ -379,64 +379,25 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #pragma once
 
-#include <string>
-#include <list>
+#include <stdexcept>
+#include <filesystem>
 
-namespace striboh::base {
+#include <fmt/format.h>
 
-    enum class EProtocol {
-        HTTP,
-        SHM,
-        NOT_SPECIFIED
-    };
+namespace striboh::base::exceptions {
 
-    class Address {
+    class WrongAddress : public std::runtime_error {
     public:
-        using Uri=std::vector<std::string>;
-
-        /// Parse the passed address
-        explicit Address(std::string_view pUrl)  ;
-        static int checkGrammar();
-
-    public:
-        const std::string &getHost() const {
-            return m_Host;
+        explicit WrongAddress(std::string_view pUrl) :
+                std::runtime_error(fmt::format("Failed to parse \"{}\".", pUrl)),
+                m_Url(pUrl) {
         }
 
-        void setHost(const std::string &pHost) {
-            m_Host = pHost;
-        }
-
-        int getPort() const {
-            return m_Port;
-        }
-
-        void setPort(int pPort) {
-            m_Port = pPort;
-        }
-
-        EProtocol getProtocol() const {
-            return m_Protocol;
-        }
-
-        void setProtocol(EProtocol pProtocol) {
-            m_Protocol = pProtocol;
-        }
-
-        std::string str() const;
-
-        const Uri& getUri() const { return m_Uri; }
-
-        Uri& addDir( const std::string& pDir ) {
-            m_Uri.push_back(pDir);
-            return m_Uri;
-        }
+        const std::string &getUrl() const { return m_Url; }
 
     private:
-        int  /*--------*/ m_Port /*----*/ = 0;
-        std::string /*-*/ m_Host;
-        EProtocol /*---*/ m_Protocol /**/ = EProtocol::NOT_SPECIFIED;
-        Uri /*---------*/ m_Uri;
+        std::string m_Url;
     };
 
-} // end namespace striboh::base
+} // end namespace
+

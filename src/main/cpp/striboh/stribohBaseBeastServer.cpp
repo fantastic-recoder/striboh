@@ -888,14 +888,14 @@ namespace striboh {
             }
 
             /**
-             * @TODO Think through what to do when the port is not free.
+             * @TODO Think through what to do when the Port is not free.
              * @param pErrorCode - self evident.
              * @param pSocket - network socket.
              */
             void
             onAccept(beast::error_code pErrorCode, tcp::socket pSocket) {
                 if (pErrorCode) {
-                    fail(pErrorCode, "onAccept (is port taken?)");
+                    fail(pErrorCode, "onAccept (is Port taken?)");
                 } else {
                     // Create the session and run it
                     std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
@@ -952,7 +952,7 @@ namespace striboh {
                 this->mLog.debug("BeastServer::run() Thread {} finished.",
                                  toString(std::this_thread::get_id()));
             };
-            // Create and launch a listening on port aPort
+            // Create and launch a listening on Port aPort
             std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker(), mLog)->run();
 
             // Run the I/O service on the requested number of threads
