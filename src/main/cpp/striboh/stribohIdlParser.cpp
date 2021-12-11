@@ -659,25 +659,6 @@ namespace striboh {
         }
 
         IdlContext::IdlContext(::striboh::base::LogIface &pLog) : m_Log(pLog) {
-            mInterpreter = std::make_unique<chaiscript::ChaiScript>();
-            mInterpreter->add(chaiscript::user_type<IdlContext>(), "IdlContext");
-            mInterpreter->add(chaiscript::fun(&IdlContext::setOk, this), "setOk");
-            mInterpreter->add(chaiscript::var(this), "theIdlContext");
-            mInterpreter->add(chaiscript::fun(&IdlContext::setClientRuns, this),
-                              "stribohIdlSetClientRuns");
-            mInterpreter->add(chaiscript::fun(&IdlContext::setServantRuns, this),
-                              "stribohIdlSetServantRuns");
-            mInterpreter->add(chaiscript::fun(&IdlContext::addClientCode, this),
-                              "addClientCode");
-            mInterpreter->add(chaiscript::fun(&IdlContext::addServantCode, this),
-                              "addServantCode");
-        }
-
-        chaiscript::Boxed_Value
-        IdlContext::evalChaiscript(const std::string &pInput,
-                                   const chaiscript::Exception_Handler &pExceptionHandler,
-                                   const std::string &pReport) noexcept {
-            return mInterpreter->eval(pInput, pExceptionHandler, pReport);
         }
 
         IdlGenerated operator+(const IdlGenerated &p1, const IdlGenerated &p2) {
@@ -686,35 +667,6 @@ namespace striboh {
                 mySumm[myP2.first] += myP2.second;
             }
             return mySumm;
-        }
-
-        IdlGenerated
-        IdlContext::generateCode(const Includes &/*pIncludes*/,
-                                 const EGenerateParts pWhichParts2Generate,
-                                 const std::vector<ast::RootNode> &pParsed,
-                                 const chaiscript::Exception_Handler &pExceptionHandler,
-                                 const string &pReport) noexcept {
-            if (pWhichParts2Generate & EGenerateParts::EServant) {
-                generateServantCode(pParsed, pExceptionHandler, pReport);
-            }
-            if (pWhichParts2Generate & EGenerateParts::EClient) {
-                generateClientCode(pParsed, pExceptionHandler, pReport);
-            }
-            static const IdlGenerated theEmptySnippedMap;
-            const IdlGenerated &myServantSnippets =
-                    m_AstServantVisitor
-                    ?
-                    m_AstServantVisitor->getGeneratedSnippets()
-                    :
-                    theEmptySnippedMap;
-            const IdlGenerated &myClientSnippets =
-                    m_AstClientVisitor
-                    ?
-                    m_AstClientVisitor->getGeneratedSnippets()
-                    :
-                    theEmptySnippedMap;
-            auto myGenerated = myServantSnippets + myClientSnippets;
-            return myGenerated;
         }
 
         IdlGenerated
@@ -747,47 +699,12 @@ namespace striboh {
         static const string K_INIT_STR("\n");
         static constexpr const char *K_CALL_SERVANT_INIT = "\nstribohIdlServantInit()";
 
-        void IdlContext::generateServantCode(const vector<ast::RootNode> &pParsed,
-                                             const chaiscript::Exception_Handler &pExceptionHandler,
-                                             const string &pReport) {
-            if(!m_AstServantVisitor)
-                m_AstServantVisitor = new AstVisitorServantBackend(*this, pExceptionHandler, pReport);
-            std::string myChaiServantBackendCallback =
-                    (mBackendState == EBackendState::EProcessed)
-                    ? K_CALL_SERVANT_INIT : mBackendScript + K_CALL_SERVANT_INIT;
-            for (auto myAstTree: pParsed) {
-                evalChaiscript(myChaiServantBackendCallback, pExceptionHandler, pReport);
-                mBackendState = EBackendState::EProcessed;
-                for (int myRun = 1; myRun <= m_AstServantVisitor->getRuns(); myRun++) {
-                    m_AstServantVisitor->beginRun(myRun);
-                    myAstTree.visit(*m_AstServantVisitor);
-                }
-            }
-        }
 
         static constexpr const char *K_CALL_CLIENT_INIT = "\nstribohIdlClientInit()";
 
         void IdlContext::setBackendVisitors(AstVisitor* pClientVisitor, AstVisitor* pServantVisitor) {
             m_AstClientVisitor=pClientVisitor;
             m_AstServantVisitor=pServantVisitor;
-        }
-
-        void IdlContext::generateClientCode(const vector<ast::RootNode> &pParsed,
-                                            const chaiscript::Exception_Handler &pExceptionHandler,
-                                            const string &pReport) {
-            if(!m_AstClientVisitor)
-                m_AstClientVisitor = new AstVisitorClientBackend(*this, pExceptionHandler, pReport);
-            std::string myChaiClientBackendCallback =
-                    (mBackendState == EBackendState::EProcessed)
-                    ? K_CALL_CLIENT_INIT : mBackendScript + K_CALL_CLIENT_INIT;
-            for (auto myAstTree: pParsed) {
-                evalChaiscript(myChaiClientBackendCallback, pExceptionHandler, pReport);
-                mBackendState = EBackendState::EProcessed;
-                for (int myRun = 1; myRun <= m_AstClientVisitor->getRuns(); myRun++) {
-                    m_AstClientVisitor->beginRun(myRun);
-                    myAstTree.visit(*m_AstClientVisitor);
-                }
-            }
         }
 
         void IdlContext::pyGenerateClientCode(const vector<ast::RootNode> &pParsed) {

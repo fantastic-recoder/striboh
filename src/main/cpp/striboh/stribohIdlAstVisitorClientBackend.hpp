@@ -380,45 +380,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #ifndef STRIBOH_IDL_AST_VISITOR_CLIENT_BACKEND_HPP
 #define STRIBOH_IDL_AST_VISITOR_CLIENT_BACKEND_HPP
 
-#include <chaiscript/chaiscript.hpp>
-
 #include "stribohIdlAstVisitor.hpp"
 
 namespace striboh::idl {
 
     class IdlContext;
-
-    class AstVisitorClientBackend : public AstVisitor {
-    public:
-        /// @TODO move pExceptionHandler and pReport to IdlContext
-        AstVisitorClientBackend(IdlContext &pIdlCtx,
-                                const chaiscript::Exception_Handler &pExceptionHandler,
-                                const std::string &pReport);
-
-        ~AstVisitorClientBackend() override = default;
-
-        void beginRun( int pRunNum ) override;
-
-        void beginModule(std::string_view pModuleName) override;
-
-        void endModule(std::string_view pModuleName) override;
-
-        void beginInterface(std::string_view pInterfaceName) override;
-
-        void endInterface(std::string_view pInterfaceName) override;
-
-        void beginMethod(const ast::TypedIdentifierNode &pMethod) override;
-
-        void endMethod(const ast::TypedIdentifierNode &pMethod) override;
-
-        void beginParameter(const ast::TypedIdentifierNode &pPar) override;
-    private:
-
-        IdlContext &mIdlCtx;
-        const chaiscript::Exception_Handler &mExceptionHandler;
-        const std::string &mReport;
-        std::string mModuleBeginScript;
-    };
 
 }
 #endif //STRIBOH_IDL_AST_VISITOR_CLIENT_BACKEND_HPP

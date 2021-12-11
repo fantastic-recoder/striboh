@@ -376,11 +376,52 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include "stribohIdlCompiler.hpp"
-#include "stribohIdlAstRootNode.hpp"
-#include "stribohBaseLogIface.hpp"
 
-int main(int pArgc, char *pArgV[]) {
-    striboh::idl::Compiler myIdlCompiler(striboh::base::getGlobalLog());
-    return myIdlCompiler.process(pArgc,pArgV);
-}
+#pragma once
+
+#include <string>
+
+namespace striboh::base {
+
+    enum class EProtocol {
+        HTTP,
+        SHM
+    };
+
+    class Address {
+    public:
+        /// Parse the passed address
+        explicit Address(std::string_view pUrl);
+
+    public:
+        const std::string &getHost() const {
+            return m_Host;
+        }
+
+        void setHost(const std::string &pHost) {
+            m_Host = pHost;
+        }
+
+        int getPort() const {
+            return m_Port;
+        }
+
+        void setPort(int pPort) {
+            m_Port = pPort;
+        }
+
+        EProtocol getProtocol() const {
+            return m_Protocol;
+        }
+
+        void setProtocol(EProtocol pProtocol) {
+            m_Protocol = pProtocol;
+        }
+
+    private:
+        int  /*--------*/ m_Port;
+        std::string /*-*/ m_Host;
+        EProtocol /*---*/ m_Protocol;
+    };
+
+} // end namespace striboh::base

@@ -476,24 +476,6 @@ namespace striboh::idl {
         return myRetVal;
     }
 
-    int Compiler::process(int pArgC, char **pArgV) {
-
-        int myRetVal = processCommandLine(pArgC, pArgV);
-        if (myRetVal != 0) {
-            return myRetVal;
-        }
-        m_IdlContextPtr->loadBackend(m_Backend);
-
-        chaiscript::Exception_Handler myReport;
-        const auto myIdlGenerated = m_IdlContextPtr->generateCode(m_Includes, m_Parts2Generate, m_ParsedInputFiles,
-                                                                  myReport);
-        print2StdOutWhenRequested(myIdlGenerated);
-
-        myRetVal = outputGeneratedCode(myIdlGenerated);
-
-        return myRetVal;
-    }
-
     int Compiler::pyProcess(int pArgC, char **pArgV) {
         m_Log.debug(__func__);
         int myRetVal = processCommandLine(pArgC, pArgV);

@@ -20,7 +20,13 @@ add_executable(striboh_base_tests striboh_base_tests.cpp striboh_test_echo_serve
 target_include_directories(striboh_base_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
 target_link_libraries(striboh_base_tests striboh_base_library striboh_idl_library striboh_test_utils ${CONAN_LIBS_GTEST} ${STRIBOH_LIBS})
 target_link_directories(striboh_base_tests PRIVATE ${CONAN_LIB_DIRS_GTEST} ${STRIBOH_LIB_DIRS})
-add_test(NAME striboh_base_tests COMMAND striboh_idl_tests)
+add_test(NAME striboh_base_tests COMMAND striboh_base_tests)
+
+add_executable(striboh_address_tests striboh_test_address.cpp)
+target_include_directories(striboh_address_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIR})
+target_link_libraries(striboh_address_tests striboh_base_library striboh_idl_library striboh_test_utils ${CONAN_LIBS_GTEST} ${STRIBOH_LIBS})
+target_link_directories(striboh_address_tests PRIVATE ${CONAN_LIB_DIRS_GTEST} ${STRIBOH_LIB_DIRS})
+add_test(NAME striboh_address_tests COMMAND striboh_address_tests)
 
 add_dependencies(striboh_base_tests striboh_test_echo_server)
 

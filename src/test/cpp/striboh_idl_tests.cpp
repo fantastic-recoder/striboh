@@ -581,31 +581,6 @@ TEST(stribohIdlTests, testUnknownType) {
     EXPECT_EQ(1UL, myIdlAst.getErrors().size());
 }
 
-TEST(stribohIdlTests, testChaiscriptBasics) {
-
-    static const char *K_CHAI_TO_PRINT = R"K_CHAI_TEST_01(
-    print("Chaiscript Test001")
-    setOk(true)
-    return true;
-    )K_CHAI_TEST_01";
-    striboh::idl::IdlContext myIdlCtx(getLog());
-    auto myRet = myIdlCtx.getInterpreter()->eval(K_CHAI_TO_PRINT);
-    ASSERT_EQ(true, chaiscript::boxed_cast<bool>(myRet));
-    ASSERT_EQ(true, myIdlCtx.isOk());
-}
-
-TEST(stribohIdlTests, testChaiscriptCallback) {
-    static const char *K_CHAI_MOD_BABE = R"K_CHAI_CALLBACK(
-    def beginModule(pBabe) {
-        return "--> ${pBabe}"
-    }
-    return beginModule("Babe")
-    )K_CHAI_CALLBACK";
-    striboh::idl::IdlContext myIdlCtx(getLog());
-    auto myStartModule = chaiscript::boxed_cast<std::string>(myIdlCtx.getInterpreter()->eval(K_CHAI_MOD_BABE));
-    ASSERT_EQ("--> Babe", myStartModule);
-}
-
 TEST(stribohIdlTests, testIdlChaiscriptCallback) {
     static const char *K_IDL_BACKEND = R"K_IDL_COMP_BACK(
 
@@ -690,6 +665,8 @@ MOD_END_mod0
     striboh::idl::IdlContext myIdlCtx(getLog());
 
     myIdlCtx.setBackend(K_IDL_BACKEND);
+    /// TODO add a equivalent test here
+    /*
     const auto myGeneratedSnippets = myIdlCtx.generateCode(
             myIncludes,
             EGenerateParts::EServant,
@@ -697,6 +674,7 @@ MOD_END_mod0
             );
     ASSERT_EQ(1UL, myGeneratedSnippets.size());
     ASSERT_EQ(K_GENERATED, myGeneratedSnippets.find("HelloWorld.hpp")->second);
+     */
 }
 
 TEST(stribohIdlTests, testNotExistentBackend) {
