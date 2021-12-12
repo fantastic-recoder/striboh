@@ -31,7 +31,7 @@ req.on('error', function(e) {
     console.log('problem with request: ' + e.message);
 });
 
-const aWs = new WebSocket('ws://localhost:63898/m0/m1/Hello?upgrade');
+const aWs = new WebSocket('ws://localhost:10000/m0/m1/Hello?upgrade');
 
 aWs.on('open', function open() {
     console.log('Connected to Server via WS.');

@@ -393,23 +393,32 @@ using std::string;
 
 namespace striboh::base {
 
-
     namespace url {
+
+        using pegtl::range;
+        using pegtl::one;
+        using pegtl::plus;
+        using pegtl::seq;
+        using pegtl::string;
+        using pegtl::opt;
+        using pegtl::sor;
+        using pegtl::list;
+
         struct Http : pegtl::string<'h', 't', 't', 'p'> {
         };
         struct Shm : pegtl::string<'s', 'h', 'm'> {
         };
-        struct Host : pegtl::plus<pegtl::alpha> {
+        struct Host : plus< sor< range<'a', 'z'>, range<'A', 'Z'>, range<'0', '9'>,one<'.'>>> {
         };
-        struct Protocol : pegtl::seq<pegtl::sor<Http, Shm>, pegtl::string<':', '/', '/'> > {
+        struct Protocol : seq<sor<Http, Shm>, string<':', '/', '/'> > {
         };
-        struct Port : pegtl::opt<pegtl::seq<pegtl::one<':'>, pegtl::rep_min_max<1, 5, pegtl::digit>>> {
+        struct Port : opt<seq<one<':'>, pegtl::rep_min_max<1, 5, pegtl::digit>>> {
         };
-        struct Dir : pegtl::plus<pegtl::alnum> {
+        struct Dir : plus<pegtl::alnum> {
         };
-        struct Uri : pegtl::opt<pegtl::one<'/'>, pegtl::list<Dir, pegtl::one<'/'>>> {
+        struct Uri : opt<one<'/'>, list<Dir, one<'/'>>> {
         };
-        struct Grammar : pegtl::seq<Protocol, Host, Port, Uri> {
+        struct Grammar : seq<Protocol, Host, Port, Uri> {
         };
 
         template<typename Rule>
@@ -436,8 +445,8 @@ namespace striboh::base {
         struct action<Port> {
             template<typename ActionInput>
             static void apply(const ActionInput &pIn, Address &pAddress) {
-                string myPort(pIn.string());
-                pAddress.setPort(boost::lexical_cast<int>(myPort.substr(1)));
+                std::string myPort(pIn.string());
+                pAddress.setPort(boost::lexical_cast<Address::Port_t>(myPort.substr(1)));
             }
         };
 

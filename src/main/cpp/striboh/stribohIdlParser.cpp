@@ -398,8 +398,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohIdlAstTypeNode.hpp"
 #include "stribohIdlAstTypedIdentifierNode.hpp"
 #include "stribohIdlAstEBuildinTypes.hpp"
-#include "stribohIdlAstVisitorServantBackend.hpp"
-#include "stribohIdlAstVisitorClientBackend.hpp"
 #include "stribohIdlAstErrorNode.hpp"
 #include "stribohBaseExceptionsFileNotFound.hpp"
 #include "stribohBaseLogIface.hpp"

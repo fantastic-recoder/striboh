@@ -940,8 +940,8 @@ namespace striboh {
 
         void BeastServer::run() {
             mLog.debug("BeastServer::run() -->");
-            auto const aAddress = net::ip::make_address(K_DEFAULT_HOST);
-            auto const aPort = K_DEFAULT_PORT;
+            auto const aAddress = net::ip::make_address(getBroker().getAddress().getHost());
+            auto const aPort = getBroker().getAddress().getPort();
             auto myIocRun = [this]() -> void {
                 this->mLog.debug("BeastServer::run() Thread {} started.",
                                  toString(std::this_thread::get_id()));

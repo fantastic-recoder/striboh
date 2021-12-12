@@ -119,7 +119,7 @@ export class {{interface_name}}Service {
     private onReceiveEchoUiid(p{{interface_name}}UuidResponse: {{interface_name}}UuidResponse): void {
         this.mUuid = p{{interface_name}}UuidResponse.svc.uuid_arr;
         console.log('UUID Response:' + this.mUuid);
-        this.mWebSocket = new WebSocket('ws://localhost:63898/m0/m1/Hello?upgrade');
+        this.mWebSocket = new WebSocket('ws://localhost:10112/m0/m1/Hello?upgrade');
         this.mWebSocket.onopen = () => { this.onWsOpen(); };
         this.mWebSocket.onerror = (pError: any) => {
             console.log(`WebSocket error: ${pError}`);
@@ -132,7 +132,7 @@ export class {{interface_name}}Service {
     }
 
     private retrieveUuid(): void {
-        this.mHttp.get<{{interface_name}}UuidResponse>('http://localhost:63898/m0/m1/Hello?svc')
+        this.mHttp.get<{{interface_name}}UuidResponse>('http://localhost:10112/m0/m1/Hello?svc')
             .subscribe((p{{interface_name}}UuidResponse: {{interface_name}}UuidResponse) => {this.onReceiveEchoUiid(p{{interface_name}}UuidResponse); },
                 {{interface_name}}Service.onUiidReceiveError);
     }

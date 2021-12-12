@@ -394,100 +394,105 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseInterface.hpp"
 #include "stribohBaseEServerState.hpp"
 #include "stribohBaseMessage.hpp"
+#include "stribohBaseAddress.hpp"
 
 namespace striboh::base {
 
-        enum class EResolveResult {
-            NOT_FOUND,
-            OK
-        };
+    enum class EResolveResult {
+        NOT_FOUND,
+        OK
+    };
 
-        std::ostream& operator << (std::ostream& , const EServerState& );
+    std::ostream &operator<<(std::ostream &, const EServerState &);
 
-        std::string toString(const EServerState& );
+    std::string toString(const EServerState &);
 
-        class Interface;
+    class Interface;
 
-        using PathSegment   = fluent::NamedType<std::string,struct PathSegmentTag>;
-        using Path          = fluent::NamedType<std::vector<PathSegment>,struct PathTag>;
-        using PathIterator  = Path::UnderlyingType::iterator;
+    using PathSegment = fluent::NamedType<std::string, struct PathSegmentTag>;
+    using Path = fluent::NamedType<std::vector<PathSegment>, struct PathTag>;
+    using PathIterator = Path::UnderlyingType::iterator;
 
-        inline auto operator < (const PathSegment& p0, const PathSegment& p1) {
-            return p0.get() < p1.get();
+    inline auto operator<(const PathSegment &p0, const PathSegment &p1) {
+        return p0.get() < p1.get();
+    }
+
+    typedef std::set<PathSegment> PathSegments;
+    typedef std::set<InterfaceName> Interfaces;
+
+    struct ResolvedResult {
+        EResolveResult mResult = EResolveResult::NOT_FOUND;
+        PathSegments mModules;
+        Interfaces mInterfaces;
+    };
+
+
+    using ResolvedService = std::pair<bool, InstanceId>;
+
+    struct BrokerIface {
+
+        BrokerIface(Address &&pAddress, LogIface &pLogIface) //
+                : m_Address(std::move(pAddress)) //
+                , mLogIface(pLogIface) {}
+
+        const LogIface &getLog() const {
+            return mLogIface;
         }
 
-        typedef std::set<PathSegment> PathSegments;
-        typedef std::set<InterfaceName> Interfaces;
+        LogIface &getLog() {
+            return mLogIface;
+        }
 
-        struct ResolvedResult {
-            EResolveResult mResult = EResolveResult::NOT_FOUND;
-            PathSegments   mModules;
-            Interfaces mInterfaces;
-        };
+        static InstanceId
+        generateInstanceId();
 
+        virtual void
+        initialize() = 0;
 
-        using ResolvedService = std::pair<bool,InstanceId>;
+        virtual const std::atomic<EServerState> &
+        serveOnce() = 0;
 
-        struct BrokerIface {
+        virtual std::future<void>
+        shutdown() = 0;
 
-            BrokerIface( LogIface& pLogIface ):
-            mLogIface(pLogIface){}
+        virtual Message
+        invokeMethod(Message &&pInvocation) = 0;
 
-            const LogIface &getLog() const {
-                return mLogIface;
-            }
+        virtual InstanceId
+        addServant(const Interface &pMethodSignature) = 0;
 
-            LogIface &getLog() {
-                return mLogIface;
-            }
+        virtual ResolvedResult
+        resolve(std::string_view pPath) const = 0;
 
-            static InstanceId
-            generateInstanceId();
+        virtual ResolvedService
+        resolveService(std::string_view pPath) const = 0;
 
-            virtual void
-            initialize() = 0;
+        virtual std::string
+        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const = 0;
 
-            virtual const std::atomic<EServerState>&
-            serveOnce() = 0;
+        const std::shared_ptr<ServerIface> &
+        getServer() const { return mServerIface; }
 
-            virtual std::future<void>
-            shutdown() = 0;
+        void setServer(std::shared_ptr<ServerIface> &&pServerIface);
 
-            virtual Message
-            invokeMethod(Message&& pInvocation) = 0;
+        const std::atomic<EServerState> &
+        getState() const { return mOperationalState; }
 
-            virtual InstanceId
-            addServant(const Interface& pMethodSignature) = 0;
+        const Address& getAddress() const { return m_Address; }
 
-            virtual ResolvedResult
-            resolve(std::string_view pPath ) const = 0;
+    protected:
+        void setState(EServerState pState) {
+            mOperationalState = pState;
+        }
 
-            virtual ResolvedService
-            resolveService(std::string_view pPath ) const = 0;
+        Address m_Address;
+    private:
+        std::atomic<EServerState>
+                mOperationalState = EServerState::K_NOMINAL;
 
-            virtual std::string
-            resolvedServiceToStr(std::string_view pPath, const ResolvedService& pSvc ) const = 0;
-
-            const std::shared_ptr<ServerIface>&
-            getServer() const { return mServerIface; }
-
-            void setServer(std::shared_ptr<ServerIface>&& pServerIface);
-
-            const std::atomic<EServerState>&
-            getState() const { return mOperationalState; }
-
-        protected:
-            void setState(EServerState pState) {
-                mOperationalState = pState;
-            }
-
-        private:
-            std::atomic<EServerState>
-                    mOperationalState = EServerState::K_NOMINAL;
-
-            LogIface& mLogIface;
-            std::shared_ptr<ServerIface> mServerIface;
-        };
-    }
+        LogIface &mLogIface;
+        std::shared_ptr<ServerIface> mServerIface;
+    };
+}
 
 #endif //STRIBOH_BASE_BROKER_IFACE_HPP

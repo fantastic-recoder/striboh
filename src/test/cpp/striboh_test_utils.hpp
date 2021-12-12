@@ -376,8 +376,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_TEST_UTILS_HPP
-#define STRIBOH_TEST_UTILS_HPP
+#pragma once
 
 #include <string>
 #include <boost/process.hpp>
@@ -392,4 +391,4 @@ namespace striboh {
     }
 }
 
-#endif //STRIBOH_TEST_UTILS_HPP
+

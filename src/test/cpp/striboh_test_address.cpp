@@ -395,6 +395,14 @@ TEST(testAddress,basicParsing) {
     EXPECT_EQ(string("group1"),myAddress.getUri()[0]);
 }
 
+TEST(testAddress,ipv4Parsing) {
+    Address myAddress("http://0.0.0.0:9991");
+    EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
+    EXPECT_EQ("0.0.0.0",myAddress.getHost()) << "Hostname parsed wrong.";
+    EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
+    EXPECT_EQ(0UL,myAddress.getUri().size());
+}
+
 TEST(testAddress,emptyUrl) {
     Address myAddress("http://localhost:9991");
     EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";

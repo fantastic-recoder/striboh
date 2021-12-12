@@ -392,7 +392,8 @@ namespace striboh::base {
 
     class Address {
     public:
-        using Uri=std::vector<std::string>;
+        using Uri_t = std::vector<std::string>;
+        using Port_t = unsigned short int;
 
         /// Parse the passed address
         explicit Address(std::string_view pUrl)  ;
@@ -407,11 +408,11 @@ namespace striboh::base {
             m_Host = pHost;
         }
 
-        int getPort() const {
+        Port_t getPort() const {
             return m_Port;
         }
 
-        void setPort(int pPort) {
+        void setPort(Port_t pPort) {
             m_Port = pPort;
         }
 
@@ -425,18 +426,18 @@ namespace striboh::base {
 
         std::string str() const;
 
-        const Uri& getUri() const { return m_Uri; }
+        const Uri_t& getUri() const { return m_Uri; }
 
-        Uri& addDir( const std::string& pDir ) {
+        Uri_t& addDir(const std::string& pDir ) {
             m_Uri.push_back(pDir);
             return m_Uri;
         }
 
     private:
-        int  /*--------*/ m_Port /*----*/ = 0;
-        std::string /*-*/ m_Host;
-        EProtocol /*---*/ m_Protocol /**/ = EProtocol::NOT_SPECIFIED;
-        Uri /*---------*/ m_Uri;
+        Port_t /*-------*/ m_Port /*----*/ = 0;
+        std::string /*--*/ m_Host;
+        EProtocol /*----*/ m_Protocol /**/ = EProtocol::NOT_SPECIFIED;
+        Uri_t /*----------*/ m_Uri;
     };
 
 } // end namespace striboh::base

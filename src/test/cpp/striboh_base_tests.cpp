@@ -466,7 +466,7 @@ TEST(stribohBaseTests, testParseUrlParameters) {
 }
 
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
-    Broker aBroker(theLog);
+    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
     aBroker.serveOnce();
     aBroker.shutdown();
     ASSERT_EQ(EServerState::K_NOMINAL, aBroker.getState());
@@ -552,7 +552,7 @@ Interface createTestInterface() {
 static constexpr const std::string_view theM0M1Path("/m0/m1/Hello");
 
 TEST(stribohBaseTests, testResolve) {
-    Broker aBroker(theLog);
+    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
 
     Interface myInterface(createTestInterface());
 
@@ -592,7 +592,7 @@ TEST(stribohBaseTests, testResolve) {
 
 TEST(stribohBaseTests, testResolveServiceToStr) {
     Interface myInterface(createTestInterface());
-    Broker aBroker(theLog);
+    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
     InstanceId myUuid = aBroker.addServant(myInterface);
     auto aSvc = aBroker.resolveService(theM0M1Path);
     string myResolved = aBroker.resolvedServiceToStr(theM0M1Path, aSvc);
@@ -605,7 +605,7 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
-    Broker aBroker(theLog);
+    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
     aBroker.serveOnce();
 
     Interface myInterface{
@@ -685,8 +685,8 @@ static constexpr const char *const theTestEchoServerBinary = "./striboh_test_ech
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
 
-    HostConnection aClient(striboh::base::K_DEFAULT_HOST,
-                           striboh::base::K_DEFAULT_PORT, theLog);
+    HostConnection aClient("localhost",
+                           10000, theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
     EXPECT_TRUE(myProxy->isConnected());
     {

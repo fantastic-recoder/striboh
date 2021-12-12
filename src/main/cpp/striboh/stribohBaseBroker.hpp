@@ -408,8 +408,9 @@ namespace striboh::base {
     public:
         typedef std::map<InstanceId, Interface> Instances_t;
 
-        explicit Broker(LogIface &pLogIface) :
-                BrokerIface(pLogIface) {}
+        Broker(Address &&pAddress, LogIface &pLogIface) //
+                : BrokerIface(std::move(pAddress) //
+                , pLogIface) {}
 
         void
         initialize() override;

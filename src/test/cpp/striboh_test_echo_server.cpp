@@ -425,7 +425,7 @@ int main( const int argc, const char* argv[]) {
     }
     myLog.info("Sleep time set to: {} seconds.", myTotalWorkTimeInSeconds );
 
-    Broker aBroker(myLog);
+    Broker aBroker(Address("http://0.0.0.0:10000"),myLog);
     aBroker.setServer(std::make_shared<BeastServer>(3,aBroker,myLog));
     aBroker.serveOnce();
 
