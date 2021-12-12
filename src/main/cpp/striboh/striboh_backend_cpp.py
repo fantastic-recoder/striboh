@@ -262,6 +262,7 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
             self.addCode(self.m_filename, "#include <striboh/stribohBaseInterface.hpp>\n")
             self.addCode(self.m_filename, "#include <striboh/stribohBaseProxyBase.hpp>\n")
             self.addCode(self.m_filename, "#include <striboh/stribohBaseBroker.hpp>\n")
+            self.addCode(self.m_filename, "#include <striboh/stribohBaseAddress.hpp>\n")
             self.addCode(self.m_filename, "\n")
             self.addCode(self.m_filename, self.generate_namespace())
             my_module_path = generate_module_path(self.m_module_names)
@@ -270,10 +271,10 @@ class ClientVisitor(CppVisitorBase, stribohIdl.AstVisitor):
                          '// starting class {pInterfaceName}Proxy\n'
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
             self.addCode(self.m_filename, "{myPrefix}\tpublic:\n".format(myPrefix=my_prefix));
-            self.addCode(self.m_filename, "{myPrefix}\t\t{pInterfaceName}Proxy(  std::string_view pHost, short pPort,"
+            self.addCode(self.m_filename, "{myPrefix}\t\t{pInterfaceName}Proxy(  std::string_view pUrl,"
                                           " striboh::base::LogIface& pLogIface )\n"
                          .format(myPrefix=my_prefix, pInterfaceName=p_interface_name))
-            self.addCode(self.m_filename, '{myPrefix}\t\t\t : striboh::base::ProxyBase(pHost, pPort, '
+            self.addCode(self.m_filename, '{myPrefix}\t\t\t : striboh::base::ProxyBase(striboh::base::Address(pUrl), '
                                           '"/{myModulePath}{pInterfaceName}", pLogIface ) {{}}\n'
                          .format(myPrefix=my_prefix, myModulePath=my_module_path, pInterfaceName=p_interface_name))
         self.__module_depth += 1

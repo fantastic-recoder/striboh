@@ -466,7 +466,7 @@ TEST(stribohBaseTests, testParseUrlParameters) {
 }
 
 TEST(stribohBaseTests, testStribohBrokerShutdown) {
-    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
+    Broker aBroker("http://0.0.0.0:10000",theLog);
     aBroker.serveOnce();
     aBroker.shutdown();
     ASSERT_EQ(EServerState::K_NOMINAL, aBroker.getState());
@@ -552,7 +552,7 @@ Interface createTestInterface() {
 static constexpr const std::string_view theM0M1Path("/m0/m1/Hello");
 
 TEST(stribohBaseTests, testResolve) {
-    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
+    Broker aBroker("http://0.0.0.0:10000",theLog);
 
     Interface myInterface(createTestInterface());
 
@@ -592,7 +592,7 @@ TEST(stribohBaseTests, testResolve) {
 
 TEST(stribohBaseTests, testResolveServiceToStr) {
     Interface myInterface(createTestInterface());
-    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
+    Broker aBroker("http://0.0.0.0:10000",theLog);
     InstanceId myUuid = aBroker.addServant(myInterface);
     auto aSvc = aBroker.resolveService(theM0M1Path);
     string myResolved = aBroker.resolvedServiceToStr(theM0M1Path, aSvc);
@@ -605,7 +605,7 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
 }
 
 TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
-    Broker aBroker(Address("http://0.0.0.0:10000"),theLog);
+    Broker aBroker("http://0.0.0.0:10000",theLog);
     aBroker.serveOnce();
 
     Interface myInterface{
@@ -685,8 +685,7 @@ static constexpr const char *const theTestEchoServerBinary = "./striboh_test_ech
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
 
-    HostConnection aClient("localhost",
-                           10000, theLog);
+    HostConnection aClient(Address("http://localhost:10000"),theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
     EXPECT_TRUE(myProxy->isConnected());
     {
@@ -769,4 +768,9 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
     EXPECT_EQ(42L, m1.getParameters()[0].getValue().get<int64_t>());
     EXPECT_EQ("helloMethod", m1.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, m1.getType());
+}
+
+TEST(stribohBaseTests, testHostConConstr) {
+    HostConnection aHostConnection(Address("http://0.0.0.0:123"),getLog());
+    EXPECT_EQ(string("123"),aHostConnection.getPortStr());
 }

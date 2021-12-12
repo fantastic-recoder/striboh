@@ -408,7 +408,7 @@ namespace striboh::base {
     public:
         typedef std::map<InstanceId, Interface> Instances_t;
 
-        Broker(Address &&pAddress, LogIface &pLogIface) //
+        Broker(std::string_view &&pAddress, LogIface &pLogIface) //
                 : BrokerIface(std::move(pAddress) //
                 , pLogIface) {}
 

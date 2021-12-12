@@ -377,8 +377,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
-#define STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP
+#pragma once
+
+static const char *const K_TEST_SRV = "http://0.0.0.0:10000";
 
 #include <iostream>
 
@@ -430,4 +431,3 @@ namespace striboh {
     }
 }
 
-#endif //STRIBOH_STRIBOH_TEST_ECHO_SERVER_COMMON_HPP

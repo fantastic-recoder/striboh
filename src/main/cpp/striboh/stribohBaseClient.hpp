@@ -558,26 +558,25 @@ namespace striboh {
         };
 
         class HostConnection {
-            LogIface &mLog;
-            std::string mHost;
-            unsigned short mPort;
-            std::string mPortStr;
-            std::shared_ptr<ObjectProxy> mProxyPtr;
+            LogIface &m_Log;
+            Address m_Address;
+            std::string m_PortStr;
+            std::shared_ptr<ObjectProxy> m_ProxyPtr;
         private:
             int mVersion = 11;
 
         public:
-            HostConnection(std::string_view pHost, unsigned short pPort, LogIface &pLog);
+            HostConnection(Address&& pAddress, LogIface &pLog);
 
             std::shared_ptr<ObjectProxy>
             createProxyFor(std::string_view pPath);
 
             LogIface &getLog() const {
-                return mLog;
+                return m_Log;
             }
 
             unsigned short getPort() const {
-                return mPort;
+                return m_Address.getPort();
             }
 
             int getVersion() const {
@@ -585,13 +584,12 @@ namespace striboh {
             }
 
             const std::string &getHost() const {
-                return mHost;
+                return m_Address.getHost();
             }
 
             const std::string &getPortStr() const {
-                return mPortStr;
+                return m_PortStr;
             }
-
         };
 
     }

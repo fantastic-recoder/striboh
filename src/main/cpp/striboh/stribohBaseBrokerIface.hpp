@@ -431,7 +431,7 @@ namespace striboh::base {
 
     struct BrokerIface {
 
-        BrokerIface(Address &&pAddress, LogIface &pLogIface) //
+        BrokerIface(std::string_view&& pAddress, LogIface &pLogIface) //
                 : m_Address(std::move(pAddress)) //
                 , mLogIface(pLogIface) {}
 

@@ -409,10 +409,10 @@ namespace striboh::base {
         HostConnection mConnection;
         std::shared_ptr<ObjectProxy> mObjectProxy;
     public:
-        ProxyBase( std::string_view pHost, short pPort, std::string&& pModulePath, LogIface& pIface )
+        ProxyBase( Address&& pAddress, std::string&& pModulePath, LogIface& pIface )
         : mLogIface(pIface)
         , mModulePath(std::forward<std::string>(pModulePath))
-        , mConnection(pHost,pPort,mLogIface)
+        , mConnection(std::move(pAddress),mLogIface)
         , mObjectProxy(mConnection.createProxyFor(mModulePath))
         {}
 
