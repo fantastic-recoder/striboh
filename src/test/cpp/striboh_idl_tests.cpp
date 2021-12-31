@@ -389,7 +389,7 @@ using namespace striboh::idl;
 using striboh::base::exceptions::FileNotFound;
 using std::endl;
 using std::string;
-using striboh::idl::ast::EBuildinTypes;
+using striboh::idl::ast::EBuildInTypes;
 
 namespace {
     static const char *K_TST_IDL_MOD01 = R"K_TST_IDL(
@@ -557,7 +557,7 @@ TEST(stribohIdlTests, test2MethodInterface) {
     ASSERT_EQ(2UL,myMethod1.size()) << "Method parameter list parsing is wrong.";
     EXPECT_EQ(string("echo"), myMethod1.getMethodName());
     EXPECT_EQ( string("p0"), myMethod1[1].getName());
-    EXPECT_EQ(EBuildinTypes::K_STRING, myMethod1[1].getType());
+    EXPECT_EQ(EBuildInTypes::K_STRING, myMethod1[1].getType());
     const auto myMethod2 = myHelloWorldIFace.getMethods()[1];
     EXPECT_EQ(string("shutdown"), myMethod2.getMethodName());
 }

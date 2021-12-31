@@ -388,7 +388,7 @@ namespace striboh {
 
             struct TypeNode : public BaseNode {
 
-                EBuildinTypes mBuildinType = EBuildinTypes::K_NONE_TYPE;
+                EBuildInTypes mBuildinType = EBuildInTypes::K_NONE_TYPE;
 
                 TypeNode() = default;
 
@@ -400,23 +400,23 @@ namespace striboh {
                     return theTYPE_NAME;
                 }
 
-                operator EBuildinTypes() const {
+                operator EBuildInTypes() const {
                     return mBuildinType;
                 }
 
-                EBuildinTypes& getType() {
+                EBuildInTypes& getType() {
                     return mBuildinType;
                 }
 
-                EBuildinTypes getType() const {
+                EBuildInTypes getType() const {
                     return mBuildinType;
                 }
 
-                operator EBuildinTypes&() {
+                operator EBuildInTypes&() {
                     return mBuildinType;
                 }
 
-                TypeNode& operator=(const EBuildinTypes pType) {
+                TypeNode& operator=(const EBuildInTypes pType) {
                     mBuildinType = pType;
                     return *this;
                 }

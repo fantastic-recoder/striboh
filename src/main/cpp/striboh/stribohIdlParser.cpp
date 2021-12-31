@@ -513,11 +513,11 @@ namespace striboh {
                 importList = *import[_val += _1];
 
                 type = (
-                        lit("string")[_val = ast::EBuildinTypes::K_STRING]
+                        lit("string")[_val = ast::EBuildInTypes::K_STRING]
                         |
-                        lit("int")[_val = ast::EBuildinTypes::K_INT]
+                        lit("int")[_val = ast::EBuildInTypes::K_INT]
                         |
-                        lit("void")[_val = ast::EBuildinTypes::K_VOID]
+                        lit("void")[_val = ast::EBuildInTypes::K_VOID]
                 );
 
                 typedIdentifier = type >> identifier;

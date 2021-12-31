@@ -394,14 +394,14 @@ namespace striboh {
             using std::string;
             using boost::fusion::at_c;
 
-            const std::string& toString(const EBuildinTypes pType) {
+            const std::string& toString(const EBuildInTypes pType) {
                 switch (pType) {
-                    case EBuildinTypes::K_INT:
+                    case EBuildInTypes::K_INT:
                         return K_INT;
-                    case EBuildinTypes::K_STRING:
+                    case EBuildInTypes::K_STRING:
                         return K_STRING;
                     default:
-                    case EBuildinTypes::K_NONE_TYPE:
+                    case EBuildInTypes::K_NONE_TYPE:
                         return K_NONE;
                 }
             }

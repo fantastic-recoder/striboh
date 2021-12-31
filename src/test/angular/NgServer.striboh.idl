@@ -1,8 +1,8 @@
 module ng {
 module hello_world {
    interface NgServer {
-       string echo( string pMsg );
-       int add( int pA, int pB );
+       string echo( string msg );
+       int add( int a, int b );
        int shutdown();
    };
 };

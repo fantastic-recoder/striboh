@@ -393,7 +393,7 @@ namespace striboh {
     namespace idl {
         namespace ast {
 
-            struct TypedIdentifierNode : public BaseNode, public boost::fusion::tuple<EBuildinTypes, IdentifierNode> {
+            struct TypedIdentifierNode : public BaseNode, public boost::fusion::tuple<EBuildInTypes, IdentifierNode> {
 
                 size_t getSubNodeCount() const override {
                     return 1UL;
@@ -407,7 +407,7 @@ namespace striboh {
                     return boost::fusion::at_c<1>(*this).getValue();
                 }
 
-                EBuildinTypes getType() const {
+                EBuildInTypes getType() const {
                     return boost::fusion::at_c<0>(*this);
                 }
 
