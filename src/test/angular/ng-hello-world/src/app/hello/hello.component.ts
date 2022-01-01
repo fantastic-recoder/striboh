@@ -1,6 +1,6 @@
 import { ThrowStmt } from '@angular/compiler';
 import { Component, OnInit } from '@angular/core';
-import { HelloService } from '../org/striboh/hello.service';
+import { NgServerService } from '../ng_server.service';
 
 @Component({
   selector: 'app-hello',
@@ -12,14 +12,16 @@ export class HelloComponent implements OnInit {
   mTextToSend = '';
   mServerReturned = 'No answer yet.'
 
-  constructor(private mHelloService: HelloService) { }
+  constructor(private mNgService: NgServerService ) { 
+    mNgService.setHostAndPort('0.0.0.0:5600');
+  }
 
   ngOnInit(): void {
   }
 
   sendToServer(): void {
     console.log('--> send to server:' + this.mTextToSend + '.');
-    this.mHelloService.echo(this.mTextToSend, ( pReply: string ) => { this.onReceived(pReply); } );
+    this.mNgService.echo(this.mTextToSend, ( pReply: string ) => { this.onReceived(pReply); } );
   }
 
   onReceived(pMessage: string): void {
