@@ -51,7 +51,7 @@ class NgServantVisitor(NgVisitorBase, striboh.AstVisitor):
 ########################################################################################################################
 
 module_template = """
-import { Injectable } from '@angular/core';
+import {  Inject, Injectable } from '@angular/core';
 
 import { encode, decode } from 'msgpack-lite';
 
@@ -74,7 +74,7 @@ type {{method.method_pascal_name}}ReturnFunction = (pReturn: {{method.method_typ
     providedIn: 'root'
 })
 export class {{interface_name}}Service {
-    private mHostPortMods = '';
+    private readonly mHostPortMods;
     private mUuid: Uint8Array | undefined;
     private mWebSocket: WebSocket | undefined;
 {{#methods}}
@@ -159,13 +159,10 @@ export class {{interface_name}}Service {
 
 {{/methods}}
 
-    public setHostAndPort(pHostAndPort: string) {
-        this.mHostPortMods = pHostAndPort + '/{{path}}';
-        this.mUuid = undefined;
-        this.mWebSocket = undefined;
+    constructor(private mHttp: HttpClient, @Inject('mHostAndPort') private readonly mHostAndPort: string) {
+        this.mHostPortMods = this.mHostAndPort + '/{{path}}';
+        console.log('Created Striboh service: ' + this.mHostPortMods + '.');
     }
-
-    constructor(private mHttp: HttpClient) {}
 }
 """
 

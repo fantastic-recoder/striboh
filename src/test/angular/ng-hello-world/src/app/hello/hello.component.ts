@@ -5,7 +5,8 @@ import { NgServerService } from '../ng_server.service';
 @Component({
   selector: 'app-hello',
   templateUrl: './hello.component.html',
-  styleUrls: ['./hello.component.styl']
+  providers: [ { provide: 'mHostAndPort', useValue: '0.0.0.0:5600' }, ],
+  styleUrls: ['./hello.component.styl'],
 })
 export class HelloComponent implements OnInit {
 
@@ -13,7 +14,6 @@ export class HelloComponent implements OnInit {
   mServerReturned = 'No answer yet.'
 
   constructor(private mNgService: NgServerService ) { 
-    mNgService.setHostAndPort('0.0.0.0:5600');
   }
 
   ngOnInit(): void {
