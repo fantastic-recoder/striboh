@@ -97,12 +97,17 @@ export class {{interface_name}}Service {
         console.log('Received:' + pBuffer);
         const myReplyObj = decode(new Uint8Array(pBuffer));
         console.log(myReplyObj);
-        if (this.mEchoReturn !== undefined) {
-            this.mEchoReturn(myReplyObj.rtrn);
+        {{#methods}}
+        if (myReplyObj.mthd === '{{method.method_name}}') {
+          if (this.m{{method.method_pascal_name}}Return !== undefined) {
+            this.m{{method.method_pascal_name}}Return(myReplyObj.rtrn);
+            return;
+          } else {
+            console.error('"{{method.method_name}}" return lambda is undefined.');
+          }
         }
-        else {
-            console.error('this.m_EchoReturn==undefined');
-        }
+        {{/methods}}
+        console.error('Unknown method "' + myReplyObj.mthd + '".');
     }
 
 {{#methods}}

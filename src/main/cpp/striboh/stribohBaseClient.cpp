@@ -447,7 +447,7 @@ namespace striboh {
                 LogIface &pLog
         )
                 : mLog(pLog), mObjectProxy(pObjectProxy), mIoContext(pIoContext), mValues(pValues),
-                  mReturnValues(Value(), mLog) {
+                  mReturnValues(mValues, Value(), mLog) {
             mLog.debug("InvocationContext::InvocationContext m_Log=={}.", (void *) (&mLog));
         }
 

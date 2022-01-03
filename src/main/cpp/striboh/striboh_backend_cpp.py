@@ -81,7 +81,7 @@ SERVANT_CLOSE_METHOD = """
 {myPrefix}\t\t\t[this](const striboh::base::Message &pIncoming,striboh::base::Context pCtx) {{
 {myPrefix}\t\t\t\tauto myRetVal={pMethodName}(\n{theLambdaParameterList}
 {myPrefix}\t\t\t\t);
-{myPrefix}\t\t\t\treturn striboh::base::Message(striboh::base::Value( myRetVal ),getLog());
+{myPrefix}\t\t\t\treturn striboh::base::Message(pIncoming, striboh::base::Value( myRetVal ),getLog());
 {myPrefix}\t\t\t}},
 {myPrefix}\t\t\tgetLog()
 {myPrefix}\t\t}} // end servant method

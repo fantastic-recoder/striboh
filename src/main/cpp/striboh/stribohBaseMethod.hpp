@@ -418,7 +418,7 @@ namespace striboh::base {
         Message invoke( Message &pIns, Context pCtx) {
             if (mImplementation)
                 return mImplementation(pIns, pCtx);
-            return Message(Value(),mLog);
+            return Message(pIns, Value(),mLog);
         }
 
         const ParameterDescriptionList &getParameters() const {

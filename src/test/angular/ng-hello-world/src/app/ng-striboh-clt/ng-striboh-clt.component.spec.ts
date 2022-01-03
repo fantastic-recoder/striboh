@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { HelloComponent } from './hello.component';
+import { NgStribohCltComponent } from './ng-striboh-clt.component';
 
 describe('HelloComponent', () => {
-  let component: HelloComponent;
-  let fixture: ComponentFixture<HelloComponent>;
+  let component: NgStribohCltComponent;
+  let fixture: ComponentFixture<NgStribohCltComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ HelloComponent ]
+      declarations: [ NgStribohCltComponent ]
     })
     .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(HelloComponent);
+    fixture = TestBed.createComponent(NgStribohCltComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

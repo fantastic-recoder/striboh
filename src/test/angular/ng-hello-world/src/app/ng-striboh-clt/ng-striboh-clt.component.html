@@ -1,0 +1,52 @@
+<div id="ngStribohHello">
+  <h2>Perform remote calls to Striboh server</h2>
+  <div id="idEchoOpPar">
+    <h3>Echo operation</h3>
+    <p>
+      <label
+      >Text to be send:
+        <input
+          type="text"
+          #ngStribohHelloInput
+          (keyup)="updateTextToSend(ngStribohHelloInput.value)"
+        />
+      </label>
+      <button (click)="sendEchoToServer()">Send</button>
+    </p>
+    <p>
+      <label>Server returns:</label>
+      <label id="idSrvReturn">{{ mServerReturned }}</label>
+    </p>
+  </div>
+  <div id="idAddOpPar">
+    <h3>Add two numbers</h3>
+    <div>
+      <input
+        type="number"
+        required="true"
+        value="{{ mP0 }}"
+        #ngP0Input
+        (keyup)="updateP0ToSend(ngP0Input.value)"
+      />
+      <label for="ngP1Input">+</label>
+      <input
+        type="number"
+        required="true"
+        value="{{ mP1 }}"
+        name="ngP1Input"
+        #ngP1Input
+        (keyup)="updateP1ToSend(ngP1Input.value)"
+      />
+      <label id="idSrvAddReturn">= {{ mAddResult }}</label>
+    </div>
+    <div id="idAddDiv">
+      <button (click)="sendAddToServer()">Add numbers</button>
+    </div>
+  </div>
+  <div id="idShutdownOpPar">
+    <h3>Shutdown server operation</h3>
+    <p id="idShutdownServerBtnParagraph">
+      <button (click)="sendShutdownToServer()">Shutdown server</button>
+    </p>
+  </div>
+</div>

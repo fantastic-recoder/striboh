@@ -19,13 +19,13 @@ describe('AppComponent', () => {
   it(`should have as title 'ng-hello-world'`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('ng-hello-world');
+    expect(app.title).toEqual('ng-striboh-clt-world');
   });
 
   it('should render title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement;
-    expect(compiled.querySelector('.content span').textContent).toContain('ng-hello-world app is running!');
+    expect(compiled.querySelector('.content span').textContent).toContain('ng-striboh-clt-world app is running!');
   });
 });

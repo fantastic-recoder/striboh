@@ -571,7 +571,6 @@ namespace striboh::base {
             return make_transition_table(
                     *"BeforeMessageState"_s + event<EvtStartMap> = "ParsingMessageState"_s,
                     "BeforeMessageState"_s + event<EvtBool> = "ErrorState"_s,
-                    //"ParsingMessageState"_s + event<EvtStringVal> / actionStoreKey = "ParsingMessageState"_s,
                     // message type
                     "ParsingMessageState"_s + event<EvtStringVal>[checkMessageTypeKey] = "ParsingMessageType"_s,
                     "ParsingMessageType"_s + event<EvtInt64> / actionStoreMessageType = "ParsingMessageState"_s,
@@ -581,14 +580,16 @@ namespace striboh::base {
                     "ParsingInstanceId"_s + event<EvtEndArray> / actionStoreInstanceId = "ParsingMessageState"_s,
                     // parameters of a method
                     "ParsingMessageState"_s + event<EvtStringVal>[checkParametersKey] = "ParsingParameters"_s,
+                    "ParsingParameters"_s + event<EvtStartArray> = "ParsingParametersKey"_s,
                     "ParsingParameters"_s + event<EvtStartMap> = "ParsingParametersKey"_s,
                     "ParsingParametersKey"_s + event<EvtStringVal> / actionStoreKey = "ParsingParametersKey"_s,
                     "ParsingParametersKey"_s + event<EvtEndMapKey> = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtInt64> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtBool> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
                     "ParsingParameterValue"_s + event<EvtStringVal> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                    "ParsingParameterValue"_s + event<EvtEndMapValue> = "ParsingParametersKey"_s,
-                    "ParsingParametersKey"_s + event<EvtEndMap> = "ParsingMessageState"_s,
+                    "ParsingParameterValue"_s + event<EvtEndMapValue> = "ParsingParameterEnd"_s,
+                    "ParsingParameterEnd"_s + event<EvtEndArrayItem> = "ParsingParameters"_s,
+                    "ParsingParametersKey"_s + event<EvtEndArray> = "ParsingMessageState"_s,
                     // method name
                     "ParsingMessageState"_s + event<EvtStringVal>[checkMethodNameKey] = "ParsingMethodName"_s,
                     "ParsingMethodName"_s + event<EvtStringVal> / actionStoreMethodName = "ParsingMessageState"_s,
@@ -648,17 +649,20 @@ namespace striboh::base {
             return isInErrorState();
         }
 
-        inline bool start_array(uint32_t /*pArraySize*/) {
+        inline bool start_array(uint32_t pArraySize) {
+            mLog.debug("MessageVisitor1::start_array pArraySize=={}.",pArraySize);
             mMessageParser.process_event(EvtStartArray());
             return isInErrorState();
         }
 
         inline bool end_array_item() {
+            mLog.debug("MessageVisitor1::end_array_item.");
             mMessageParser.process_event(EvtEndArrayItem());
             return isInErrorState();
         }
 
         inline bool end_array() {
+            mLog.debug("MessageVisitor1::end_array.");
             mMessageParser.process_event(EvtEndArray());
             return isInErrorState();
         }
@@ -727,8 +731,8 @@ namespace striboh::base {
         mLog.debug("Message::Message(pMethodName=={}) &m_Log={}",pMethodName,(void*)(&mLog));
     }
 
-    Message::Message(Value &&pReturn, LogIface &pLog)
-            :  mLog(pLog), mType(EMessageType::K_RETURN), mReturn(std::forward<Value>(pReturn)) {
+    Message::Message(const Message& pInReplyTo, Value &&pReturn, LogIface &pLog)
+            : mLog(pLog), mMethodName(pInReplyTo.getMethodName()), mType(EMessageType::K_RETURN), mReturn(std::forward<Value>(pReturn)) {
         mLog.debug("Message::Message(Return) &m_Log={}",(void*)(&mLog));
     }
 
@@ -747,9 +751,10 @@ namespace striboh::base {
         pBuffer.clear();
         msgpack::packer<Buffer> myPacker(pBuffer);
         if (getType() == EMessageType::K_RETURN) {
-            myPacker.pack_map(3); // type + instance id + return value
+            myPacker.pack_map(4); // type + instance id + return value
             packType(myPacker);
             packInstanceId(myPacker);
+            packMethodName(myPacker);
             packReturnValue(myPacker);
         } else if (getType() == EMessageType::K_METHOD) {
             myPacker.pack_map(4); // type + instance id + method name + parameters
@@ -763,8 +768,9 @@ namespace striboh::base {
     void Message::packParameters(msgpack::packer<Buffer> &myPacker) const {
         packString(myPacker, string_view(K_PARAMETERS_KEY));
         const int32_t myMapSize = getParameters().size();
-        myPacker.pack_map(myMapSize);
+        myPacker.pack_array(myMapSize);
         for (const Parameter &myPar: getParameters()) {
+            myPacker.pack_map(1);
             string_view myName = myPar.getName();
             packString(myPacker, myName);
             std::visit([&myPacker](auto &&myVal)

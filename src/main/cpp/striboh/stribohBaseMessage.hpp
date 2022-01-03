@@ -476,7 +476,7 @@ namespace striboh::base {
 
         explicit Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog);
 
-        explicit Message(Value &&pReturn, LogIface &pLog);
+        explicit Message(const Message& pInReplyTo, Value &&pReturn, LogIface &pLog);
 
         explicit Message(LogIface &pLog);
 

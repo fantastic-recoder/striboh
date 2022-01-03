@@ -514,7 +514,7 @@ namespace striboh::base {
         } else {
             getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
         }
-        Message myRetVal(Value{}, getLog());
+        Message myRetVal(pValues, Value{}, getLog());
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
                        pValues.getMethodName(), toString(aInstanceId));
