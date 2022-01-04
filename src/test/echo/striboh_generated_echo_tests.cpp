@@ -420,3 +420,16 @@ TEST(stribohGeneratedEchoTests, testAdd) {
     sleep(10);
     ASSERT_FALSE(myChild->running());
 }
+
+TEST(stribohGeneratedEchoTests, testEchoAndAdd) {
+    auto myChild = runServer("./striboh_generated_echo_server",theLog);
+    sleep(10);
+    EchoProxy myEchoPrx(K_TEST_SRV, theLog);
+    auto myAddOp = myEchoPrx.add(13, 4);
+    EXPECT_EQ(17,myAddOp.getVal());
+    auto myEchoOp = myEchoPrx.echo("Striboh");
+    EXPECT_EQ("Hello Striboh!",myEchoOp.getVal());
+    myEchoPrx.shutdown();
+    sleep(10);
+    ASSERT_FALSE(myChild->running());
+}

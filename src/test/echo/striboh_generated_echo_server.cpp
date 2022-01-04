@@ -402,7 +402,7 @@ namespace generated_echo_test {
             return "Hello " + pMsg + "!";
         }
 
-        virtual int64_t add(const int64_t &pA, const int64_t &pB) override {
+        virtual int64_t add(int64_t pA, int64_t pB) override {
             theLog.info("*** Adding {} and {}.",pA,pB);
             return pA + pB;
         }
