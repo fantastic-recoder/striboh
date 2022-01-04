@@ -50,3 +50,4 @@ CMakeLists.txt.user
 /.settings/
 /striboh.creator.user
 /.idea/markdown.xml
+/cmake-build-debug-coverage/
