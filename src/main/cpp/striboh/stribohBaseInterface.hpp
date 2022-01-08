@@ -426,20 +426,25 @@ namespace striboh::base {
         }
 
         const InterfaceName &getName() const {
-            return mName;
+            return m_Name;
         }
 
 
         ServantBase &getObject();
 
+        constexpr const Methods_t & getMehtods() const {
+            return m_Methods;
+        }
     private:
-        ServantBase& mObject;
-        Path_t mPath;
-        InterfaceName mName;
-        Methods_t mMethods;
+        ServantBase& /*--*/ m_Object;
+        Path_t  /*-------*/ m_Path;
+        InterfaceName /*-*/ m_Name;
+        Methods_t /*-----*/ m_Methods;
     };
 
     static const constexpr char *const K_TAG_SVC = "svc";
+
+    static const constexpr char *const K_TAG_API = "api";
 
     static const constexpr char *const K_TAG_SVC_PATH = "path";
 

@@ -391,12 +391,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/asio/strand.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/lexical_cast.hpp>
+#include <nlohmann/json.hpp>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseUtils.hpp"
 #include "stribohBaseEMessageType.hpp"
+#include "stribohBaseMethod.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -410,8 +412,7 @@ using std::pair;
 using std::string_view;
 using namespace std::chrono_literals;
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
 
         static const char *const theAppJson = "application/json";
 
@@ -450,6 +451,8 @@ namespace striboh {
         }
 
         string createResolvedModuleReply(const ResolvedResult &pResolved);
+
+        string serviceToJsonStr(const Interface &pResolved, LogIface& pIface);
 
         /**
          *   This function produces an HTTP response for the given
@@ -490,7 +493,6 @@ namespace striboh {
                     };
 
             // Returns a server error response
-            /* not yet used
             auto const server_error =
                     [&pRequest](beast::string_view what) {
                         http::response<http::string_body> res{http::status::internal_server_error, pRequest.version()};
@@ -501,7 +503,7 @@ namespace striboh {
                         res.prepare_payload();
                         return res;
                     };
-*/
+
             // Make sure we can handle the method
             if (pRequest.method() != http::verb::get &&
                 pRequest.method() != http::verb::head)
@@ -522,11 +524,8 @@ namespace striboh {
             auto myParams = parseUrlParameters(myUrl);
 
             std::string theResponse;
-            if (myParams.find("svc") != myParams.end()) {
-                pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
-                theResponse = pBroker.resolvedServiceToStr(myParams[K_BASE_URL][0], aSvc);
-            } else if (myParams.find("upgrade") != myParams.end() &&
-                       boost::beast::websocket::is_upgrade(pRequest)) {
+            if (myParams.find("upgrade") != myParams.end() &&
+                boost::beast::websocket::is_upgrade(pRequest)) {
                 pWebSocketPtr
                         .reset(new websocket::stream<beast::tcp_stream>{std::move(*pTcpSocketPtr)});
                 pWebSocketPtr->set_option(
@@ -543,7 +542,17 @@ namespace striboh {
                 pWebSocketPtr->binary(true);
                 pWebSocketPtr->accept(pRequest);
                 return true;
-            } else {
+            } else if (myParams.find( K_TAG_SVC ) != myParams.end()) {
+                pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
+                theResponse = pBroker.resolvedServiceToStr(myParams[K_BASE_URL][0], aSvc);
+            } else if (myParams.find( K_TAG_API ) != myParams.end()) {
+                pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
+                if(aSvc.first) {
+                    theResponse = serviceToJsonStr(pBroker.getInterface(aSvc.second),pBroker.getLog());
+                } else {
+                    return pSend(server_error(("Failed to find service '" + myParams[K_BASE_URL][0]) + "'."));
+                }
+            } else  {
                 auto myResolved = pBroker.resolve(std::string(pRequest.target()));
                 if (myResolved.mResult == EResolveResult::NOT_FOUND) {
                     return pSend(not_found(pRequest.target()));
@@ -607,12 +616,34 @@ namespace striboh {
             return myReply;
         }
 
-        /**
-         * Report a failure
-         */
+    string serviceToJsonStr(const Interface &pResolved, LogIface& pLog) {
+        pLog.debug("--> api request");
+        Json myRetVal =
+            {
+                {
+                    "interface",
+                    {
+                            {"name", pResolved.getName().get()},
+                            {"methods", Json::array()}
+                    }
+                }
+            };
+        auto myMethodList(pResolved.getMehtods());
+        for(auto& myMethod :myMethodList) {
+            myRetVal["interface"]["methods"].push_back({ {"name", myMethod.getName()} });
+            pLog.debug("    method: {}",myMethod.getName());
+        }
+        string myRetValStr(myRetVal.dump());
+        pLog.debug("<-- api request: {}",myRetValStr);
+        return myRetValStr;
+    }
+
+    /**
+     * Report a failure
+     */
         void
-        fail(beast::error_code ec, char const *what) {
-            std::cerr << what << ": " << ec.message() << "\n";
+        fail(beast::error_code ec, char const *what, LogIface& pLogger ) {
+            pLogger.error("{}:{}",what, ec.message());
         }
 
         /**
@@ -707,7 +738,7 @@ namespace striboh {
                 if (pErrorCode == http::error::end_of_stream)
                     return doCloseHttpStream();
                 if (pErrorCode)
-                    return fail(pErrorCode, "onHttpRead");
+                    return fail(pErrorCode, "onHttpRead", mLog);
                 // Send the response
                 if (handleHttpRequest(std::move(mRequest), mLambda, mBroker,
                                       mWebSocketStream, mTcpStream)) {
@@ -719,7 +750,7 @@ namespace striboh {
             void
             onAccept(beast::error_code ec) {
                 if (ec)
-                    return fail(ec, "accept");
+                    return fail(ec, "accept", mLog);
 
                 // Read a message
                 doWsRead();
@@ -750,7 +781,7 @@ namespace striboh {
                     return;
                 }
                 if (pErrorCode) {
-                    fail(pErrorCode, "onWsRead");
+                    fail(pErrorCode, "onWsRead", mLog);
                 } else {
                     mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
                     Message myMsg(mLog);
@@ -788,7 +819,7 @@ namespace striboh {
                 boost::ignore_unused(bytes_transferred);
 
                 if (ec)
-                    return fail(ec, "onHttpWrite");
+                    return fail(ec, "onHttpWrite", mLog);
 
                 if (close) {
                     // This means we should close the connection, usually because
@@ -810,7 +841,7 @@ namespace striboh {
                 boost::ignore_unused(bytes_transferred);
 
                 if (ec)
-                    return fail(ec, "onWsWrite");
+                    return fail(ec, "onWsWrite", mLog);
                 mBroker.getLog().debug("Web socket write ok.");
                 // Do another read
                 doWsRead();
@@ -841,21 +872,21 @@ namespace striboh {
                 // Open the acceptor
                 mAcceptor.open(pEndpoint.protocol(), ec);
                 if (ec) {
-                    fail(ec, "open");
+                    fail(ec, "open", mLog);
                     return;
                 }
 
                 // Allow address reuse
                 mAcceptor.set_option(net::socket_base::reuse_address(true), ec);
                 if (ec) {
-                    fail(ec, "set_option");
+                    fail(ec, "set_option", mLog);
                     return;
                 }
 
                 // Bind to the server address
                 mAcceptor.bind(pEndpoint, ec);
                 if (ec) {
-                    fail(ec, "bind");
+                    fail(ec, "bind", mLog);
                     return;
                 }
 
@@ -863,7 +894,7 @@ namespace striboh {
                 mAcceptor.listen(
                         net::socket_base::max_listen_connections, ec);
                 if (ec) {
-                    fail(ec, "listen");
+                    fail(ec, "listen", mLog);
                     return;
                 }
                 mLog.info("listening on http:/{}:{}/", pEndpoint.address().to_string(), pEndpoint.port());
@@ -895,7 +926,7 @@ namespace striboh {
             void
             onAccept(beast::error_code pErrorCode, tcp::socket pSocket) {
                 if (pErrorCode) {
-                    fail(pErrorCode, "onAccept (is Port taken?)");
+                    fail(pErrorCode, "onAccept (is Port taken?)", mLog);
                 } else {
                     // Create the session and run it
                     std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
@@ -967,4 +998,3 @@ namespace striboh {
         }
 
     }
-}

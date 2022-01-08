@@ -432,7 +432,7 @@ namespace striboh::base {
     struct BrokerIface {
 
         BrokerIface(std::string_view&& pAddress, LogIface &pLogIface) //
-                : m_Address(std::move(pAddress)) //
+                : m_Address(std::move(pAddress), pLogIface) //
                 , mLogIface(pLogIface) {}
 
         const LogIface &getLog() const {
@@ -479,6 +479,8 @@ namespace striboh::base {
         getState() const { return mOperationalState; }
 
         const Address& getAddress() const { return m_Address; }
+
+        virtual const Interface& getInterface(const InstanceId& pInstanceId ) const = 0;
 
     protected:
         void setState(EServerState pState) {

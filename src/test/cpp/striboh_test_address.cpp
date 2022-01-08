@@ -381,13 +381,25 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseAddress.hpp>
 #include <striboh/stribohBaseExceptionsWrongAdress.hpp>
 
+#include "striboh/stribohBaseLogBoostImpl.hpp"
+
 using striboh::base::Address;
 using striboh::base::EProtocol;
 using striboh::base::exceptions::WrongAddress;
+using striboh::base::LogBoostImpl;
+using striboh::base::LogIface;
 using std::string;
 
+namespace {
+    static LogBoostImpl myLog;
+
+    LogIface &getLog() {
+        return myLog;
+    }
+}
+
 TEST(testAddress,basicParsing) {
-    Address myAddress("http://localhost:9991/group1");
+    Address myAddress("http://localhost:9991/group1", getLog());
     EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
     EXPECT_EQ("localhost",myAddress.getHost()) << "Hostname parsed wrong.";
     EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
@@ -396,7 +408,7 @@ TEST(testAddress,basicParsing) {
 }
 
 TEST(testAddress,ipv4Parsing) {
-    Address myAddress("http://0.0.0.0:9991");
+    Address myAddress("http://0.0.0.0:9991", getLog());
     EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
     EXPECT_EQ("0.0.0.0",myAddress.getHost()) << "Hostname parsed wrong.";
     EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
@@ -404,7 +416,7 @@ TEST(testAddress,ipv4Parsing) {
 }
 
 TEST(testAddress,emptyUrl) {
-    Address myAddress("http://localhost:9991");
+    Address myAddress("http://localhost:9991", getLog());
     EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
     EXPECT_EQ("localhost",myAddress.getHost()) << "Hostname parsed wrong.";
     EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
@@ -412,11 +424,11 @@ TEST(testAddress,emptyUrl) {
 }
 
 TEST(testAddress,wrongUrl) {
-    EXPECT_THROW(Address myAddress("http:/:9991/"), WrongAddress);
+    EXPECT_THROW(Address myAddress("http:/:9991/", getLog()), WrongAddress);
 }
 
 TEST(testAddress,emptyUrl1) {
-    Address myAddress("http://localhost:9991/");
+    Address myAddress("http://localhost:9991/", getLog());
     EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
     EXPECT_EQ("localhost",myAddress.getHost()) << "Hostname parsed wrong.";
     EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";

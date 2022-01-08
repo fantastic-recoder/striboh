@@ -448,7 +448,7 @@ namespace striboh::base {
         void serve();
 
 
-        const std::chrono::milliseconds &getDispatchSleep() const {
+        constexpr const std::chrono::milliseconds &getDispatchSleep() const {
             return m_DispatchSleep;
         }
 
@@ -470,6 +470,10 @@ namespace striboh::base {
 
         static void setTraceInterval(const std::chrono::duration<float> &pTheirTraceInterval) {
             theirTraceInterval = pTheirTraceInterval;
+        }
+
+        const Interface& getInterface(const InstanceId& pInstanceId ) const override {
+            return m_Instances.find(pInstanceId)->second;
         }
 
     private:

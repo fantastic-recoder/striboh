@@ -250,7 +250,7 @@ namespace {{namespace}} {
 	class {{interface_name}}Proxy : public striboh::base::ProxyBase { // starting class {{interface_name}}Proxy
 	public:
 		{{interface_name}}Proxy(  std::string_view pUrl, striboh::base::LogIface& pLogIface )
-			 : striboh::base::ProxyBase(striboh::base::Address(pUrl), "/{{module_path}}{{interface_name}}", pLogIface ) {}
+			 : striboh::base::ProxyBase(striboh::base::Address(pUrl, pLogIface), "/{{module_path}}{{interface_name}}", pLogIface ) {}
 
         {{#methods}}
 		 striboh::base::RetValProxy<{{method.method_type}}> {{method.method_name}}({{#method.parameters}}{{#comma}}, {{/comma}}{{parameter_type}} p{{parameter_name}}{{/method.parameters}}){

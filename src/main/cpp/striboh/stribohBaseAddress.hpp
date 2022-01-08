@@ -381,6 +381,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <string>
 #include <list>
+#include "stribohBaseLogIface.hpp"
 
 namespace striboh::base {
 
@@ -396,7 +397,7 @@ namespace striboh::base {
         using Port_t = unsigned short int;
 
         /// Parse the passed address
-        explicit Address(std::string_view pUrl)  ;
+        explicit Address(std::string_view pUrl, LogIface& pLogger);
         static int checkGrammar();
 
     public:
@@ -434,6 +435,7 @@ namespace striboh::base {
         }
 
     private:
+        LogIface& /*----*/ m_Logger;
         Port_t /*-------*/ m_Port /*----*/ = 0;
         std::string /*--*/ m_Host;
         EProtocol /*----*/ m_Protocol /**/ = EProtocol::NOT_SPECIFIED;

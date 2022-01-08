@@ -496,7 +496,7 @@ namespace striboh::base {
         return myRetVal;
     }
 
-    Address::Address(std::string_view pUrl) {
+    Address::Address( std::string_view pUrl, LogIface& pLogger ): m_Logger(pLogger) {
         pegtl::memory_input myIn(pUrl, "");
         if (!pegtl::parse<url::Grammar, url::action>(myIn, *this)) {
             exceptions::WrongAddress *myExc = new exceptions::WrongAddress(pUrl);

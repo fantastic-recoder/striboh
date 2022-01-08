@@ -685,7 +685,7 @@ static constexpr const char *const theTestEchoServerBinary = "./striboh_test_ech
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
 
-    HostConnection aClient(Address("http://localhost:10000"),theLog);
+    HostConnection aClient(Address("http://localhost:10000",theLog),theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
     EXPECT_TRUE(myProxy->isConnected());
     {
@@ -776,6 +776,25 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
 }
 
 TEST(stribohBaseTests, testHostConConstr) {
-    HostConnection aHostConnection(Address("http://0.0.0.0:123"),getLog());
+    HostConnection aHostConnection(Address("http://0.0.0.0:123",getLog()),getLog());
     EXPECT_EQ(string("123"),aHostConnection.getPortStr());
+}
+
+TEST(stribohBaseTests, testJsonArray) {
+    Json myRetVal =
+            {
+                {"interface",
+                 {
+                         {"name", "TestInterface"},
+                         {"methods", Json::array()}
+                 }}
+            };
+
+    myRetVal["interface"]["methods"].emplace_back( Json{{ "method",{ { "name", "echo" } }  }} );
+    myRetVal["interface"]["methods"].emplace_back( Json{{ "method",{ { "name", "add" } }  }} );
+    myRetVal["interface"]["methods"].emplace_back( Json{{ "method",{ { "name", "shutdown" } }  }} );
+    string myRetValStr(myRetVal.dump());
+    getLog().debug("<-- api request: {}", myRetValStr);
+    EXPECT_EQ(1UL,myRetVal.size());
+    EXPECT_EQ(3UL,myRetVal["interface"]["methods"].size());
 }

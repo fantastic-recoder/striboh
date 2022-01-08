@@ -390,17 +390,17 @@ namespace striboh::base {
                 std::initializer_list<Method> pMethodList
         )
         :
-        mObject(pObject),
-        mPath{pPath},
-        mName{pName},
-        mMethods{pMethodList}
+                m_Object(pObject),
+                m_Path{pPath},
+                m_Name{pName},
+                m_Methods{pMethodList}
         {
-            BOOST_LOG_TRIVIAL(debug) << mName.get() << " service has " << mMethods.size() << " methods.";
+            BOOST_LOG_TRIVIAL(debug) << m_Name.get() << " service has " << m_Methods.size() << " methods.";
         }
 
         Interface::Methods_t::iterator
         Interface::findMethod(std::string_view pMethodName) {
-            return std::find_if(mMethods.begin(),mMethods.end(), [pMethodName]( const Method& pMethod)->bool {
+            return std::find_if(m_Methods.begin(), m_Methods.end(), [pMethodName](const Method& pMethod)->bool {
                 if(pMethod.getName().compare(pMethodName)==0) {
                     return true;
                 }
@@ -410,16 +410,16 @@ namespace striboh::base {
 
         Interface::Methods_t::iterator
         Interface::end() {
-            return mMethods.end();
+            return m_Methods.end();
         }
 
         const Interface::Path_t &
         Interface::getPath() const {
-            return mPath;
+            return m_Path;
         }
 
     ServantBase &Interface::getObject() {
-        return mObject;
+        return m_Object;
     }
 
 }

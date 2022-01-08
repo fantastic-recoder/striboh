@@ -396,7 +396,7 @@ using namespace std::chrono_literals;
 namespace po = boost::program_options;
 
 namespace striboh::base {
-    LogBoostImpl myLog;
+    static LogBoostImpl myLog;
     LogIface &getLog() {
         return myLog;
     }
