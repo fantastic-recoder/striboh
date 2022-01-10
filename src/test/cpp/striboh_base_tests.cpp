@@ -528,7 +528,7 @@ TEST(stribohBaseTests, testUuidGeneration) {
 Interface createTestInterface() {
     return Interface{
             theEchoServant,
-            {"m0", "m1"}, InterfaceName("Hello"),
+            {ModuleName{"m0"}, ModuleName{"m1"}}, InterfaceName("Hello"),
             {
                     Method{"echo",
                            ParameterDescriptionList{
@@ -609,7 +609,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
 
     Interface myInterface{
             theEchoServant,
-            {"m0"}, InterfaceName{"Hello"},
+            {ModuleName{"m0"}}, InterfaceName{"Hello"},
             {
                     Method{"echo",
                            ParameterDescriptionList{

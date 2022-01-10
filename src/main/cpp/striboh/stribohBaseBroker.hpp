@@ -499,7 +499,7 @@ namespace striboh::base {
 
         idl::ast::ModuleBodyNode *addServantModule(ModuleListNode *myChildNodes, std::string &mDir) const;
 
-        static ResolvedService resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode &pNode);
+        static ResolvedService resolveService(ModuleName pInterfaceName, const idl::ast::ModuleNode &pNode);
 
         void doShutdown();
 

@@ -385,6 +385,7 @@ static constexpr const char *const K_TEST_MTHD_NM = "testMethod";
 
 #include <iostream>
 
+#include "striboh/stribohBase.hpp"
 #include "striboh/stribohBaseInterface.hpp"
 #include "striboh/stribohBaseEMessageType.hpp"
 #include "striboh/stribohBaseParameterList.hpp"
@@ -398,7 +399,7 @@ namespace striboh {
 
             Interface mEchoServerInterface {
                     *this,
-                    {"m0", "m1"}, InterfaceName{"Hello"},
+                    {ModuleName{"m0"}, ModuleName{"m1"}}, InterfaceName{"Hello"},
                     {
                             Method{"echo",
                                    ParameterDescriptionList{

@@ -381,9 +381,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseBroker.hpp"
 #include "stribohBaseInterface.hpp"
-#include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseServantBase.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseMethod.hpp"
@@ -527,8 +527,8 @@ namespace striboh::base {
         const auto myPair = m_Instances.try_emplace(myUuid, pInterface);
         ModuleListNode *myChildModules = &m_RootNode.getModules();
         ModuleBodyNode *myModuleBodyNode = nullptr;
-        for (string myModuleName: myPair.first->second.getPath()) {
-            myModuleBodyNode = addServantModule(myChildModules, myModuleName);
+        for (auto myModuleName: myPair.first->second.getPath().get()) {
+            myModuleBodyNode = addServantModule(myChildModules, myModuleName.get());
             myChildModules = &myModuleBodyNode->getModules();
         }
         if (myModuleBodyNode) {
@@ -596,7 +596,7 @@ namespace striboh::base {
     Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleListNode &pModules) const {
         pRetVal.m_Result = EResolveResult::OK;
         for (const auto &mySubNodeRef: pModules) {
-            pRetVal.m_Modules.emplace(PathSegment(std::string(mySubNodeRef.getValueStr())));
+            pRetVal.m_Modules.emplace(ModuleName(std::string(mySubNodeRef.getValueStr())));
         }
     }
 
@@ -610,15 +610,14 @@ namespace striboh::base {
 
     ResolvedResult
     Broker::resolve(std::string_view pPath) const {
-        ResolvedResult myRetVal(myRetVal.m_Address);
-        Path myPathToResolve;
+        ResolvedResult myRetVal(getAddress());
         if (pPath == K_SEPARATOR) {
             addSubmodulesToResult(myRetVal, m_RootNode.getModules());
         } else {
-            myPathToResolve = split(pPath, K_SEPARATOR);
+            myRetVal.m_Path = split(pPath, K_SEPARATOR);
             auto mySubmodules = m_RootNode.getModules();
-            auto myPathBegin = myPathToResolve.get().begin();
-            resolveSubNodes(myPathBegin, myPathToResolve.get().end(), myRetVal, mySubmodules);
+            auto myPathBegin = myRetVal.m_Path.get().begin();
+            resolveSubNodes(myPathBegin, myRetVal.m_Path.get().end(), myRetVal, mySubmodules);
         }
         return myRetVal;
     }
@@ -653,7 +652,7 @@ namespace striboh::base {
         if (myPathToResolve.get().empty()) {
             return theNullService;
         }
-        PathSegment myInterfaceName{myPathToResolve.get().back()};
+        ModuleName myInterfaceName{myPathToResolve.get().back()};
         myPathToResolve.get().pop_back();
         auto mySubmodules = m_RootNode.getModules();
         auto myPathBegin = myPathToResolve.get().begin();
@@ -665,7 +664,7 @@ namespace striboh::base {
     }
 
     ResolvedService
-    Broker::resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode &pNode) {
+    Broker::resolveService(ModuleName pInterfaceName, const idl::ast::ModuleNode &pNode) {
         for (auto &myInterface: pNode.getModuleBody().getInterfaces()) {
             if (myInterface.getName() == pInterfaceName.get()) {
                 ResolvedService myFoundService(true, myInterface.getUuid());

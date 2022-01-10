@@ -416,11 +416,13 @@ namespace striboh::base {
 
     constexpr static const char *const theAppJson = "application/json";
 
-    string createResolvedModuleReply(const ResolvedResult &pResolved, LogIface &pLog);
+    string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog);
 
     string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pIface);
 
     string fullPath(const Address &pAddress, const Interface &pResolved);
+
+    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName);
 
     //! Return a reasonable mime type based on the extension of a file.
     beast::string_view
@@ -593,28 +595,28 @@ namespace striboh::base {
         return pSend(std::move(res));
     }
 
-    string createResolvedModuleReply(const ResolvedResult &pResolved, LogIface &pLog) {
+    string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog) {
         pLog.debug("--> module request");
         string myReply;
-        if (pResolved.m_Result == EResolveResult::OK) {
+        if (p_Resolved.m_Result == EResolveResult::OK) {
             Json myRetVal{
                     {"Message",    "Hello from striboh."},
                     {"modules",    Json::array()},
                     {"interfaces", Json::array()}
             };
-            for (auto mySegment: pResolved.m_Modules) {
-                myRetVal["modules"].push_back(mySegment.get());
+            for (auto myModuleName: p_Resolved.m_Modules) {
+                Path myPath;
+                myPath.get().emplace_back(myModuleName);
+                myRetVal["modules"].emplace_back(fullPath(p_Resolved.m_Address, myPath, InterfaceName("")));
             }
-            for (auto myInterface: pResolved.m_Interfaces) {
-                myRetVal["interfaces"].emplace_back(myInterface.get());
+            for (auto myInterface: p_Resolved.m_Interfaces) {
+                myRetVal["interfaces"].emplace_back(fullPath(p_Resolved.m_Address, p_Resolved.m_Path, myInterface)+"?api");
             }
             myReply = myRetVal.dump();
         }
         pLog.debug("<-- module request");
         return myReply;
     }
-
-    string fullPath(const Address &pAddress, const Interface &pResolved);
 
     /**
        * Describe the passed interface in Json.
@@ -625,13 +627,14 @@ namespace striboh::base {
        */
     string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pLog) {
         pLog.debug("--> api request");
-        string myPath = fullPath(pAddress, pAnInterface);
+        string myPathToId = fullPath(pAddress, pAnInterface) + "?svc";
         Json myRetVal =
                 {
                         {
                                 "interface",
                                 {
-                                        {"name", myPath},
+                                        {"name", pAnInterface.getName().get()},
+                                        {"id", myPathToId },
                                         {"methods", Json::array()}
                                 }
                         }
@@ -646,13 +649,18 @@ namespace striboh::base {
         return myRetValStr;
     }
 
-    string fullPath(const Address &pAddress, const Interface &pResolved) {
-        string myPath(pAddress.str());
-        myPath = std::accumulate(pResolved.getPath().begin(), pResolved.getPath().end(), myPath,
-                                 [](const string &p0, const string &p1) -> string {
-                                     return p0 + '/' + p1;
+    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName) {
+        ModuleName myPath(pAddress.str());
+        myPath = std::accumulate(p_Path.get().begin(), p_Path.get().end(), myPath,
+                                 [](const ModuleName &p0, const ModuleName &p1) -> ModuleName {
+                                     return ModuleName(p0.get() + '/' + p1.get());
                                  });
-        myPath += ('/' + (pResolved.getName().get() + "?api"));
+        myPath.get() += ('/' + p_InterfaceName.get());
+        return myPath.get();
+    }
+
+    string fullPath(const Address &pAddress, const Interface &pResolved) {
+        string myPath(fullPath(pAddress,pResolved.getPath(),pResolved.getName()));
         return myPath;
     }
 

@@ -143,6 +143,7 @@ K_SERVANT_TEMPLATE = """
 
 #include <string>
 #include <vector>
+#include <striboh/stribohBase.hpp>
 #include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 #include <striboh/stribohBaseMethod.hpp>
@@ -167,7 +168,7 @@ namespace {{namespace}} {
 
 	 striboh::base::Interface mInterface{
 		*this,
-		{ {{#modules_list}}{{#comma}},{{/comma}}"{{mod}}"{{/modules_list}} },
+		{ {{#modules_list}}{{#comma}},{{/comma}}striboh::base::ModuleName{"{{mod}}"}{{/modules_list}} },
 		striboh::base::InterfaceName{"{{interface_name}}"},
 		{
             {{#methods}}
@@ -237,6 +238,7 @@ K_CLIENT_TEMPLATE = """
 #pragma once
 #include <string>
 #include <vector>
+#include <striboh/stribohBase.hpp>
 #include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 #include <striboh/stribohBaseMethod.hpp>
@@ -267,8 +269,9 @@ namespace {{namespace}} {
 
 
 def generate_module_path(p_module_names: [str]):
-    my_module_path = ""
+    my_module_path = ''
     for myModuleName in p_module_names:
+        myModuleName = ('ModuleName('+myModuleName+')')
         if len(my_module_path) == 0:
             my_module_path += myModuleName
         else:

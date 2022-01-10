@@ -376,50 +376,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#include <boost/log/trivial.hpp>
 
-#include "stribohBaseInterface.hpp"
-#include "stribohBaseMethod.hpp"
+#pragma once
 
 namespace striboh::base {
-        Interface::Interface
-        (
-                ServantBase& pObject,
-                std::initializer_list<ModuleName> pPath,
-                InterfaceName pName,
-                std::initializer_list<Method> pMethodList
-        )
-        :
-                m_Object(pObject),
-                m_Path{pPath},
-                m_Name{pName},
-                m_Methods{pMethodList}
-        {
-            BOOST_LOG_TRIVIAL(debug) << m_Name.get() << " service has " << m_Methods.size() << " methods.";
-        }
 
-        Interface::Methods_t::iterator
-        Interface::findMethod(std::string_view pMethodName) {
-            return std::find_if(m_Methods.begin(), m_Methods.end(), [pMethodName](const Method& pMethod)->bool {
-                if(pMethod.getName().compare(pMethodName)==0) {
-                    return true;
-                }
-                return false;
-            });
-        }
-
-        Interface::Methods_t::iterator
-        Interface::end() {
-            return m_Methods.end();
-        }
-
-        const Path &
-        Interface::getPath() const {
-            return m_Path;
-        }
-
-    ServantBase &Interface::getObject() {
-        return m_Object;
-    }
+    using ModuleName /*---*/  = fluent::NamedType<std::string, struct PathSegmentTag>;
+    using Path /*----------*/ = fluent::NamedType<std::vector<ModuleName>, struct PathTag>;
+    using PathIterator /*--*/ = Path::UnderlyingType::iterator;
+    using InterfaceName /*-*/ = fluent::NamedType<std::string, struct InterfaceNameTag>;
 
 }

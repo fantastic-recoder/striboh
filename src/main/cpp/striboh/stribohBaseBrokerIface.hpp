@@ -387,6 +387,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <set>
 #include <NamedType/named_type.hpp>
 
+#include "stribohBase.hpp"
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseLogIface.hpp"
@@ -409,20 +410,17 @@ namespace striboh::base {
 
     class Interface;
 
-    using PathSegment = fluent::NamedType<std::string, struct PathSegmentTag>;
-    using Path = fluent::NamedType<std::vector<PathSegment>, struct PathTag>;
-    using PathIterator = Path::UnderlyingType::iterator;
-
-    inline auto operator<(const PathSegment &p0, const PathSegment &p1) {
+    inline auto operator<(const ModuleName &p0, const ModuleName &p1) {
         return p0.get() < p1.get();
     }
 
-    typedef std::set<PathSegment> PathSegments;
+    typedef std::set<ModuleName> ModuleNames;
     typedef std::set<InterfaceName> InterfaceNames;
 
     struct ResolvedResult {
         EResolveResult m_Result = EResolveResult::NOT_FOUND;
-        PathSegments m_Modules;
+        ModuleNames m_Modules;
+        Path m_Path;
         InterfaceNames m_Interfaces;
         const Address& m_Address;
 

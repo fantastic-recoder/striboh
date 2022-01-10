@@ -386,6 +386,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <NamedType/named_type.hpp>
 
+#include "striboh/stribohBase.hpp"
+#include "striboh/stribohBaseBrokerIface.hpp"
+
 namespace striboh::base {
 
     class Broker;
@@ -396,8 +399,6 @@ namespace striboh::base {
 
     class Method;
 
-    using InterfaceName = fluent::NamedType<std::string, struct InterfaceNameTag>;
-
     inline bool operator<(const InterfaceName &pLeft, const InterfaceName &pRight) {
         return pLeft.get() < pRight.get();
     }
@@ -405,12 +406,11 @@ namespace striboh::base {
     class Interface {
     public:
         typedef std::vector<Method> Methods_t;
-        typedef std::vector<std::string> Path_t;
 
         explicit Interface
                 (
                         ServantBase& pObject,
-                        std::initializer_list<std::string> pPath,
+                        std::initializer_list<ModuleName> pPath,
                         InterfaceName pName,
                         std::initializer_list<Method>
                 );
@@ -419,7 +419,7 @@ namespace striboh::base {
 
         Methods_t::iterator end();
 
-        const Path_t &getPath() const;
+        const Path &getPath() const;
 
         bool isLocal() const {
             return true;
@@ -437,7 +437,7 @@ namespace striboh::base {
         }
     private:
         ServantBase& /*--*/ m_Object;
-        Path_t  /*-------*/ m_Path;
+        Path  /*---------*/ m_Path;
         InterfaceName /*-*/ m_Name;
         Methods_t /*-----*/ m_Methods;
     };
