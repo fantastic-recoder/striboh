@@ -434,7 +434,7 @@ namespace striboh::base {
         resolveService(std::string_view pPath) const override;
 
         std::string
-        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const override;
+        resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) const override;
 
         static Path split(std::string_view pPathStr, std::string_view pSeparator);
 

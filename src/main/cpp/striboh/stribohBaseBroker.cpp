@@ -594,9 +594,9 @@ namespace striboh::base {
 
     void
     Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleListNode &pModules) const {
-        pRetVal.mResult = EResolveResult::OK;
+        pRetVal.m_Result = EResolveResult::OK;
         for (const auto &mySubNodeRef: pModules) {
-            pRetVal.mModules.emplace(PathSegment(std::string(mySubNodeRef.getValueStr())));
+            pRetVal.m_Modules.emplace(PathSegment(std::string(mySubNodeRef.getValueStr())));
         }
     }
 
@@ -604,13 +604,13 @@ namespace striboh::base {
     Broker::addSubmodulesToResult(ResolvedResult &pRetVal, const ModuleBodyNode &pModule) const {
         addSubmodulesToResult(pRetVal, pModule.getModules());
         for (const auto &myInterface: pModule.getInterfaces()) {
-            pRetVal.mInterfaces.emplace(InterfaceName(myInterface.getName()));
+            pRetVal.m_Interfaces.emplace(InterfaceName(myInterface.getName()));
         }
     }
 
     ResolvedResult
     Broker::resolve(std::string_view pPath) const {
-        ResolvedResult myRetVal;
+        ResolvedResult myRetVal(myRetVal.m_Address);
         Path myPathToResolve;
         if (pPath == K_SEPARATOR) {
             addSubmodulesToResult(myRetVal, m_RootNode.getModules());
@@ -648,7 +648,7 @@ namespace striboh::base {
 
     ResolvedService
     Broker::resolveService(std::string_view pPath) const {
-        ResolvedResult myRetVal;
+        ResolvedResult myRetVal{getAddress()};
         Path myPathToResolve = split(pPath, K_SEPARATOR);
         if (myPathToResolve.get().empty()) {
             return theNullService;
@@ -676,7 +676,7 @@ namespace striboh::base {
     }
 
     std::string
-    Broker::resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const {
+    Broker::resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) const {
         json aJson;
         aJson[K_TAG_SVC][K_TAG_SVC_PATH] = pPath;
         aJson[K_TAG_SVC][K_TAG_SVC_RESULT] = pSvc.first;

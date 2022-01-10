@@ -433,9 +433,19 @@ TEST(testAddress,emptyUrl1) {
     EXPECT_EQ("localhost",myAddress.getHost()) << "Hostname parsed wrong.";
     EXPECT_EQ(9991,myAddress.getPort()) << "Port parsed wrongly.";
     EXPECT_EQ(0UL,myAddress.getUri().size());
+    EXPECT_EQ("http://localhost:9991",myAddress.str());
 }
 
 
 TEST(testAddress,analyzeGrammar) {
     ASSERT_EQ(0,Address::checkGrammar())<< "Address grammar contains circles.";
+}
+
+TEST(testAddress,parse0_0_0_0) {
+    Address myAddress("http://0.0.0.0:9998", getLog());
+    EXPECT_EQ(EProtocol::HTTP, myAddress.getProtocol()) << "Protocol not parsed.";
+    EXPECT_EQ("0.0.0.0",myAddress.getHost()) << "Hostname parsed wrong.";
+    EXPECT_EQ(9998,myAddress.getPort()) << "Port parsed wrongly.";
+    EXPECT_EQ(0UL,myAddress.getUri().size());
+    EXPECT_EQ("http://0.0.0.0:9998",myAddress.str());
 }

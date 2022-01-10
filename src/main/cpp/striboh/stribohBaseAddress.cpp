@@ -404,22 +404,14 @@ namespace striboh::base {
         using pegtl::sor;
         using pegtl::list;
 
-        struct Http : pegtl::string<'h', 't', 't', 'p'> {
-        };
-        struct Shm : pegtl::string<'s', 'h', 'm'> {
-        };
-        struct Host : plus< sor< range<'a', 'z'>, range<'A', 'Z'>, range<'0', '9'>,one<'.'>>> {
-        };
-        struct Protocol : seq<sor<Http, Shm>, string<':', '/', '/'> > {
-        };
-        struct Port : opt<seq<one<':'>, pegtl::rep_min_max<1, 5, pegtl::digit>>> {
-        };
-        struct Dir : plus<pegtl::alnum> {
-        };
-        struct Uri : opt<one<'/'>, list<Dir, one<'/'>>> {
-        };
-        struct Grammar : seq<Protocol, Host, Port, Uri> {
-        };
+        struct Http : pegtl::string<'h', 't', 't', 'p'> {};
+        struct Shm : pegtl::string<'s', 'h', 'm'> {};
+        struct Host : plus< sor< range<'a', 'z'>, range<'A', 'Z'>, range<'0', '9'>,one<'.'>>> {};
+        struct Protocol : seq<sor<Http, Shm>, string<':', '/', '/'> > {};
+        struct Port : opt<seq<one<':'>, pegtl::rep_min_max<1, 5, pegtl::digit>>> {};
+        struct Dir : plus<pegtl::alnum> {};
+        struct Uri : opt<one<'/'>, list<Dir, one<'/'>>> {};
+        struct Grammar : seq<Protocol, Host, Port, Uri> {};
 
         template<typename Rule>
         struct action {
@@ -480,10 +472,12 @@ namespace striboh::base {
         } else {
             myRetVal += "none";
         }
-        if (getPort() > 0) {
-            myRetVal += (':' + boost::lexical_cast<string>(getPort()));
+        myRetVal += "://";
+        myRetVal += getHost();
+        if(getPort()) {
+            myRetVal += ':';
+            myRetVal += boost::lexical_cast<std::string>(getPort());
         }
-        myRetVal += "//";
         bool myFirs = true;
         for (auto myDir: getUri()) {
             if (myFirs) {

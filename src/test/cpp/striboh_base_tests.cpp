@@ -558,28 +558,28 @@ TEST(stribohBaseTests, testResolve) {
     InstanceId myUuid = aBroker.addServant(myInterface);
     {
         ResolvedResult myResolved0 = aBroker.resolve("/not-existent");
-        EXPECT_EQ(EResolveResult::NOT_FOUND, myResolved0.mResult);
+        EXPECT_EQ(EResolveResult::NOT_FOUND, myResolved0.m_Result);
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/");
-        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        ASSERT_EQ(1UL, myResolved0.mModules.size());
-        auto myModulesIt = myResolved0.mModules.begin();
+        ASSERT_EQ(EResolveResult::OK, myResolved0.m_Result);
+        ASSERT_EQ(1UL, myResolved0.m_Modules.size());
+        auto myModulesIt = myResolved0.m_Modules.begin();
         EXPECT_EQ(string("m0"), myModulesIt->get());
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/m0");
-        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        ASSERT_EQ(1UL, myResolved0.mModules.size());
-        auto myModulesIt = myResolved0.mModules.begin();
+        ASSERT_EQ(EResolveResult::OK, myResolved0.m_Result);
+        ASSERT_EQ(1UL, myResolved0.m_Modules.size());
+        auto myModulesIt = myResolved0.m_Modules.begin();
         EXPECT_EQ(string("m1"), myModulesIt->get());
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/m0/m1");
-        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        EXPECT_EQ(0UL, myResolved0.mModules.size());
-        ASSERT_EQ(1UL, myResolved0.mInterfaces.size());
-        auto myInterfaceIt = myResolved0.mInterfaces.begin();
+        ASSERT_EQ(EResolveResult::OK, myResolved0.m_Result);
+        EXPECT_EQ(0UL, myResolved0.m_Modules.size());
+        ASSERT_EQ(1UL, myResolved0.m_Interfaces.size());
+        auto myInterfaceIt = myResolved0.m_Interfaces.begin();
         EXPECT_EQ(string("Hello"), myInterfaceIt->get());
     }
     {
@@ -594,7 +594,7 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     Broker aBroker("http://0.0.0.0:10000",theLog);
     InstanceId myUuid = aBroker.addServant(myInterface);
     auto aSvc = aBroker.resolveService(theM0M1Path);
-    string myResolved = aBroker.resolvedServiceToStr(theM0M1Path, aSvc);
+    string myResolved = aBroker.resolvedServiceIdToJsonStr(theM0M1Path, aSvc);
     EXPECT_FALSE(myResolved.empty());
     BOOST_LOG_TRIVIAL(debug) << myResolved;
     auto aJson = json::parse(myResolved);
@@ -797,4 +797,15 @@ TEST(stribohBaseTests, testJsonArray) {
     getLog().debug("<-- api request: {}", myRetValStr);
     EXPECT_EQ(1UL,myRetVal.size());
     EXPECT_EQ(3UL,myRetVal["interface"]["methods"].size());
+
+    getLog().debug("--> mod request");
+    myRetVal = {
+        {"Message", "Hello from striboh."},
+        {"modules", Json::array()}
+    };
+    myRetVal["modules"].push_back(string("ggggg"));
+    myRetVal["modules"].push_back(string("hhhh"));
+    myRetValStr=myRetVal.dump();
+    getLog().debug("<-- mod request: {}", myRetValStr);
+
 }

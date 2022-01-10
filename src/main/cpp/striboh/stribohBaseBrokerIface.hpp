@@ -418,12 +418,15 @@ namespace striboh::base {
     }
 
     typedef std::set<PathSegment> PathSegments;
-    typedef std::set<InterfaceName> Interfaces;
+    typedef std::set<InterfaceName> InterfaceNames;
 
     struct ResolvedResult {
-        EResolveResult mResult = EResolveResult::NOT_FOUND;
-        PathSegments mModules;
-        Interfaces mInterfaces;
+        EResolveResult m_Result = EResolveResult::NOT_FOUND;
+        PathSegments m_Modules;
+        InterfaceNames m_Interfaces;
+        const Address& m_Address;
+
+        ResolvedResult(const Address& p_Address): m_Address(p_Address){};
     };
 
 
@@ -468,7 +471,7 @@ namespace striboh::base {
         resolveService(std::string_view pPath) const = 0;
 
         virtual std::string
-        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const = 0;
+        resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) const = 0;
 
         const std::shared_ptr<ServerIface> &
         getServer() const { return mServerIface; }
