@@ -436,6 +436,10 @@ namespace striboh::base {
                 : mName(pParameterName), mValue(pValue) {
         }
 
+        Parameter(const std::string &pParameterName, int pValue)
+                : mName(pParameterName), mValue(int64_t{pValue}) {
+        }
+
         Parameter(const std::string &pParameterName, bool pValue)
                 : mName(pParameterName), mValue(pValue) {
         }

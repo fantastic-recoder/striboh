@@ -536,9 +536,9 @@ namespace {
 
 void
 IdlContext::loadPyBackend(std::string_view pBackendName, std::string_view pCompilerDir) {
-    std::filesystem::path myFilename(fmt::format("striboh_backend_{}",pBackendName));
+    std::string myFilename(fmt::format("striboh_backend_{}",pBackendName));
     mBackendScript.clear();
-    m_Log.debug("Going to open backend: {}{}.", pCompilerDir, myFilename.string());
+    m_Log.debug("Going to open backend: {}{}.", pCompilerDir, myFilename);
     std::filesystem::current_path(pCompilerDir);
     mBackendModule = pybind11::module_::import(myFilename.c_str());
     mBackendModule.attr("register")();

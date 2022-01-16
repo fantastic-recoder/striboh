@@ -27,8 +27,9 @@ set(striboh_idl_python_scripts ${striboh_BINARY_DIR}/bin/striboh_backend_cpp.py 
 set(CMAKE_SHARED_MODULE_PREFIX "")
 # Add a shared module - modules are intended to be imported at runtime.
 add_library(stribohIdl MODULE stribohIdlPyModule.cpp stribohIdlCompiler.cpp stribohIdlCompiler.hpp ${striboh_BINARY_DIR}/bin/striboh_idl.py ${striboh_idl_python_scripts})
-set_target_properties(stribohIdl PROPERTIES LINK_OPTIONS LINKER:-shared )
-target_link_libraries(stribohIdl ${PYTHON_LIBRARIES} boost_program_options striboh_base_library striboh_idl_library
-        ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} pthread ${CMAKE_DL_LIBS})
+if(!MSVC)
+    set_target_properties(stribohIdl PROPERTIES LINK_OPTIONS LINKER:-shared )
+endif()
+target_link_libraries(stribohIdl ${Python3_LIBRARIES} striboh_base_library striboh_idl_library ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} Threads::Threads ${CMAKE_DL_LIBS})
 target_include_directories(stribohIdl PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${STRIBOH_LIBS_INCLUDES})
-target_link_directories(stribohIdl PRIVATE ${CONAN_LIB_DIRS_FMT} ${CONAN_LIB_DIRS_BOOST})
+target_link_directories(stribohIdl PRIVATE  ${CONAN_LIB_DIRS_BOOST} ${Python3_LIBRARY_DIRS} ${CONAN_LIB_DIRS_FMT})

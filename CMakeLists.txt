@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 project(striboh)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(MSGPACK_CXX17 ON)
 if (MSVC)
     # warning level 4 and all warnings as errors
-    add_compile_options(/bigobj)
+    add_compile_options(/bigobj -D_WIN32_WINNT=0x0A00)
 else()
     # lots of warnings and all warnings as errors
     add_compile_options(-std=c++2a -fPIC -Wall -Wextra -pedantic)
@@ -41,9 +41,11 @@ endif()
 # SML end
 ###############################################################################
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
-set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} ${CMAKE_DL_LIBS} pthread)
+set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} ${CMAKE_DL_LIBS} Threads::Threads)
 set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_BOOST} ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS})
 
 add_subdirectory(src/main/cpp/striboh)

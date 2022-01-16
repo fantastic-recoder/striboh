@@ -474,8 +474,10 @@ TEST(stribohBaseTests, testStribohBrokerShutdown) {
 
 TEST(stribohBaseTests, testMethodParametersConstructor) {
     const std::string myVal0("Test 0.");
-    Message myList(K_TEST_MTHD_NM, {{"p0", myVal0},
-                                   {"p1", 42L}}, getLog());
+    Message myList(K_TEST_MTHD_NM, {
+        {"p0", myVal0},
+        {"p1", 42}
+    }, getLog());
     ASSERT_EQ(myVal0, myList.getParameters()[0].getValue().get<std::string>());
     ASSERT_EQ(42L, myList.getParameters()[1].getValue().get<int64_t>());
     ASSERT_EQ(K_TEST_MTHD_NM, myList.getMethodName());
@@ -598,7 +600,7 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     EXPECT_FALSE(myResolved.empty());
     BOOST_LOG_TRIVIAL(debug) << myResolved;
     auto aJson = json::parse(myResolved);
-    EXPECT_EQ(theM0M1Path, aJson[K_TAG_SVC][K_TAG_SVC_PATH]);
+    EXPECT_EQ(theM0M1Path, aJson[K_TAG_SVC][K_TAG_SVC_PATH].get<string>());
     EXPECT_EQ(true, aJson[K_TAG_SVC][K_TAG_SVC_RESULT]);
     EXPECT_EQ(myUuid, from_json(aJson[K_TAG_SVC][K_TAG_SVC_UUID_ARR]));
 }
@@ -642,9 +644,9 @@ static constexpr const char *const K_TEST_METHOD_NAME2 = "abracadabra";
 TEST(stribohBaseTests, testSerailization) {
     Message myInputValues(K_TEST_MTHD_NM,
                           {{"p0", "Echo string."},
-                           {"p1", 42L},
+                           {"p1", 42},
                            {"p2", "end."},
-                           {"p3", 13L}}, getLog());
+                           {"p3", 13} }, getLog());
     const InstanceId myIId = Broker::generateInstanceId();
     myInputValues.setInstanceId(myIId);
     EXPECT_EQ(myIId, myInputValues.getInstanceId());
@@ -729,9 +731,9 @@ TEST(stribohBaseTests, testJson) {
 TEST(stribohBaseTests, testGenerateAndParseReturn) {
     Message myInputValues(K_TEST_MTHD_NM,
                           {{"p0", "Echo string."},
-                           {"p1", 42L},
+                           {"p1", int64_t {42L}},
                            {"p2", "end."},
-                           {"p3", 13L}}, getLog());
+                           {"p3", int64_t {13L}}}, getLog());
     static constexpr const string_view K_ALFONS("Alfons");
     Message m0(myInputValues, Value(string(K_ALFONS)), theLog);
     InstanceId myUuid0 = Broker::generateInstanceId();
@@ -751,7 +753,7 @@ TEST(stribohBaseTests, testGenerateAndParseReturn) {
 }
 
 TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
-    Message m0("helloMethod", {{"p1", 42L},
+    Message m0("helloMethod", {{"p1", 42},
                                {"p2", string("Santa Maria")}}, theLog);
     InstanceId myUuid0 = Broker::generateInstanceId();
     m0.setInstanceId(myUuid0);
