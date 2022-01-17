@@ -821,4 +821,8 @@ namespace striboh::base {
         return jsonToStr(toJson(ReadBuffer(myBuffer)));
     }
 
+    Message::Message(ReadBuffer &&pBuffer, LogIface &pIface): mLog(pIface) {
+        unpackFromBuffer(std::forward<ReadBuffer>(pBuffer));
+    }
+
 } // end namespace striboh::base
