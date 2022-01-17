@@ -43,7 +43,7 @@ CMakeLists.txt.user
 /.settings/language.settings.xml
 /src/test/echo/Echo.hpp
 /src/test/echo/EchoClt.hpp
-/cmake-build-debug*
+/cmake-*
 /.metadata/
 /.settings/
 /striboh.creator.user
