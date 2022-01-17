@@ -399,11 +399,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace msm = boost::msm;
 namespace mpl = boost::mpl;
-using namespace msm::front;
-// for And_ operator
-using namespace msm::front::euml;
-
-using std::string_view;
 
 namespace msgpack {
     MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
@@ -428,10 +423,79 @@ namespace msgpack {
     } // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 } // namespace msgpack
 
-namespace {
+namespace striboh::base {
 
+    namespace sml = boost::sml;
 
-/*
+    struct SmlLogger {
+
+    SmlLogger(LogIface &pLog) : mLog(pLog) {}
+
+        template<class SM, class TEvent>
+        void log_process_event(const TEvent &) {
+            mLog.debug("[{}][process_event] {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TEvent>());
+        }
+
+        template<class SM, class TGuard, class TEvent>
+        void log_guard(const TGuard &, const TEvent &, bool result) {
+            mLog.debug("[{}][guard] {} {} {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TGuard>(),
+                       sml::aux::get_type_name<TEvent>(), (result ? "[OK]" : "[Reject]"));
+        }
+
+        template<class SM, class TAction, class TEvent>
+        void log_action(const TAction &, const TEvent &) {
+            mLog.debug("[{}][action] {} {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TAction>(),
+                       sml::aux::get_type_name<TEvent>());
+        }
+
+        template<class SM, class TSrcState, class TDstState>
+        void log_state_change(const TSrcState &src, const TDstState &dst) {
+            mLog.debug("[{}][transition] {} -> {}", sml::aux::get_type_name<SM>(), src.c_str(), dst.c_str());
+        }
+
+    private:
+        LogIface &mLog;
+    };
+
+    template<typename T>
+    struct EvtVal {
+        T mVal;
+
+        EvtVal() = delete;
+
+        explicit EvtVal(T pVal) : mVal(pVal) {}
+
+    };
+
+    struct EvtNil {
+    };
+
+    struct EvtStartMap {
+    };
+
+    struct EvtEndMap {
+    };
+
+    struct EvtStartArray {
+    };
+
+    struct EvtEndArray {
+    };
+
+    struct EvtEndArrayItem {
+    };
+
+    struct EvtEndMapKey {
+    };
+
+    struct EvtEndMapValue {
+    };
+
+    using EvtStringVal = EvtVal<std::string>;
+    using EvtBool = EvtVal<bool>;
+    using EvtInt64 = EvtVal<int64_t>;
+    using striboh::base::Message;
+
     struct MessageParserContext {
         Message &mMessage;
         std::string mKey;
@@ -511,11 +575,11 @@ namespace {
         };
 
         auto operator()() const {
-            using namespace sml;*/
-    /**
-     * Initial state: *initial_state
-     * Transition DSL: src_state + event [ guard ] / action = dst_state
-     */ /*
+            using namespace sml;
+            /**
+             * Initial state: *initial_state
+             * Transition DSL: src_state + event [ guard ] / action = dst_state
+             */
             return make_transition_table(
                     *"BeforeMessageState"_s + event<EvtStartMap> = "ParsingMessageState"_s,
                     "BeforeMessageState"_s + event<EvtBool> = "ErrorState"_s,
@@ -551,206 +615,93 @@ namespace {
             );
         }
     };
-*/
-
-    struct AllOk : public msm::front::state<>
-    {
-        template <class Event,class FSM>
-        void on_entry(Event const&,FSM& ) {std::cout << "starting: AllOk" << std::endl;}
-        template <class Event,class FSM>
-        void on_exit(Event const&,FSM& ) {std::cout << "finishing: AllOk" << std::endl;}
-    };
-
-// The list of FSM states
-    struct BeforeMessageState : public msm::front::state<>
-    {
-        // if the play event arrives in this state, defer it until a state handles it or
-        // rejects it
-        //typedef mpl::vector<play> deferred_events;
-
-        // every (optional) entry/exit methods get the event passed.
-        template <class Event,class FSM>
-        void on_entry(Event const&,FSM& ) {std::cout << "entering: Empty" << std::endl;}
-        template <class Event,class FSM>
-        void on_exit(Event const&,FSM& ) {std::cout << "leaving: Empty" << std::endl;}
-    };
-
-    struct ParsingMessageState : public msm::front::state<> {
-
-    };
-
-
-    struct Decoding_tag {};
-    typedef msm::front::euml::func_state<Decoding_tag> Playing;
-
-    // the initial state of the player SM. Must be defined
-    typedef mpl::vector<BeforeMessageState,AllOk> initial_state;
-
-    struct StartMapAction
-    {
-        template <class EVT,class FSM,class SourceState,class TargetState>
-        void operator()(EVT const& ,FSM& ,SourceState& ,TargetState& )
-        {
-            //cout << "player::start_playback" << endl;
-        }
-    };
-
-    struct EvtStartMap;
-
-    // Transition table for player
-    struct message_transition_table : mpl::vector<
-            //    Start                  Event        Target                  Action                      Guard
-            //   +--------------------+-------------+-----------------------+---------------------------+----------------------------+
-            Row  < BeforeMessageState , EvtStartMap ,  ParsingMessageState  , StartMapAction            , none                       >
-
-    > {};
-
-    // fsm definition
-    struct player_tag {};
-    typedef msm::front::euml::func_state_machine<Decoding_tag,
-            // transition table
-            message_transition_table,
-            //Initial state
-            BeforeMessageState> MessageTransitionTable;
-
-    // Pick a back-end
-    using MessageParserStateMachine = msm::back::state_machine<MessageTransitionTable>;
-    using striboh::base::ReadBuffer;
-    using striboh::base::LogIface;
-
-    struct BaseEvt {
-        BaseEvt() = delete;
-        MessageParserStateMachine& m_parser;
-        BaseEvt(MessageParserStateMachine& p_parser): m_parser(p_parser) {}
-    };
-
-    template<typename T>
-    struct EvtVal : public BaseEvt {
-        T m_val;
-
-        EvtVal() = delete;
-
-        EvtVal(MessageParserStateMachine& p_log, T p_val) : BaseEvt(p_log), m_val(p_val){}
-
-    };
-
-    struct EvtNil : public BaseEvt {
-        EvtNil(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtStartMap  : public BaseEvt {
-        EvtStartMap(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtEndMap  : public BaseEvt {
-        EvtEndMap(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtStartArray  : public BaseEvt {
-        EvtStartArray(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtEndArray  : public BaseEvt {
-        EvtEndArray(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtEndArrayItem  : public BaseEvt {
-        EvtEndArrayItem(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtEndMapKey  : public BaseEvt {
-        EvtEndMapKey(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    struct EvtEndMapValue  : public BaseEvt {
-        EvtEndMapValue(MessageParserStateMachine& p_parser): BaseEvt(p_parser) {}
-    };
-
-    using EvtStringVal = EvtVal<std::string>;
-    using EvtBool = EvtVal<bool>;
-    using EvtInt64 = EvtVal<int64_t>;
-    using striboh::base::Message;
 
 
     struct MessageVisitor1 : msgpack::v2::null_visitor {
 
-        MessageParserStateMachine m_parser;
-        Message& m_msg;
+        using MessageParser = sml::sm
+                <
+                        MessageParserConfig,
+                        MessageParserContext,
+                        sml::logger<SmlLogger>
+                >;
 
-        MessageVisitor1(Message& p_msg, const ReadBuffer &pBuffer, LogIface &pLog): m_msg(p_msg), mLog(pLog), mBuffer(pBuffer) {
-            mLog.debug("Created MessageVisitor1 &m_parser=={}.", (void *) (&mLog));
+        MessageVisitor1(MessageParserContext &pContext, const ReadBuffer &pBuffer, LogIface &pLog)
+                : mLog(pLog), mLogger(pLog), mBuffer(pBuffer), mMessageParser{pContext, mLogger} {
+            mLog.debug("Created MessageVisitor1 &m_Log=={}.",(void*)(&mLog));
         }
 
         inline bool isInErrorState() {
-            return true;//m_parser;
+            using namespace sml;
+            return !mMessageParser.is("ErrorState"_s);
         }
 
         inline bool visit_nil() {
-            m_parser.process_event(EvtNil(m_parser));
+            mMessageParser.process_event(EvtNil());
             return isInErrorState();
         }
 
         inline bool visit_boolean(bool v) {
-            m_parser.process_event(EvtBool(m_parser,v));
+            mMessageParser.process_event(EvtBool(v));
             return isInErrorState();
         }
 
         inline bool visit_positive_integer(uint64_t v) {
-            m_parser.process_event(EvtInt64(m_parser,v));
+            mMessageParser.process_event(EvtInt64(v));
             return isInErrorState();
         }
 
         inline bool visit_negative_integer(int64_t v) {
-            m_parser.process_event(EvtInt64(m_parser,v));
+            mMessageParser.process_event(EvtInt64(v));
             return isInErrorState();
         }
 
         inline bool visit_str(const char *v, uint32_t pSize) {
-            m_parser.process_event(EvtStringVal(m_parser,std::string(v, pSize)));
+            mMessageParser.process_event(EvtStringVal(std::string(v, pSize)));
             return isInErrorState();
         }
 
         inline bool start_array(uint32_t pArraySize) {
-            mLog.debug("MessageVisitor1::start_array pArraySize=={}.", pArraySize);
-            m_parser.process_event(EvtStartArray(m_parser));
+            mLog.debug("MessageVisitor1::start_array pArraySize=={}.",pArraySize);
+            mMessageParser.process_event(EvtStartArray());
             return isInErrorState();
         }
 
         inline bool end_array_item() {
             mLog.debug("MessageVisitor1::end_array_item.");
-            m_parser.process_event(EvtEndArrayItem(m_parser));
+            mMessageParser.process_event(EvtEndArrayItem());
             return isInErrorState();
         }
 
         inline bool end_array() {
             mLog.debug("MessageVisitor1::end_array.");
-            m_parser.process_event(EvtEndArray(m_parser));
+            mMessageParser.process_event(EvtEndArray());
             return isInErrorState();
         }
 
         inline bool start_map(uint32_t pMapSize) {
-            mLog.debug("MessageVisitor1::start_map pMapSize=={}.", pMapSize);
-            m_parser.process_event(EvtStartMap(m_parser));
+            mLog.debug("MessageVisitor1::start_map pMapSize=={}.",pMapSize);
+            mMessageParser.process_event(EvtStartMap());
             return isInErrorState();
         }
 
         inline bool end_map_key() {
-            m_parser.process_event(EvtEndMapKey(m_parser));
+            mMessageParser.process_event(EvtEndMapKey());
             return isInErrorState();
         }
 
         inline bool end_map_value() {
-            m_parser.process_event(EvtEndMapValue(m_parser));
+            mMessageParser.process_event(EvtEndMapValue());
             return isInErrorState();
         }
 
         inline bool end_map() {
-            m_parser.process_event(EvtEndMap(m_parser));
+            mMessageParser.process_event(EvtEndMap());
             return isInErrorState();
         }
 
         void parse_error(size_t pParsedOffset, size_t pErrorOffset) {
-            throw new striboh::base::exceptions::InMessageParserError
+            throw new exceptions::InMessageParserError
                     (
                             "Parser error",
                             pErrorOffset,
@@ -760,7 +711,7 @@ namespace {
         }
 
         void insufficient_bytes(size_t pParsedOffset, size_t pErrorOffset) {
-            throw new striboh::base::exceptions::InMessageParserError
+            throw new exceptions::InMessageParserError
                     (
                             "Insufficient bytes",
                             pErrorOffset,
@@ -772,16 +723,14 @@ namespace {
     private:
 
         LogIface &mLog;
-        //-SmlLogger mLogger;
+        SmlLogger mLogger;
         const ReadBuffer &mBuffer;
-        //-MessageParser m_parser;
+        MessageParser mMessageParser;
     };
-}
 
-namespace striboh::base {
-
-bool Message::unpackFromBuffer(const ReadBuffer& myBuff) {
-        MessageVisitor1 myMessageVisitor(*this, myBuff, mLog);
+    bool Message::unpackFromBuffer(const ReadBuffer& myBuff) {
+        MessageParserContext myContext(*this);
+        MessageVisitor1 myMessageVisitor(myContext, myBuff, mLog);
         size_t myOffset = 0;
         bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(),
                                            myOffset, myMessageVisitor);
@@ -791,21 +740,21 @@ bool Message::unpackFromBuffer(const ReadBuffer& myBuff) {
     Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
             : mLog(pLog), mMethodName(pMethodName), mType(EMessageType::K_METHOD),
               mParameters(std::forward<Parameters>(pParameters)) {
-        mLog.debug("Message::Message(pMethodName=={}) &m_parser={}",pMethodName,(void*)(&mLog));
+        mLog.debug("Message::Message(pMethodName=={}) &m_Log={}",pMethodName,(void*)(&mLog));
     }
 
     Message::Message(const Message& pInReplyTo, Value &&pReturn, LogIface &pLog)
             : mLog(pLog), mMethodName(pInReplyTo.getMethodName()), mType(EMessageType::K_RETURN), mReturn(std::forward<Value>(pReturn)) {
-        mLog.debug("Message::Message(Return) &m_parser={}",(void*)(&mLog));
+        mLog.debug("Message::Message(Return) &m_Log={}",(void*)(&mLog));
     }
 
     Message::Message(LogIface &pLog) :  mLog(pLog), mType(EMessageType::K_UNKNOWN) {
-        mLog.debug("Message::Message(Unknown) &m_parser={}",(void*)(&mLog));
+        mLog.debug("Message::Message(Unknown) &m_Log={}",(void*)(&mLog));
     }
 
     Message::Message(const ReadBuffer &pBuffer, LogIface &pIface): mLog(pIface) {
         unpackFromBuffer(pBuffer);
-        mLog.debug("Message::Message(Upacked) &m_parser={}",(void*)(&mLog));
+        mLog.debug("Message::Message(Upacked) &m_Log={}",(void*)(&mLog));
     }
 
 
