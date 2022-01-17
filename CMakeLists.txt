@@ -5,13 +5,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(MSGPACK_CXX17 ON)
 if (MSVC)
     # warning level 4 and all warnings as errors
-    add_compile_options(/bigobj -D_WIN32_WINNT=0x0A00 /W3)
+    add_compile_options(/bigobj -D_WIN32_WINNT=0x0A00 /W3 /D_HAS_DEPRECATED_ALLOCATOR_MEMBERS=1)
 else()
     # lots of warnings and all warnings as errors
     add_compile_options(-std=c++2a -fPIC -Wall -Wextra -pedantic)
 endif()
 
 enable_testing()
+
+find_package(Threads)
 
 find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter Development)
 
