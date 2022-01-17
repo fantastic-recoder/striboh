@@ -379,7 +379,17 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <variant>
 #include <string_view>
-#include <boost/sml.hpp>
+
+/*
+template <class T, T... Chrs>
+constexpr auto operator""_s() {
+    return sml::front::state<sml::aux::string<T, Chrs...>>{};
+}
+template <class T, T... Chrs>
+constexpr auto operator""_e() {
+    return sml::event<sml::aux::string<T, Chrs...>>;
+}
+*/
 
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseMessage.hpp"
@@ -413,11 +423,9 @@ namespace msgpack {
 
 namespace striboh::base {
 
-    namespace sml = boost::sml;
-
     struct SmlLogger {
 
-    SmlLogger(LogIface &pLog) : mLog(pLog) {}
+        SmlLogger(LogIface &pLog) : mLog(pLog) {}
 
         template<class SM, class TEvent>
         void log_process_event(const TEvent &) {
@@ -482,7 +490,6 @@ namespace striboh::base {
     using EvtStringVal = EvtVal<std::string>;
     using EvtBool = EvtVal<bool>;
     using EvtInt64 = EvtVal<int64_t>;
-    using striboh::base::Message;
 
     struct MessageParserContext {
         Message &mMessage;
@@ -503,23 +510,23 @@ namespace striboh::base {
         pContext.mMessage.setType(EMessageType(pEvent.mVal));
     };
 
-    constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+    constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
         return pEvt.mVal == Message::K_PARAMETERS_KEY;
     };
 
-    constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+    constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
         return pEvt.mVal == Message::K_METHOD_NAME_KEY;
     };
 
-    constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+    constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
         return pEvt.mVal == Message::K_RETURN_KEY;
     };
 
-    constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+    constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
         return pEvt.mVal == Message::K_INSTANCE_ID_KEY;
     };
 
-    constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+    constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &pContext) -> bool {
         return pEvt.mVal == Message::K_MESSAGE_TYPE_KEY;
     };
 
@@ -551,7 +558,7 @@ namespace striboh::base {
             template<typename TEvent>
             void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
                 pContext.mMessage.getParameters().emplace_back(Parameter(pContext.mKey, pEvent.mVal));
-            }
+            };
 
         };
 
@@ -559,7 +566,7 @@ namespace striboh::base {
             template<typename TEvent>
             void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
                 pContext.mMessage.setReturn(Value(pEvent.mVal));
-            }
+            };
         };
 
         auto operator()() const {
@@ -614,8 +621,7 @@ namespace striboh::base {
                 >;
 
         MessageVisitor1(MessageParserContext &pContext, const ReadBuffer &pBuffer, LogIface &pLog)
-                : mLog(pLog), mLogger(pLog), mBuffer(pBuffer), mMessageParser{pContext, mLogger} {
-            mLog.debug("Created MessageVisitor1 &m_Log=={}.",(void*)(&mLog));
+                : mLog(pLog), mLogger(mLog), mBuffer(pBuffer), mMessageParser{pContext, mLogger} {
         }
 
         inline bool isInErrorState() {
@@ -648,7 +654,7 @@ namespace striboh::base {
             return isInErrorState();
         }
 
-        inline bool start_array(uint32_t /*pArraySize*/) {
+        inline bool start_array(uint32_t pArraySize) {
             mMessageParser.process_event(EvtStartArray());
             return isInErrorState();
         }
@@ -664,7 +670,6 @@ namespace striboh::base {
         }
 
         inline bool start_map(uint32_t pMapSize) {
-            mLog.debug("MessageVisitor1::start_map pMapSize=={}.",pMapSize);
             mMessageParser.process_event(EvtStartMap());
             return isInErrorState();
         }
@@ -708,11 +713,11 @@ namespace striboh::base {
 
         LogIface &mLog;
         SmlLogger mLogger;
-        const ReadBuffer &mBuffer;
         MessageParser mMessageParser;
+        const ReadBuffer &mBuffer;
     };
 
-    bool Message::unpackFromBuffer(const ReadBuffer& myBuff) {
+    bool Message::unpackFromBuffer(ReadBuffer&& myBuff) {
         MessageParserContext myContext(*this);
         MessageVisitor1 myMessageVisitor(myContext, myBuff, mLog);
         size_t myOffset = 0;
@@ -722,23 +727,15 @@ namespace striboh::base {
     }
 
     Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
-            : mLog(pLog), mMethodName(pMethodName), mType(EMessageType::K_METHOD),
-              mParameters(std::forward<Parameters>(pParameters)) {
-        mLog.debug("Message::Message(pMethodName=={}) &m_Log={}",pMethodName,(void*)(&mLog));
+            : mMethodName(pMethodName), mParameters(std::forward<Parameters>(pParameters)),
+              mType(EMessageType::K_METHOD), mLog(pLog) {
     }
 
     Message::Message(Value &&pReturn, LogIface &pLog)
-            :  mLog(pLog), mType(EMessageType::K_RETURN), mReturn(std::forward<Value>(pReturn)) {
-        mLog.debug("Message::Message(Return) &m_Log={}",(void*)(&mLog));
+            : mReturn(std::forward<Value>(pReturn)), mType(EMessageType::K_RETURN), mLog(pLog) {
     }
 
-    Message::Message(LogIface &pLog) :  mLog(pLog), mType(EMessageType::K_UNKNOWN) {
-        mLog.debug("Message::Message(Unknown) &m_Log={}",(void*)(&mLog));
-    }
-
-    Message::Message(const ReadBuffer &pBuffer, LogIface &pIface): mLog(pIface) {
-        unpackFromBuffer(pBuffer);
-        mLog.debug("Message::Message(Upacked) &m_Log={}",(void*)(&mLog));
+    Message::Message(LogIface &pLog) : mLog(pLog), mType(EMessageType::K_UNKNOWN) {
     }
 
 
@@ -801,6 +798,10 @@ namespace striboh::base {
         Buffer myBuffer;
         packToBuffer(myBuffer);
         return jsonToStr(toJson(ReadBuffer(myBuffer)));
+    }
+
+    Message::Message(ReadBuffer &&pBuffer, LogIface &pIface): mLog(pIface) {
+        unpackFromBuffer(std::forward<ReadBuffer>(pBuffer));
     }
 
 } // end namespace striboh::base
