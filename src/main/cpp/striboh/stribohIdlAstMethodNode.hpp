@@ -392,7 +392,7 @@ namespace striboh {
 
                 const std::string& getMethodName() const;
 
-                EBuildinTypes getMethodReturnType() const;
+                EBuildInTypes getMethodReturnType() const;
 
                 MethodNode& operator+=(const std::vector<TypedIdentifierNode>& pParameterList);
 

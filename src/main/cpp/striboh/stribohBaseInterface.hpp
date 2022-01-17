@@ -386,6 +386,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <NamedType/named_type.hpp>
 
+#include "striboh/stribohBase.hpp"
+#include "striboh/stribohBaseBrokerIface.hpp"
+
 namespace striboh::base {
 
     class Broker;
@@ -396,8 +399,6 @@ namespace striboh::base {
 
     class Method;
 
-    using InterfaceName = fluent::NamedType<std::string, struct InterfaceNameTag>;
-
     inline bool operator<(const InterfaceName &pLeft, const InterfaceName &pRight) {
         return pLeft.get() < pRight.get();
     }
@@ -405,12 +406,11 @@ namespace striboh::base {
     class Interface {
     public:
         typedef std::vector<Method> Methods_t;
-        typedef std::vector<std::string> Path_t;
 
         explicit Interface
                 (
                         ServantBase& pObject,
-                        std::initializer_list<std::string> pPath,
+                        std::initializer_list<ModuleName> pPath,
                         InterfaceName pName,
                         std::initializer_list<Method>
                 );
@@ -419,27 +419,32 @@ namespace striboh::base {
 
         Methods_t::iterator end();
 
-        const Path_t &getPath() const;
+        const Path &getPath() const;
 
         bool isLocal() const {
             return true;
         }
 
         const InterfaceName &getName() const {
-            return mName;
+            return m_Name;
         }
 
 
         ServantBase &getObject();
 
+        constexpr const Methods_t & getMehtods() const {
+            return m_Methods;
+        }
     private:
-        ServantBase& mObject;
-        Path_t mPath;
-        InterfaceName mName;
-        Methods_t mMethods;
+        ServantBase& /*--*/ m_Object;
+        Path  /*---------*/ m_Path;
+        InterfaceName /*-*/ m_Name;
+        Methods_t /*-----*/ m_Methods;
     };
 
     static const constexpr char *const K_TAG_SVC = "svc";
+
+    static const constexpr char *const K_TAG_API = "api";
 
     static const constexpr char *const K_TAG_SVC_PATH = "path";
 

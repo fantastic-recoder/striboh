@@ -392,7 +392,7 @@ namespace striboh {
                 }
                 return (*this)[0].getName();
             }
-            EBuildinTypes MethodNode::getMethodReturnType() const {
+            EBuildInTypes MethodNode::getMethodReturnType() const {
                 if (empty()) {
                     throw runtime_error("Empty method.");
                 }

@@ -434,7 +434,7 @@ namespace striboh::base {
         resolveService(std::string_view pPath) const override;
 
         std::string
-        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const override;
+        resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) const override;
 
         static Path split(std::string_view pPathStr, std::string_view pSeparator);
 
@@ -448,7 +448,7 @@ namespace striboh::base {
         void serve();
 
 
-        const std::chrono::milliseconds &getDispatchSleep() const {
+        constexpr const std::chrono::milliseconds &getDispatchSleep() const {
             return m_DispatchSleep;
         }
 
@@ -470,6 +470,10 @@ namespace striboh::base {
 
         static void setTraceInterval(const std::chrono::duration<float> &pTheirTraceInterval) {
             theirTraceInterval = pTheirTraceInterval;
+        }
+
+        const Interface& getInterface(const InstanceId& pInstanceId ) const override {
+            return m_Instances.find(pInstanceId)->second;
         }
 
     private:
@@ -495,7 +499,7 @@ namespace striboh::base {
 
         idl::ast::ModuleBodyNode *addServantModule(ModuleListNode *myChildNodes, std::string &mDir) const;
 
-        static ResolvedService resolveService(PathSegment pInterfaceName, const idl::ast::ModuleNode &pNode);
+        static ResolvedService resolveService(ModuleName pInterfaceName, const idl::ast::ModuleNode &pNode);
 
         void doShutdown();
 

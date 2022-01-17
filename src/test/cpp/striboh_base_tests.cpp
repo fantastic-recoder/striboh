@@ -473,13 +473,12 @@ TEST(stribohBaseTests, testStribohBrokerShutdown) {
 }
 
 TEST(stribohBaseTests, testMethodParametersConstructor) {
-    constexpr const char *const K_METHOD_NAME = "testMethod";
     const std::string myVal0("Test 0.");
-    Message myList(K_METHOD_NAME, {{"p0", myVal0},
+    Message myList(K_TEST_MTHD_NM, {{"p0", myVal0},
                                    {"p1", 42L}}, getLog());
     ASSERT_EQ(myVal0, myList.getParameters()[0].getValue().get<std::string>());
     ASSERT_EQ(42L, myList.getParameters()[1].getValue().get<int64_t>());
-    ASSERT_EQ(K_METHOD_NAME, myList.getMethodName());
+    ASSERT_EQ(K_TEST_MTHD_NM, myList.getMethodName());
 }
 
 TEST(stribohBaseTests, testSplit) {
@@ -529,14 +528,14 @@ TEST(stribohBaseTests, testUuidGeneration) {
 Interface createTestInterface() {
     return Interface{
             theEchoServant,
-            {"m0", "m1"}, InterfaceName("Hello"),
+            {ModuleName{"m0"}, ModuleName{"m1"}}, InterfaceName("Hello"),
             {
                     Method{"echo",
                            ParameterDescriptionList{
                                    {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
                            },
                            [](const Message &pIncoming, Context /*pCtx*/) -> Message {
-                               Message myReturn(Value{std::string("Server greats ")
+                               Message myReturn(pIncoming, Value{std::string("Server greats ")
                                                       + pIncoming.getParameters()[0].getValue().get<std::string>()},
                                                 getLog()
                                );
@@ -559,28 +558,28 @@ TEST(stribohBaseTests, testResolve) {
     InstanceId myUuid = aBroker.addServant(myInterface);
     {
         ResolvedResult myResolved0 = aBroker.resolve("/not-existent");
-        EXPECT_EQ(EResolveResult::NOT_FOUND, myResolved0.mResult);
+        EXPECT_EQ(EResolveResult::NOT_FOUND, myResolved0.m_Result);
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/");
-        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        ASSERT_EQ(1UL, myResolved0.mModules.size());
-        auto myModulesIt = myResolved0.mModules.begin();
+        ASSERT_EQ(EResolveResult::OK, myResolved0.m_Result);
+        ASSERT_EQ(1UL, myResolved0.m_Modules.size());
+        auto myModulesIt = myResolved0.m_Modules.begin();
         EXPECT_EQ(string("m0"), myModulesIt->get());
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/m0");
-        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        ASSERT_EQ(1UL, myResolved0.mModules.size());
-        auto myModulesIt = myResolved0.mModules.begin();
+        ASSERT_EQ(EResolveResult::OK, myResolved0.m_Result);
+        ASSERT_EQ(1UL, myResolved0.m_Modules.size());
+        auto myModulesIt = myResolved0.m_Modules.begin();
         EXPECT_EQ(string("m1"), myModulesIt->get());
     }
     {
         ResolvedResult myResolved0 = aBroker.resolve("/m0/m1");
-        ASSERT_EQ(EResolveResult::OK, myResolved0.mResult);
-        EXPECT_EQ(0UL, myResolved0.mModules.size());
-        ASSERT_EQ(1UL, myResolved0.mInterfaces.size());
-        auto myInterfaceIt = myResolved0.mInterfaces.begin();
+        ASSERT_EQ(EResolveResult::OK, myResolved0.m_Result);
+        EXPECT_EQ(0UL, myResolved0.m_Modules.size());
+        ASSERT_EQ(1UL, myResolved0.m_Interfaces.size());
+        auto myInterfaceIt = myResolved0.m_Interfaces.begin();
         EXPECT_EQ(string("Hello"), myInterfaceIt->get());
     }
     {
@@ -595,7 +594,7 @@ TEST(stribohBaseTests, testResolveServiceToStr) {
     Broker aBroker("http://0.0.0.0:10000",theLog);
     InstanceId myUuid = aBroker.addServant(myInterface);
     auto aSvc = aBroker.resolveService(theM0M1Path);
-    string myResolved = aBroker.resolvedServiceToStr(theM0M1Path, aSvc);
+    string myResolved = aBroker.resolvedServiceIdToJsonStr(theM0M1Path, aSvc);
     EXPECT_FALSE(myResolved.empty());
     BOOST_LOG_TRIVIAL(debug) << myResolved;
     auto aJson = json::parse(myResolved);
@@ -610,7 +609,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
 
     Interface myInterface{
             theEchoServant,
-            {"m0"}, InterfaceName{"Hello"},
+            {ModuleName{"m0"}}, InterfaceName{"Hello"},
             {
                     Method{"echo",
                            ParameterDescriptionList{
@@ -619,7 +618,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
                            [](const Message &pIncoming, Context /*pCtx*/) -> Message {
                                BOOST_LOG_TRIVIAL(debug) << "Received: " << pIncoming.asJsonString();
                                string p0(pIncoming.getParameters()[0].get<std::string>());
-                               Message myRetVal(Value{"Server greats " + p0}, getLog());
+                               Message myRetVal(pIncoming,Value{"Server greats " + p0}, getLog());
                                BOOST_LOG_TRIVIAL(debug) << "Returning: " << myRetVal.asJsonString();
                                return myRetVal;
                            },
@@ -628,7 +627,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
             }
     };
     InstanceId myUuid = aBroker.addServant(myInterface);
-    Message myMsg("echo", {{"p0", "Peter!"}}, getLog());
+    Message myMsg(std::string_view("echo"), {{"p0", "Peter!"}}, getLog());
     BOOST_LOG_TRIVIAL(debug) << "Invoking: " << myMsg.asJsonString();
     myMsg.setInstanceId(myUuid);
     Message myReply = aBroker.invokeMethod(std::forward<Message>(myMsg));
@@ -641,7 +640,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
 static constexpr const char *const K_TEST_METHOD_NAME2 = "abracadabra";
 
 TEST(stribohBaseTests, testSerailization) {
-    Message myInputValues("testMethod",
+    Message myInputValues(K_TEST_MTHD_NM,
                           {{"p0", "Echo string."},
                            {"p1", 42L},
                            {"p2", "end."},
@@ -659,7 +658,7 @@ TEST(stribohBaseTests, testSerailization) {
     EXPECT_EQ(42L, myOutputValues.getParameters()[1].getValue().get<int64_t>());
     EXPECT_EQ("end.", myOutputValues.getParameters()[2].get<string>());
     EXPECT_EQ(13L, myOutputValues.getParameters()[3].getValue().get<int64_t>());
-    EXPECT_EQ("testMethod", myOutputValues.getMethodName());
+    EXPECT_EQ(K_TEST_MTHD_NM, myOutputValues.getMethodName());
     EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
     myOutputValues.setMethodName(K_TEST_METHOD_NAME2);
     EXPECT_EQ(K_TEST_METHOD_NAME2, myOutputValues.getMethodName());
@@ -667,10 +666,11 @@ TEST(stribohBaseTests, testSerailization) {
     EXPECT_EQ(EMessageType::K_RETURN, myOutputValues.getType());
     EXPECT_EQ(myIId, myOutputValues.getInstanceId());
     constexpr const char *K_HELLO_RETURNED = "Hallo returned!";
-    Message myReturnIn{Value{K_HELLO_RETURNED}, getLog()};
+    Message myReturnIn{myOutputValues,Value{K_HELLO_RETURNED}, getLog()};
     BOOST_LOG_TRIVIAL(debug) << myReturnIn.asJsonString();
     ASSERT_EQ(string(K_HELLO_RETURNED), myReturnIn.getReturn().get<std::string>());
     ASSERT_EQ(EMessageType::K_RETURN, myReturnIn.getType());
+    ASSERT_EQ(myOutputValues.getMethodName(), myReturnIn.getMethodName());
     Buffer myBuff1;
     myReturnIn.packToBuffer(myBuff);
     Message myReturnOut(ReadBuffer(myBuff), getLog());
@@ -685,7 +685,7 @@ static constexpr const char *const theTestEchoServerBinary = "./striboh_test_ech
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
 
-    HostConnection aClient(Address("http://localhost:10000"),theLog);
+    HostConnection aClient(Address("http://localhost:10000",theLog),theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
     EXPECT_TRUE(myProxy->isConnected());
     {
@@ -727,8 +727,13 @@ TEST(stribohBaseTests, testJson) {
 }
 
 TEST(stribohBaseTests, testGenerateAndParseReturn) {
-    static const string_view K_ALFONS("Alfons");
-    Message m0(Value(string(K_ALFONS)), theLog);
+    Message myInputValues(K_TEST_MTHD_NM,
+                          {{"p0", "Echo string."},
+                           {"p1", 42L},
+                           {"p2", "end."},
+                           {"p3", 13L}}, getLog());
+    static constexpr const string_view K_ALFONS("Alfons");
+    Message m0(myInputValues, Value(string(K_ALFONS)), theLog);
     InstanceId myUuid0 = Broker::generateInstanceId();
     m0.setInstanceId(myUuid0);
     Buffer myBuffer;
@@ -755,8 +760,8 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
     const Json myJson = Message::toJson(ReadBuffer(myBuffer));
     const string myJsonStr = Message::jsonToStr(myJson);
     theLog.debug("Generated: {}", myJsonStr);
-    EXPECT_EQ("Santa Maria", myJson[Message::K_PARAMETERS_KEY]["p2"].get<string>());
-    EXPECT_EQ(42L, myJson[Message::K_PARAMETERS_KEY]["p1"].get<int64_t>());
+    EXPECT_EQ("Santa Maria", myJson[Message::K_PARAMETERS_KEY][1]["p2"].get<string>());
+    EXPECT_EQ(42L, myJson[Message::K_PARAMETERS_KEY][0]["p1"].get<int64_t>());
     EXPECT_EQ("helloMethod", myJson[Message::K_METHOD_NAME_KEY]);
     EXPECT_EQ(int(EMessageType::K_METHOD), myJson[Message::K_MESSAGE_TYPE_KEY].get<int>());
     Message m1(theLog);
@@ -771,6 +776,36 @@ TEST(stribohBaseTests, testGenerateAndParseMethodMessage) {
 }
 
 TEST(stribohBaseTests, testHostConConstr) {
-    HostConnection aHostConnection(Address("http://0.0.0.0:123"),getLog());
+    HostConnection aHostConnection(Address("http://0.0.0.0:123",getLog()),getLog());
     EXPECT_EQ(string("123"),aHostConnection.getPortStr());
+}
+
+TEST(stribohBaseTests, testJsonArray) {
+    Json myRetVal =
+            {
+                {"interface",
+                 {
+                         {"name", "TestInterface"},
+                         {"methods", Json::array()}
+                 }}
+            };
+
+    myRetVal["interface"]["methods"].emplace_back( Json{{ "method",{ { "name", "echo" } }  }} );
+    myRetVal["interface"]["methods"].emplace_back( Json{{ "method",{ { "name", "add" } }  }} );
+    myRetVal["interface"]["methods"].emplace_back( Json{{ "method",{ { "name", "shutdown" } }  }} );
+    string myRetValStr(myRetVal.dump());
+    getLog().debug("<-- api request: {}", myRetValStr);
+    EXPECT_EQ(1UL,myRetVal.size());
+    EXPECT_EQ(3UL,myRetVal["interface"]["methods"].size());
+
+    getLog().debug("--> mod request");
+    myRetVal = {
+        {"Message", "Hello from striboh."},
+        {"modules", Json::array()}
+    };
+    myRetVal["modules"].push_back(string("ggggg"));
+    myRetVal["modules"].push_back(string("hhhh"));
+    myRetValStr=myRetVal.dump();
+    getLog().debug("<-- mod request: {}", myRetValStr);
+
 }

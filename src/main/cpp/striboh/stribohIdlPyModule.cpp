@@ -557,11 +557,12 @@ PYBIND11_MODULE(stribohIdl, pPyModule)
     pPyModule.def("setBackendVisitors",setBackendVisitors, "Set the visitors to be called upon backend code "
                                                            "generation.");
 
-    py::enum_<ast::EBuildinTypes>(pPyModule, "EBuildinTypes")
-            .value("INT",ast::EBuildinTypes::K_INT)
-            .value("STRING",ast::EBuildinTypes::K_STRING)
-            .value("K_VOID",ast::EBuildinTypes::K_VOID)
-            .value("NONE",ast::EBuildinTypes::K_NONE_TYPE)
+    py::enum_<ast::EBuildInTypes>(pPyModule, "EBuildInTypes")
+            .value("INT",ast::EBuildInTypes::K_INT)
+            .value("STRING",ast::EBuildInTypes::K_STRING)
+            .value("FLOAT",ast::EBuildInTypes::K_FLOAT)
+            .value("VOID",ast::EBuildInTypes::K_VOID)
+            .value("NONE",ast::EBuildInTypes::K_NONE_TYPE)
             ;
 
     py::class_<ast::TypedIdentifierNode>(pPyModule, "TypedIdentifierNode")

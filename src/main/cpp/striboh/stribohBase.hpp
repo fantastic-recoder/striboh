@@ -377,51 +377,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <string>
-#include <striboh/stribohBaseBroker.hpp>
-#include <striboh/stribohBaseBeastServer.hpp>
-#include <striboh/stribohBaseLogBoostImpl.hpp>
+#pragma once
 
-#include "Echo.hpp"
+namespace striboh::base {
 
+    using ModuleName /*---*/  = fluent::NamedType<std::string, struct PathSegmentTag>;
+    using Path /*----------*/ = fluent::NamedType<std::vector<ModuleName>, struct PathTag>;
+    using PathIterator /*--*/ = Path::UnderlyingType::iterator;
+    using InterfaceName /*-*/ = fluent::NamedType<std::string, struct InterfaceNameTag>;
 
-namespace {
-    static striboh::base::LogBoostImpl theLog;
-}
-namespace generated_echo_test {
-
-    using striboh::base::BrokerIface;
-
-    class EchoServant : public Echo {
-        BrokerIface& mBroker;
-    public:
-        EchoServant( BrokerIface& pBroker ): mBroker(pBroker) {}
-
-        virtual std::string echo(const std::string &pMsg) override {
-            theLog.info("*** Echoing {}.",pMsg);
-            return "Hello " + pMsg + "!";
-        }
-
-        virtual int64_t add(int64_t pA, int64_t pB) override {
-            theLog.info("*** Adding {} and {}.",pA,pB);
-            return pA + pB;
-        }
-
-        virtual int64_t shutdown() override {
-            theLog.info("shutdown()");
-            mBroker.shutdown();
-            return 0;
-        }
-    };
-}
-
-using generated_echo_test::EchoServant;
-
-int main() {
-    striboh::base::Broker aBroker("http://0.0.0.0:9998",theLog);
-    EchoServant myEchoServant(aBroker);
-    auto myUiid=aBroker.addServant(myEchoServant.getInterface());
-    aBroker.getLog().debug("EchoServant Uiid = {}.",to_string(myUiid));
-    aBroker.serve();
-    return 0;
 }

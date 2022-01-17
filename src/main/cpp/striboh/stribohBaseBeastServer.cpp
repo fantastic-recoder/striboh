@@ -391,12 +391,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/asio/strand.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/lexical_cast.hpp>
+#include <nlohmann/json.hpp>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
 #include "stribohBaseBrokerIface.hpp"
 #include "stribohBaseUtils.hpp"
 #include "stribohBaseEMessageType.hpp"
+#include "stribohBaseMethod.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -410,561 +412,621 @@ using std::pair;
 using std::string_view;
 using namespace std::chrono_literals;
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
 
-        static const char *const theAppJson = "application/json";
+    constexpr static const char *const theAppJson = "application/json";
 
-        //! Return a reasonable mime type based on the extension of a file.
-        beast::string_view
-        mime_type(beast::string_view path) {
-            using beast::iequals;
-            auto const ext = [&path] {
-                auto const pos = path.rfind(".");
-                if (pos == beast::string_view::npos)
-                    return beast::string_view{};
-                return path.substr(pos);
-            }();
-            if (iequals(ext, ".htm")) return "text/html";
-            if (iequals(ext, ".html")) return "text/html";
-            if (iequals(ext, ".php")) return "text/html";
-            if (iequals(ext, ".css")) return "text/css";
-            if (iequals(ext, ".txt")) return "text/plain";
-            if (iequals(ext, ".js")) return "application/javascript";
-            if (iequals(ext, ".json")) return theAppJson;
-            if (iequals(ext, ".xml")) return "application/xml";
-            if (iequals(ext, ".swf")) return "application/x-shockwave-flash";
-            if (iequals(ext, ".flv")) return "video/x-flv";
-            if (iequals(ext, ".png")) return "image/png";
-            if (iequals(ext, ".jpe")) return "image/jpeg";
-            if (iequals(ext, ".jpeg")) return "image/jpeg";
-            if (iequals(ext, ".jpg")) return "image/jpeg";
-            if (iequals(ext, ".gif")) return "image/gif";
-            if (iequals(ext, ".bmp")) return "image/bmp";
-            if (iequals(ext, ".ico")) return "image/vnd.microsoft.icon";
-            if (iequals(ext, ".tiff")) return "image/tiff";
-            if (iequals(ext, ".tif")) return "image/tiff";
-            if (iequals(ext, ".svg")) return "image/svg+xml";
-            if (iequals(ext, ".svgz")) return "image/svg+xml";
-            return "application/text";
+    string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog);
+
+    string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pIface);
+
+    string fullPath(const Address &pAddress, const Interface &pResolved);
+
+    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName);
+
+    //! Return a reasonable mime type based on the extension of a file.
+    beast::string_view
+    mime_type(beast::string_view path) {
+        using beast::iequals;
+        auto const ext = [&path] {
+            auto const pos = path.rfind(".");
+            if (pos == beast::string_view::npos)
+                return beast::string_view{};
+            return path.substr(pos);
+        }();
+        if (iequals(ext, ".htm")) return "text/html";
+        if (iequals(ext, ".html")) return "text/html";
+        if (iequals(ext, ".php")) return "text/html";
+        if (iequals(ext, ".css")) return "text/css";
+        if (iequals(ext, ".txt")) return "text/plain";
+        if (iequals(ext, ".js")) return "application/javascript";
+        if (iequals(ext, ".json")) return theAppJson;
+        if (iequals(ext, ".xml")) return "application/xml";
+        if (iequals(ext, ".swf")) return "application/x-shockwave-flash";
+        if (iequals(ext, ".flv")) return "video/x-flv";
+        if (iequals(ext, ".png")) return "image/png";
+        if (iequals(ext, ".jpe")) return "image/jpeg";
+        if (iequals(ext, ".jpeg")) return "image/jpeg";
+        if (iequals(ext, ".jpg")) return "image/jpeg";
+        if (iequals(ext, ".gif")) return "image/gif";
+        if (iequals(ext, ".bmp")) return "image/bmp";
+        if (iequals(ext, ".ico")) return "image/vnd.microsoft.icon";
+        if (iequals(ext, ".tiff")) return "image/tiff";
+        if (iequals(ext, ".tif")) return "image/tiff";
+        if (iequals(ext, ".svg")) return "image/svg+xml";
+        if (iequals(ext, ".svgz")) return "image/svg+xml";
+        return "application/text";
+    }
+
+    /**
+     *   This function produces an HTTP response for the given
+     *   request. The type of the response object depends on the
+     *   contents of the request, so the interface requires the
+     *   caller to pass a generic lambda for receiving the response.
+     */
+    template<
+            class Body, class Allocator,
+            class Send>
+    bool
+    handleOrUpgradeHttpRequest
+            (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, BrokerIface &pBroker,
+             std::shared_ptr<websocket::stream<beast::tcp_stream>> &pWebSocketPtr,
+             std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr) {
+        // Returns a bad request response (local lambdas, newest performance c++ woodoo)
+        auto const bad_request =
+                [&pRequest](beast::string_view why) {
+                    http::response<http::string_body> res{http::status::bad_request, pRequest.version()};
+                    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                    res.set(http::field::content_type, "text/html");
+                    res.keep_alive(pRequest.keep_alive());
+                    res.body() = std::string(why);
+                    res.prepare_payload();
+                    return res;
+                };
+
+        // Returns a not found response
+        auto const not_found =
+                [&pRequest](beast::string_view target) {
+                    http::response<http::string_body> res{http::status::not_found, pRequest.version()};
+                    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                    res.set(http::field::content_type, "text/html");
+                    res.keep_alive(pRequest.keep_alive());
+                    res.body() = "The resource '" + std::string(target) + "' was not found.";
+                    res.prepare_payload();
+                    return res;
+                };
+
+        // Returns a server error response
+        auto const server_error =
+                [&pRequest](beast::string_view what) {
+                    http::response<http::string_body> res{http::status::internal_server_error, pRequest.version()};
+                    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                    res.set(http::field::content_type, "text/html");
+                    res.keep_alive(pRequest.keep_alive());
+                    res.body() = "An error occurred: '" + std::string(what) + "'";
+                    res.prepare_payload();
+                    return res;
+                };
+
+        // Make sure we can handle the method
+        if (pRequest.method() != http::verb::get &&
+            pRequest.method() != http::verb::head)
+            return pSend(bad_request("Unknown HTTP-method"));
+
+        // Request path must be absolute and not contain "..".
+        /// TODO: set the correct reason here
+        if (pRequest.target().empty() ||
+            pRequest.target()[0] != '/' ||
+            pRequest.target().find("..") != beast::string_view::npos) {
+            const string myTarget(pRequest.target().data(), pRequest.target().size());
+            pBroker.getLog().debug("Received wrong target: \"{}\".",
+                                   myTarget);
+            return pSend(bad_request("Illegal/empty request-target: \"" + myTarget + "\""));
         }
 
-        string createResolvedModuleReply(const ResolvedResult &pResolved);
+        string myUrl(pRequest.target());
+        auto myParams = parseUrlParameters(myUrl);
 
-        /**
-         *   This function produces an HTTP response for the given
-         *   request. The type of the response object depends on the
-         *   contents of the request, so the interface requires the
-         *   caller to pass a generic lambda for receiving the response.
-         */
-        template<
-                class Body, class Allocator,
-                class Send>
-        bool
-        handleHttpRequest
-                (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, BrokerIface &pBroker,
-                 std::shared_ptr<websocket::stream<beast::tcp_stream>> &pWebSocketPtr,
-                 std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr) {
-            // Returns a bad request response
-            auto const bad_request =
-                    [&pRequest](beast::string_view why) {
-                        http::response<http::string_body> res{http::status::bad_request, pRequest.version()};
-                        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                        res.set(http::field::content_type, "text/html");
-                        res.keep_alive(pRequest.keep_alive());
-                        res.body() = std::string(why);
-                        res.prepare_payload();
-                        return res;
-                    };
+        std::string theResponse;
+        if (myParams.find("upgrade") != myParams.end() &&
+            boost::beast::websocket::is_upgrade(pRequest)) {
+            pWebSocketPtr
+                    .reset(new websocket::stream<beast::tcp_stream>{std::move(*pTcpSocketPtr)});
+            pWebSocketPtr->set_option(
+                    websocket::stream_base::timeout::suggested(
+                            beast::role_type::server));
 
-            // Returns a not found response
-            auto const not_found =
-                    [&pRequest](beast::string_view target) {
-                        http::response<http::string_body> res{http::status::not_found, pRequest.version()};
-                        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                        res.set(http::field::content_type, "text/html");
-                        res.keep_alive(pRequest.keep_alive());
-                        res.body() = "The resource '" + std::string(target) + "' was not found.";
-                        res.prepare_payload();
-                        return res;
-                    };
-
-            // Returns a server error response
-            /* not yet used
-            auto const server_error =
-                    [&pRequest](beast::string_view what) {
-                        http::response<http::string_body> res{http::status::internal_server_error, pRequest.version()};
-                        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                        res.set(http::field::content_type, "text/html");
-                        res.keep_alive(pRequest.keep_alive());
-                        res.body() = "An error occurred: '" + std::string(what) + "'";
-                        res.prepare_payload();
-                        return res;
-                    };
-*/
-            // Make sure we can handle the method
-            if (pRequest.method() != http::verb::get &&
-                pRequest.method() != http::verb::head)
-                return pSend(bad_request("Unknown HTTP-method"));
-
-            // Request path must be absolute and not contain "..".
-            /// TODO: set the correct reason here
-            if (pRequest.target().empty() ||
-                pRequest.target()[0] != '/' ||
-                pRequest.target().find("..") != beast::string_view::npos) {
-                const string myTarget(pRequest.target().data(),pRequest.target().size());
-                pBroker.getLog().debug("Received wrong target: \"{}\".",
-                                       myTarget);
-                return pSend(bad_request("Illegal/empty request-target: \""+myTarget+"\""));
-            }
-
-            string myUrl(pRequest.target());
-            auto myParams = parseUrlParameters(myUrl);
-
-            std::string theResponse;
-            if (myParams.find("svc") != myParams.end()) {
-                pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
-                theResponse = pBroker.resolvedServiceToStr(myParams[K_BASE_URL][0], aSvc);
-            } else if (myParams.find("upgrade") != myParams.end() &&
-                       boost::beast::websocket::is_upgrade(pRequest)) {
-                pWebSocketPtr
-                        .reset(new websocket::stream<beast::tcp_stream>{std::move(*pTcpSocketPtr)});
-                pWebSocketPtr->set_option(
-                        websocket::stream_base::timeout::suggested(
-                                beast::role_type::server));
-
-                // Set a decorator to change the Server of the handshake
-                pWebSocketPtr->set_option(websocket::stream_base::decorator(
-                        [](websocket::response_type &res) {
-                            res.set(http::field::server,
-                                    std::string(BOOST_BEAST_VERSION_STRING) +
-                                    " stribohBeastServer");
-                        }));
-                pWebSocketPtr->binary(true);
-                pWebSocketPtr->accept(pRequest);
-                return true;
+            // Set a decorator to change the Server of the handshake
+            pWebSocketPtr->set_option(websocket::stream_base::decorator(
+                    [](websocket::response_type &res) {
+                        res.set(http::field::server,
+                                std::string(BOOST_BEAST_VERSION_STRING) +
+                                " stribohBeastServer");
+                    }));
+            pWebSocketPtr->binary(true);
+            pWebSocketPtr->accept(pRequest);
+            return true;
+        } else if (myParams.find(K_TAG_SVC) != myParams.end()) {
+            pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
+            theResponse = pBroker.resolvedServiceIdToJsonStr(myParams[K_BASE_URL][0], aSvc);
+        } else if (myParams.find(K_TAG_API) != myParams.end()) {
+            pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
+            if (aSvc.first) {
+                theResponse = serviceToJsonStr(pBroker.getAddress(), pBroker.getInterface(aSvc.second),
+                                               pBroker.getLog());
             } else {
-                auto myResolved = pBroker.resolve(std::string(pRequest.target()));
-                if (myResolved.mResult == EResolveResult::NOT_FOUND) {
-                    return pSend(not_found(pRequest.target()));
-                }
-                // found
-                theResponse = createResolvedModuleReply(myResolved);
+                return pSend(server_error(("Failed to find service '" + myParams[K_BASE_URL][0]) + "'."));
             }
-            if (theResponse.empty()) {
-                // on root send hello
-                static std::string_view theResponse20(R"res(
+        } else {
+            auto myResolved = pBroker.resolve(std::string(pRequest.target()));
+            if (myResolved.m_Result == EResolveResult::NOT_FOUND) {
+                return pSend(not_found(pRequest.target()));
+            }
+            // found
+            theResponse = createResolvedModuleReply(myResolved, pBroker.getLog());
+        }
+        if (theResponse.empty()) {
+            // on root send hello
+            static std::string_view theResponse20(R"res(
                 { "Message" : "Hello from striboh." }
                 )res");
-                theResponse = theResponse20;
-            }
-            // Respond to HEAD request
-            if (pRequest.method() == http::verb::head) {
-                http::response<http::empty_body> res{http::status::ok, pRequest.version()};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, theAppJson);
-                res.content_length(theResponse.length());
-                res.keep_alive(pRequest.keep_alive());
-                return pSend(std::move(res));
-            }
-            // Respond to GET request
-            http::response<http::string_body> res{
-                    std::piecewise_construct,
-                    std::make_tuple(theResponse),
-                    std::make_tuple(http::status::ok, pRequest.version())};
+            theResponse = theResponse20;
+        }
+        // Respond to HEAD request
+        if (pRequest.method() == http::verb::head) {
+            http::response<http::empty_body> res{http::status::ok, pRequest.version()};
             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
             res.set(http::field::content_type, theAppJson);
-            res.set(http::field::content_encoding, "UTF-8");
-            res.set(http::field::access_control_allow_origin, "*");
             res.content_length(theResponse.length());
             res.keep_alive(pRequest.keep_alive());
             return pSend(std::move(res));
         }
+        // Respond to GET request
+        http::response<http::string_body> res{
+                std::piecewise_construct,
+                std::make_tuple(theResponse),
+                std::make_tuple(http::status::ok, pRequest.version())};
+        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(http::field::content_type, theAppJson);
+        res.set(http::field::content_encoding, "UTF-8");
+        res.set(http::field::access_control_allow_origin, "*");
+        res.content_length(theResponse.length());
+        res.keep_alive(pRequest.keep_alive());
+        return pSend(std::move(res));
+    }
 
-        string createResolvedModuleReply(const ResolvedResult &pResolved) {
-            string myReply;
-            if (pResolved.mResult == EResolveResult::OK) {
-                static std::string_view theResponse00(R"res(
-                { "Message" : "Hello from striboh.", "modules" : [
-                )res");
-                static std::string_view theResponse10(R"res(
-                ]}
-                )res");
-                std::ostringstream myOstream;
-                myOstream << theResponse00;
-                bool start = true;
-                for (auto mySegment: pResolved.mModules) {
-                    if (start) {
-                        start = false;
-                    } else {
-                        myOstream << ", ";
-                    }
-                    myOstream << "\"" << mySegment.get() << "\"";
-                }
-                myOstream << theResponse10 << std::endl;
-                myReply = myOstream.str();
-            }
-            return myReply;
-        }
-
-        /**
-         * Report a failure
-         */
-        void
-        fail(beast::error_code ec, char const *what) {
-            std::cerr << what << ": " << ec.message() << "\n";
-        }
-
-        /**
-         * Echoes back all received WebSocket messages
-         */
-        class WebSession : public std::enable_shared_from_this<WebSession> {
-            // This is the C++11 equivalent of a generic lambda.
-            // The function object is used to send an HTTP message.
-            struct HttpSendLambda {
-                WebSession &self_;
-
-                explicit
-                HttpSendLambda(WebSession &self)
-                        : self_(self) {
-                }
-
-                template<bool isRequest, class Body, class Fields>
-                bool
-                operator()(http::message<isRequest, Body, Fields> &&msg) const {
-                    // The lifetime of the message has to extend
-                    // for the duration of the async operation so
-                    // we use a shared_ptr to manage it.
-                    auto sp = std::make_shared<
-                            http::message<isRequest, Body, Fields>>(std::move(msg));
-
-                    // Store a type-erased version of the shared
-                    // pointer in the class to keep it alive.
-                    self_.mRes = sp;
-
-                    // Write the response
-                    http::async_write(
-                            *self_.mTcpStream,
-                            *sp,
-                            beast::bind_front_handler(
-                                    &WebSession::onHttpWrite,
-                                    self_.shared_from_this(),
-                                    sp->need_eof()));
-                    return false;
-                }
+    string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog) {
+        pLog.debug("--> module request");
+        string myReply;
+        if (p_Resolved.m_Result == EResolveResult::OK) {
+            Json myRetVal{
+                    {"Message",    "Hello from striboh."},
+                    {"modules",    Json::array()},
+                    {"interfaces", Json::array()}
             };
+            for (auto myModuleName: p_Resolved.m_Modules) {
+                Path myPath;
+                myPath.get().emplace_back(myModuleName);
+                myRetVal["modules"].emplace_back(fullPath(p_Resolved.m_Address, myPath, InterfaceName("")));
+            }
+            for (auto myInterface: p_Resolved.m_Interfaces) {
+                myRetVal["interfaces"].emplace_back(fullPath(p_Resolved.m_Address, p_Resolved.m_Path, myInterface)+"?api");
+            }
+            myReply = myRetVal.dump();
+        }
+        pLog.debug("<-- module request");
+        return myReply;
+    }
 
-            Buffer mReadBuffer;
-            Buffer mWriteBuffer;
-            std::shared_ptr<beast::tcp_stream> mTcpStream;
-            std::shared_ptr<websocket::stream<beast::tcp_stream>> mWebSocketStream;
-            http::request<http::string_body> mRequest;
-            HttpSendLambda mLambda;
-            BrokerIface &mBroker;
-            std::shared_ptr<void> mRes;
-            LogIface &mLog;
-        public:
-            // Take ownership of the socket
+    /**
+       * Describe the passed interface in Json.
+       * @param pAddress Host address.
+       * @param pAnInterface To be described.
+       * @param pLog the logger.
+       * @return the interface as Json string.
+       */
+    string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pLog) {
+        pLog.debug("--> api request");
+        string myPathToId = fullPath(pAddress, pAnInterface) + "?svc";
+        Json myRetVal =
+                {
+                        {
+                                "interface",
+                                {
+                                        {"name", pAnInterface.getName().get()},
+                                        {"id", myPathToId },
+                                        {"methods", Json::array()}
+                                }
+                        }
+                };
+        auto myMethodList(pAnInterface.getMehtods());
+        for (auto &myMethod: myMethodList) {
+            myRetVal["interface"]["methods"].push_back({{"name", myMethod.getName()}});
+            pLog.debug("    method: {}", myMethod.getName());
+        }
+        string myRetValStr(myRetVal.dump());
+        pLog.debug("<-- api request: {}", myRetValStr);
+        return myRetValStr;
+    }
+
+    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName) {
+        string myPath(pAddress.str());
+        std::for_each(p_Path.get().begin(), p_Path.get().end(), [&myPath](const ModuleName &p0) -> void {
+                                     myPath += ('/' + p0.get());
+                                 });
+        myPath += ('/' + p_InterfaceName.get());
+        return myPath;
+    }
+
+    string fullPath(const Address &pAddress, const Interface &pResolved) {
+        string myPath(fullPath(pAddress,pResolved.getPath(),pResolved.getName()));
+        return myPath;
+    }
+
+    /**
+     * Report a failure
+     */
+    void
+    fail(beast::error_code ec, char const *what, LogIface &pLogger) {
+        pLogger.error("{}:{}", what, ec.message());
+    }
+
+    /**
+     * Echoes back all received WebSocket messages
+     */
+    class WebSession : public std::enable_shared_from_this<WebSession> {
+        // This is the C++11 equivalent of a generic lambda.
+        // The function object is used to send an HTTP message.
+        struct HttpSendLambda {
+            WebSession &self_;
+
             explicit
-            WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface &pLog)
-                    : mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
-                      mLambda(*this),
-                      mBroker(pBroker),
-                      mLog(pLog) {}
-
-            // Get on the correct executor
-            void
-            run() {
-                // We need to be executing within a strand to perform async operations
-                // on the I/O objects in this session. Although not strictly necessary
-                // for single-threaded contexts, this example code is written to be
-                // thread-safe by default.
-                net::dispatch(mTcpStream->get_executor(),
-                              beast::bind_front_handler(
-                                      &WebSession::doHttpRead,
-                                      shared_from_this()));
+            HttpSendLambda(WebSession &self)
+                    : self_(self) {
             }
 
-            void
-            doHttpRead() {
-                // Make the request empty before reading,
-                // otherwise the operation behavior is undefined.
-                mRequest = {};
-                // Set the timeout.
-                mTcpStream->expires_after(std::chrono::seconds(30));
-                // Read a request
-                http::async_read(*mTcpStream, mReadBuffer, mRequest,
-                                 beast::bind_front_handler(
-                                         &WebSession::onHttpRead,
-                                         shared_from_this()));
+            template<bool isRequest, class Body, class Fields>
+            bool
+            operator()(http::message<isRequest, Body, Fields> &&msg) const {
+                // The lifetime of the message has to extend
+                // for the duration of the async operation so
+                // we use a shared_ptr to manage it.
+                auto sp = std::make_shared<
+                        http::message<isRequest, Body, Fields>>(std::move(msg));
+
+                // Store a type-erased version of the shared
+                // pointer in the class to keep it alive.
+                self_.mRes = sp;
+
+                // Write the response
+                http::async_write(
+                        *self_.mTcpStream,
+                        *sp,
+                        beast::bind_front_handler(
+                                &WebSession::onHttpWrite,
+                                self_.shared_from_this(),
+                                sp->need_eof()));
+                return false;
             }
+        };
 
-            void
-            onHttpRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
-                boost::ignore_unused(pBytesTransferred);
+        Buffer mReadBuffer;
+        Buffer mWriteBuffer;
+        std::shared_ptr<beast::tcp_stream> mTcpStream;
+        std::shared_ptr<websocket::stream<beast::tcp_stream>> mWebSocketStream;
+        http::request<http::string_body> mRequest;
+        HttpSendLambda mLambda;
+        BrokerIface &mBroker;
+        std::shared_ptr<void> mRes;
+        LogIface &mLog;
+    public:
+        // Take ownership of the socket
+        explicit
+        WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface &pLog)
+                : mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
+                  mLambda(*this),
+                  mBroker(pBroker),
+                  mLog(pLog) {}
 
+        // Get on the correct executor
+        void
+        run() {
+            // We need to be executing within a strand to perform async operations
+            // on the I/O objects in this session. Although not strictly necessary
+            // for single-threaded contexts, this example code is written to be
+            // thread-safe by default.
+            net::dispatch(mTcpStream->get_executor(),
+                          beast::bind_front_handler(
+                                  &WebSession::doHttpRead,
+                                  shared_from_this()));
+        }
+
+        void
+        doHttpRead() {
+            // Make the request empty before reading,
+            // otherwise the operation behavior is undefined.
+            mRequest = {};
+            // Set the timeout.
+            mTcpStream->expires_after(std::chrono::seconds(30));
+            // Read a request
+            http::async_read(*mTcpStream, mReadBuffer, mRequest,
+                             beast::bind_front_handler(
+                                     &WebSession::onHttpRead,
+                                     shared_from_this()));
+        }
+
+        void
+        onHttpRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
+            mBroker.getLog().debug("--> onHttpRead");
+            boost::ignore_unused(pBytesTransferred);
+            try {
                 // This means they closed the connection
                 if (pErrorCode == http::error::end_of_stream)
                     return doCloseHttpStream();
                 if (pErrorCode)
-                    return fail(pErrorCode, "onHttpRead");
+                    return fail(pErrorCode, "onHttpRead", mLog);
                 // Send the response
-                if (handleHttpRequest(std::move(mRequest), mLambda, mBroker,
-                                      mWebSocketStream, mTcpStream)) {
+                if (handleOrUpgradeHttpRequest(std::move(mRequest), mLambda, mBroker,
+                                               mWebSocketStream, mTcpStream)) {
                     mBroker.getLog().debug("Upgraded!");
                     doWsRead();
                 }
+            } catch (std::exception &pExc) {
+                mBroker.getLog().error("std::exception caught: {}.", pExc.what());
+            } catch (...) {
+                mBroker.getLog().error("Unknown exception happened.");
             }
-
-            void
-            onAccept(beast::error_code ec) {
-                if (ec)
-                    return fail(ec, "accept");
-
-                // Read a message
-                doWsRead();
-            }
-
-            void
-            doWsRead() {
-                mLog.debug("Going to read the Websocket.");
-                mReadBuffer.clear();
-                // Read a message into our buffer
-                mWebSocketStream->async_read(
-                        mReadBuffer,
-                        beast::bind_front_handler(
-                                &WebSession::onWsRead,
-                                shared_from_this()));
-            }
-
-            /**
-             * @TODO What to do width errors? Need a catch?
-             * @param pErrorCode - self evident.
-             * @param pBytesTransferred - self evident.
-             */
-            void
-            onWsRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
-                // This indicates that the session was closed
-                if (pErrorCode == websocket::error::closed) {
-                    mLog.debug("WebSocket closed.");
-                    return;
-                }
-                if (pErrorCode) {
-                    fail(pErrorCode, "onWsRead");
-                } else {
-                    mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
-                    Message myMsg(mLog);
-                    auto myConstBuf(mReadBuffer.cdata());
-                    myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
-                    mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
-                    const Message myReply = mBroker.invokeMethod(std::forward<Message>(myMsg));
-                    mWriteBuffer.clear();
-                    myReply.packToBuffer(mWriteBuffer);
-                    doWriteBufferToWebSocket();
-                }
-            }
-
-            void doWriteBufferToWebSocket() {
-                mBroker.getLog().debug("WS Send {} bytes.",
-                                       mWriteBuffer.size());
-                mWebSocketStream->async_write(mWriteBuffer.data(),
-                                              beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));
-            }
-
-            void
-            doCloseHttpStream() {
-                // Send a TCP shutdown
-                beast::error_code ec;
-                if (mTcpStream)
-                    mTcpStream->socket().shutdown(tcp::socket::shutdown_send, ec);
-                // At this point the connection is closed gracefully
-            }
-
-            void
-            onHttpWrite(
-                    bool close,
-                    beast::error_code ec,
-                    std::size_t bytes_transferred) {
-                boost::ignore_unused(bytes_transferred);
-
-                if (ec)
-                    return fail(ec, "onHttpWrite");
-
-                if (close) {
-                    // This means we should close the connection, usually because
-                    // the response indicated the "Connection: close" semantic.
-                    return doCloseHttpStream();
-                }
-
-                // We're done with the response so delete it
-                mRes = nullptr;
-
-                // Read another request
-                doHttpRead();
-            }
-
-            void
-            onWsWrite(
-                    beast::error_code ec,
-                    std::size_t bytes_transferred) {
-                boost::ignore_unused(bytes_transferred);
-
-                if (ec)
-                    return fail(ec, "onWsWrite");
-                mBroker.getLog().debug("Web socket write ok.");
-                // Do another read
-                doWsRead();
-            }
-
-        };
-
-
-        /**
-         * Accepts incoming connections and launches the sessions
-         */
-        class Listener : public std::enable_shared_from_this<Listener> {
-            net::io_context &mIoc;
-            tcp::acceptor mAcceptor;
-            BrokerIface &mBroker;
-            LogIface &mLog;
-        public:
-            Listener
-                    (
-                            net::io_context &ioc,
-                            tcp::endpoint pEndpoint,
-                            BrokerIface &pBroker,
-                            LogIface &pLog
-                    )
-                    : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker), mLog(pLog) {
-                beast::error_code ec;
-
-                // Open the acceptor
-                mAcceptor.open(pEndpoint.protocol(), ec);
-                if (ec) {
-                    fail(ec, "open");
-                    return;
-                }
-
-                // Allow address reuse
-                mAcceptor.set_option(net::socket_base::reuse_address(true), ec);
-                if (ec) {
-                    fail(ec, "set_option");
-                    return;
-                }
-
-                // Bind to the server address
-                mAcceptor.bind(pEndpoint, ec);
-                if (ec) {
-                    fail(ec, "bind");
-                    return;
-                }
-
-                // Start listening for connections
-                mAcceptor.listen(
-                        net::socket_base::max_listen_connections, ec);
-                if (ec) {
-                    fail(ec, "listen");
-                    return;
-                }
-                mLog.info("listening on http:/{}:{}/", pEndpoint.address().to_string(), pEndpoint.port());
-            }
-
-            // Start accepting incoming connections
-            void
-            run() {
-                doAccept();
-            }
-
-        private:
-            void
-            doAccept() {
-                mLog.info("Accepting.");
-                // The new connection gets its own strand
-                mAcceptor.async_accept(
-                        net::make_strand(mIoc),
-                        beast::bind_front_handler(
-                                &Listener::onAccept,
-                                shared_from_this()));
-            }
-
-            /**
-             * @TODO Think through what to do when the Port is not free.
-             * @param pErrorCode - self evident.
-             * @param pSocket - network socket.
-             */
-            void
-            onAccept(beast::error_code pErrorCode, tcp::socket pSocket) {
-                if (pErrorCode) {
-                    fail(pErrorCode, "onAccept (is Port taken?)");
-                } else {
-                    // Create the session and run it
-                    std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
-                    // Accept another connection
-                    doAccept();
-                }
-            }
-        };
+            mBroker.getLog().debug("<-- onHttpRead");
+        }
 
         void
-        BeastServer::shutdown() {
-            if (getState() == EServerState::K_NOMINAL || getState() == EServerState::K_SHUTTING_DOWN) {
-                mLog.warn("BeastServer: already shutting down.");
+        onAccept(beast::error_code ec) {
+            if (ec)
+                return fail(ec, "accept", mLog);
+
+            // Read a message
+            doWsRead();
+        }
+
+        void
+        doWsRead() {
+            mLog.debug("Going to read the Websocket.");
+            mReadBuffer.clear();
+            // Read a message into our buffer
+            mWebSocketStream->async_read(
+                    mReadBuffer,
+                    beast::bind_front_handler(
+                            &WebSession::onWsRead,
+                            shared_from_this()));
+        }
+
+        /**
+         * @TODO What to do width errors? Need a catch?
+         * @param pErrorCode - self evident.
+         * @param pBytesTransferred - self evident.
+         */
+        void
+        onWsRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
+            // This indicates that the session was closed
+            if (pErrorCode == websocket::error::closed) {
+                mLog.debug("WebSocket closed.");
                 return;
             }
-            mLog.info("BeastServer: Commencing shutdown...");
-            setState(EServerState::K_SHUTTING_DOWN);
-            int myCnt = 0;
-            for (auto &aTask: mAcceptTasks) {
-                mLog.debug("BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
-                aTask.wait_for(std::chrono::duration(10s));
-                mLog.debug("BeastServer: Task {} down.", myCnt, mAcceptTasks.size());
+            if (pErrorCode) {
+                fail(pErrorCode, "onWsRead", mLog);
+            } else {
+                mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
+                Message myMsg(mLog);
+                auto myConstBuf(mReadBuffer.cdata());
+                myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
+                mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
+                const Message myReply = mBroker.invokeMethod(std::forward<Message>(myMsg));
+                mWriteBuffer.clear();
+                myReply.packToBuffer(mWriteBuffer);
+                doWriteBufferToWebSocket();
             }
-            mLog.info("BeastServer: ... shutdown completed.");
-            setState(EServerState::K_NOMINAL);
-            if (getBroker().getState() != EServerState::K_NOMINAL
-                && (getBroker().getState() == EServerState::K_SHUTTING_DOWN)) {
-                getBroker().shutdown();
+        }
+
+        void doWriteBufferToWebSocket() {
+            mBroker.getLog().debug("WS Send {} bytes.",
+                                   mWriteBuffer.size());
+            mWebSocketStream->async_write(mWriteBuffer.data(),
+                                          beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));
+        }
+
+        void
+        doCloseHttpStream() {
+            // Send a TCP shutdown
+            beast::error_code ec;
+            if (mTcpStream)
+                mTcpStream->socket().shutdown(tcp::socket::shutdown_send, ec);
+            // At this point the connection is closed gracefully
+        }
+
+        void
+        onHttpWrite(
+                bool close,
+                beast::error_code ec,
+                std::size_t bytes_transferred) {
+            boost::ignore_unused(bytes_transferred);
+
+            if (ec)
+                return fail(ec, "onHttpWrite", mLog);
+
+            if (close) {
+                // This means we should close the connection, usually because
+                // the response indicated the "Connection: close" semantic.
+                return doCloseHttpStream();
+            }
+
+            // We're done with the response so delete it
+            mRes = nullptr;
+
+            // Read another request
+            doHttpRead();
+        }
+
+        void
+        onWsWrite(
+                beast::error_code ec,
+                std::size_t bytes_transferred) {
+            boost::ignore_unused(bytes_transferred);
+
+            if (ec)
+                return fail(ec, "onWsWrite", mLog);
+            mBroker.getLog().debug("Web socket write ok.");
+            // Do another read
+            doWsRead();
+        }
+
+    };
+
+
+    /**
+     * Accepts incoming connections and launches the sessions
+     */
+    class Listener : public std::enable_shared_from_this<Listener> {
+        net::io_context &mIoc;
+        tcp::acceptor mAcceptor;
+        BrokerIface &mBroker;
+        LogIface &mLog;
+    public:
+        Listener
+                (
+                        net::io_context &ioc,
+                        tcp::endpoint pEndpoint,
+                        BrokerIface &pBroker,
+                        LogIface &pLog
+                )
+                : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker), mLog(pLog) {
+            beast::error_code ec;
+
+            // Open the acceptor
+            mAcceptor.open(pEndpoint.protocol(), ec);
+            if (ec) {
+                fail(ec, "open", mLog);
+                return;
+            }
+
+            // Allow address reuse
+            mAcceptor.set_option(net::socket_base::reuse_address(true), ec);
+            if (ec) {
+                fail(ec, "set_option", mLog);
+                return;
+            }
+
+            // Bind to the server address
+            mAcceptor.bind(pEndpoint, ec);
+            if (ec) {
+                fail(ec, "bind", mLog);
+                return;
+            }
+
+            // Start listening for connections
+            mAcceptor.listen(
+                    net::socket_base::max_listen_connections, ec);
+            if (ec) {
+                fail(ec, "listen", mLog);
+                return;
+            }
+            mLog.info("listening on http:/{}:{}/", pEndpoint.address().to_string(), pEndpoint.port());
+        }
+
+        // Start accepting incoming connections
+        void
+        run() {
+            doAccept();
+        }
+
+    private:
+        void
+        doAccept() {
+            mLog.info("Accepting.");
+            // The new connection gets its own strand
+            mAcceptor.async_accept(
+                    net::make_strand(mIoc),
+                    beast::bind_front_handler(
+                            &Listener::onAccept,
+                            shared_from_this()));
+        }
+
+        /**
+         * @TODO Think through what to do when the Port is not free.
+         * @param pErrorCode - self evident.
+         * @param pSocket - network socket.
+         */
+        void
+        onAccept(beast::error_code pErrorCode, tcp::socket pSocket) {
+            if (pErrorCode) {
+                fail(pErrorCode, "onAccept (is Port taken?)", mLog);
+            } else {
+                // Create the session and run it
+                std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
+                // Accept another connection
+                doAccept();
             }
         }
+    };
 
-        BeastServer::BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog)
-                : mLog(pLog), mThreadNum(std::max<int>(1, pNum)), mIoc(mThreadNum), mBroker(pBroker) {
-        }
-
-        inline std::string toString(const std::thread::id &pThreadId) {
-            std::stringstream ss;
-            ss << pThreadId;
-            return ss.str();
-        }
-
-
-        void BeastServer::run() {
-            mLog.debug("BeastServer::run() -->");
-            auto const aAddress = net::ip::make_address(getBroker().getAddress().getHost());
-            auto const aPort = getBroker().getAddress().getPort();
-            auto myIocRun = [this]() -> void {
-                this->mLog.debug("BeastServer::run() Thread {} started.",
-                                 toString(std::this_thread::get_id()));
-                while (this->getState() == EServerState::K_STARTED ||
-                       this->getState() == EServerState::K_STARTING) {
-                    mIoc.run_for(10s);
-                }
-                this->mLog.debug("BeastServer::run() Thread {} finished.",
-                                 toString(std::this_thread::get_id()));
-            };
-            // Create and launch a listening on Port aPort
-            std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker(), mLog)->run();
-
-            // Run the I/O service on the requested number of threads
-            mAcceptTasks.reserve(mThreadNum - 1);
-            setState(EServerState::K_STARTING);
-            for (auto i = mThreadNum - 1; i > 0; --i)
-                mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
-            mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
-            setState(EServerState::K_STARTED);
-            mLog.debug("BeastServer::run() <--");
+    void
+    BeastServer::shutdown() {
+        if (getState() == EServerState::K_NOMINAL || getState() == EServerState::K_SHUTTING_DOWN) {
+            mLog.warn("BeastServer: already shutting down.");
             return;
         }
-
+        mLog.info("BeastServer: Commencing shutdown...");
+        setState(EServerState::K_SHUTTING_DOWN);
+        int myCnt = 0;
+        for (auto &aTask: mAcceptTasks) {
+            mLog.debug("BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
+            aTask.wait_for(std::chrono::duration(10s));
+            mLog.debug("BeastServer: Task {} down.", myCnt, mAcceptTasks.size());
+        }
+        mLog.info("BeastServer: ... shutdown completed.");
+        setState(EServerState::K_NOMINAL);
+        if (getBroker().getState() != EServerState::K_NOMINAL
+            && (getBroker().getState() == EServerState::K_SHUTTING_DOWN)) {
+            getBroker().shutdown();
+        }
     }
+
+    BeastServer::BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog)
+            : mLog(pLog), mThreadNum(std::max<int>(1, pNum)), mIoc(mThreadNum), mBroker(pBroker) {
+    }
+
+    inline std::string toString(const std::thread::id &pThreadId) {
+        std::stringstream ss;
+        ss << pThreadId;
+        return ss.str();
+    }
+
+
+    void BeastServer::run() {
+        mLog.debug("BeastServer::run() -->");
+        auto const aAddress = net::ip::make_address(getBroker().getAddress().getHost());
+        auto const aPort = getBroker().getAddress().getPort();
+        auto myIocRun = [this]() -> void {
+            this->mLog.debug("BeastServer::run() Thread {} started.",
+                             toString(std::this_thread::get_id()));
+            while (this->getState() == EServerState::K_STARTED ||
+                   this->getState() == EServerState::K_STARTING) {
+                mIoc.run_for(10s);
+            }
+            this->mLog.debug("BeastServer::run() Thread {} finished.",
+                             toString(std::this_thread::get_id()));
+        };
+        // Create and launch a listening on Port aPort
+        std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker(), mLog)->run();
+
+        // Run the I/O service on the requested number of threads
+        mAcceptTasks.reserve(mThreadNum - 1);
+        setState(EServerState::K_STARTING);
+        for (auto i = mThreadNum - 1; i > 0; --i)
+            mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
+        mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
+        setState(EServerState::K_STARTED);
+        mLog.debug("BeastServer::run() <--");
+        return;
+    }
+
 }

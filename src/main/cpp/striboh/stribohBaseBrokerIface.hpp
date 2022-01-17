@@ -387,6 +387,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <set>
 #include <NamedType/named_type.hpp>
 
+#include "stribohBase.hpp"
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseNameTreeNode.hpp"
 #include "stribohBaseLogIface.hpp"
@@ -409,21 +410,21 @@ namespace striboh::base {
 
     class Interface;
 
-    using PathSegment = fluent::NamedType<std::string, struct PathSegmentTag>;
-    using Path = fluent::NamedType<std::vector<PathSegment>, struct PathTag>;
-    using PathIterator = Path::UnderlyingType::iterator;
-
-    inline auto operator<(const PathSegment &p0, const PathSegment &p1) {
+    inline auto operator<(const ModuleName &p0, const ModuleName &p1) {
         return p0.get() < p1.get();
     }
 
-    typedef std::set<PathSegment> PathSegments;
-    typedef std::set<InterfaceName> Interfaces;
+    typedef std::set<ModuleName> ModuleNames;
+    typedef std::set<InterfaceName> InterfaceNames;
 
     struct ResolvedResult {
-        EResolveResult mResult = EResolveResult::NOT_FOUND;
-        PathSegments mModules;
-        Interfaces mInterfaces;
+        EResolveResult m_Result = EResolveResult::NOT_FOUND;
+        ModuleNames m_Modules;
+        Path m_Path;
+        InterfaceNames m_Interfaces;
+        const Address& m_Address;
+
+        ResolvedResult(const Address& p_Address): m_Address(p_Address){};
     };
 
 
@@ -432,7 +433,7 @@ namespace striboh::base {
     struct BrokerIface {
 
         BrokerIface(std::string_view&& pAddress, LogIface &pLogIface) //
-                : m_Address(std::move(pAddress)) //
+                : m_Address(std::move(pAddress), pLogIface) //
                 , mLogIface(pLogIface) {}
 
         const LogIface &getLog() const {
@@ -468,7 +469,7 @@ namespace striboh::base {
         resolveService(std::string_view pPath) const = 0;
 
         virtual std::string
-        resolvedServiceToStr(std::string_view pPath, const ResolvedService &pSvc) const = 0;
+        resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) const = 0;
 
         const std::shared_ptr<ServerIface> &
         getServer() const { return mServerIface; }
@@ -479,6 +480,8 @@ namespace striboh::base {
         getState() const { return mOperationalState; }
 
         const Address& getAddress() const { return m_Address; }
+
+        virtual const Interface& getInterface(const InstanceId& pInstanceId ) const = 0;
 
     protected:
         void setState(EServerState pState) {

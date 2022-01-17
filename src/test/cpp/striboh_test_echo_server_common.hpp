@@ -379,10 +379,13 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #pragma once
 
-static const char *const K_TEST_SRV = "http://0.0.0.0:10000";
+static constexpr const char *const K_TEST_SRV = "http://0.0.0.0:10000";
+
+static constexpr const char *const K_TEST_MTHD_NM = "testMethod";
 
 #include <iostream>
 
+#include "striboh/stribohBase.hpp"
 #include "striboh/stribohBaseInterface.hpp"
 #include "striboh/stribohBaseEMessageType.hpp"
 #include "striboh/stribohBaseParameterList.hpp"
@@ -396,7 +399,7 @@ namespace striboh {
 
             Interface mEchoServerInterface {
                     *this,
-                    {"m0", "m1"}, InterfaceName{"Hello"},
+                    {ModuleName{"m0"}, ModuleName{"m1"}}, InterfaceName{"Hello"},
                     {
                             Method{"echo",
                                    ParameterDescriptionList{
@@ -407,19 +410,18 @@ namespace striboh {
                                                           pIncoming.getParameters()[0].getValue().get<std::string>() +
                                                           "!");
                                        std::cout << myWhom << std::endl;
-                                       return Message(Value{myWhom}, getLog());
+                                       return Message(pIncoming, Value{myWhom}, getLog());
                                    },
                                    getLog()
                             },
                             Method{"shutdown",
                                    ParameterDescriptionList{},
-                                   [this](const Message &/*pIncoming*/, Context pCtx) {
+                                   [this](const Message &pIncoming, Context pCtx) {
                                        pCtx.getBroker().shutdown();
-                                       return Message(Value{}, getLog());
+                                       return Message(pIncoming, Value{}, getLog());
                                    },
                                    getLog()
                             }
-
                     }
             };
 
