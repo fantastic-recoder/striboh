@@ -478,7 +478,9 @@ namespace striboh::base {
 
         Message(const ReadBuffer &pBuffer, LogIface &pIface);
 
-        explicit Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog);
+        Message(ReadBuffer &&pBuffer, LogIface &pIface);
+
+        Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog);
 
         explicit Message(const Message& pInReplyTo, Value &&pReturn, LogIface &pLog);
 
@@ -560,8 +562,8 @@ namespace striboh::base {
         }
 
         inline void packString(msgpack::packer<Buffer> &myPacker, std::string_view pStr) const {
-            myPacker.pack_str(pStr.size());
-            myPacker.pack_str_body(pStr.data(), pStr.size());
+            myPacker.pack_str(static_cast<uint32_t>(pStr.size()));
+            myPacker.pack_str_body(pStr.data(), static_cast<uint32_t>(pStr.size()));
         }
 
         void packInstanceId(Packer_t &pPacker) const;

@@ -50,3 +50,4 @@ CMakeLists.txt.user
 /.idea/markdown.xml
 /.vs
 /out/build/x64-Debug
+/CMakeSettings.json

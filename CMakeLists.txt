@@ -8,7 +8,8 @@ set(CONAN_REVISIONS_ENABLED 1)
 if (MSVC)
     set(CONAN_DISABLE_CHECK_COMPILER 1) # allow new shiny VS versions
     # warning level 4 and all warnings as errors
-    add_compile_options(/bigobj /W3 )
+    # _WIN32_WINNT=0x0A00 == Windows 10 Boost HAS to be compiled according define=BOOST_USE_WINAPI_VERSION=0x0A00
+    add_compile_options(/bigobj /W3 /D_WIN32_WINNT=0x0A00)
     add_compile_options(/bigobj)
 else()
     # lots of warnings and all warnings as errors
@@ -18,6 +19,8 @@ endif()
 ########################################################################################################################
 # Conan start
 # Download automatically, you can also just copy the conan.cmake file
+# see https://github.com/conan-io/cmake-conan
+#
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
     message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
     file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
@@ -84,8 +87,8 @@ set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} Threads::Threads ${Python3_LIBRARIES} ${CMAKE_DL_LIBS} ${Boost_LIBRARIES})
 set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_BOOST} ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS} ${Python3_LIBRARY_DIRS})
 set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON} ${CONAN_INCLUDE_DIRS_FMT}
-        ${CONAN_INCLUDE_DIRS_BOOST} ${Python3_INCLUDE_DIRS} ${STRIBOH_INCLUDE_DIR}
-        ${CONAN_INCLUDE_DIRS_PYBIND11} ${Boost_INCLUDE_DIRS}) #
+        ${Python3_INCLUDE_DIRS} ${STRIBOH_INCLUDE_DIR} ${CONAN_INCLUDE_DIRS_MSGPACK}
+        ${CONAN_INCLUDE_DIRS_PYBIND11} ${Boost_INCLUDE_DIRS})
 
 message(STATUS "STRIBOH_LIB_DIRS=${STRIBOH_LIB_DIRS}")
 add_subdirectory(src/main/cpp/striboh)

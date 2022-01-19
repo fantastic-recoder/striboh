@@ -377,14 +377,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <variant>
-#include <string_view>
-#include <vector>
-
-#include "stribohBaseInstanceId.hpp"
-#include "stribohBaseMessage.hpp"
-#include "stribohBaseExceptionsInMessageParserError.hpp"
-
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
@@ -396,6 +388,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/msm/front/euml/operator.hpp>
 // for func_state and func_state_machine
 #include <boost/msm/front/euml/state_grammar.hpp>
+
+#include <variant>
+#include <string_view>
+#include <vector>
+
+#include "striboh/stribohBaseInstanceId.hpp"
+#include "striboh/stribohBaseMessage.hpp"
+#include "striboh/stribohBaseExceptionsInMessageParserError.hpp"
 
 namespace msm = boost::msm;
 namespace mpl = boost::mpl;
@@ -423,40 +423,22 @@ namespace msgpack {
     } // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 } // namespace msgpack
 
-namespace striboh::base {
+namespace {
+    struct LogGuard {
+        striboh::base::LogIface &m_log;
+        std::string_view m_msg;
 
-    namespace sml = boost::sml;
-
-    struct SmlLogger {
-
-    SmlLogger(LogIface &pLog) : mLog(pLog) {}
-
-        template<class SM, class TEvent>
-        void log_process_event(const TEvent &) {
-            mLog.debug("[{}][process_event] {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TEvent>());
+        LogGuard(striboh::base::LogIface &p_log, std::string_view p_msg)
+                : m_log(p_log), m_msg(p_msg) {
+            m_log.debug("--> {}", m_msg);
         }
 
-        template<class SM, class TGuard, class TEvent>
-        void log_guard(const TGuard &, const TEvent &, bool result) {
-            mLog.debug("[{}][guard] {} {} {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TGuard>(),
-                       sml::aux::get_type_name<TEvent>(), (result ? "[OK]" : "[Reject]"));
+        ~LogGuard() {
+            m_log.debug("<-- {}", m_msg);
         }
-
-        template<class SM, class TAction, class TEvent>
-        void log_action(const TAction &, const TEvent &) {
-            mLog.debug("[{}][action] {} {}", sml::aux::get_type_name<SM>(), sml::aux::get_type_name<TAction>(),
-                       sml::aux::get_type_name<TEvent>());
-        }
-
-        template<class SM, class TSrcState, class TDstState>
-        void log_state_change(const TSrcState &src, const TDstState &dst) {
-            mLog.debug("[{}][transition] {} -> {}", sml::aux::get_type_name<SM>(), src.c_str(), dst.c_str());
-        }
-
-    private:
-        LogIface &mLog;
     };
 
+    /// Base for all value events.
     template<typename T>
     struct EvtVal {
         T mVal;
@@ -496,73 +478,20 @@ namespace striboh::base {
     using EvtInt64 = EvtVal<int64_t>;
     using striboh::base::Message;
 
-    struct MessageParserContext {
-        Message &mMessage;
-        std::string mKey;
-        std::vector<uint8_t> mInstanceId;
+    using striboh::base::LogIface;
+    using striboh::base::Message;
+    using striboh::base::InstanceId;
 
-        MessageParserContext(Message &pMessage)
-                : mMessage(pMessage) {}
-    };
+    using std::string;
+    using std::string_view;
 
-    constexpr auto actionStoreKey
-            = [](const EvtStringVal &pEvent, MessageParserContext &pContext) {
-                pContext.mKey = pEvent.mVal;
-    };
-
-    constexpr auto  actionStoreMessageType
-            = [](const EvtInt64 &pEvent, MessageParserContext &pContext) {
-        pContext.mMessage.setType(EMessageType(pEvent.mVal));
-    };
-
-    constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-        return pEvt.mVal == Message::K_PARAMETERS_KEY;
-    };
-
-    constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-        return pEvt.mVal == Message::K_METHOD_NAME_KEY;
-    };
-
-    constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-        return pEvt.mVal == Message::K_RETURN_KEY;
-    };
-
-    constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-        return pEvt.mVal == Message::K_INSTANCE_ID_KEY;
-    };
-
-    constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-        return pEvt.mVal == Message::K_MESSAGE_TYPE_KEY;
-    };
-
-    constexpr auto actionStartInstanceId = [](const EvtStringVal &, MessageParserContext &pContext) {
-        pContext.mInstanceId.clear();
-    };
-
-    constexpr auto actionStoreInstanceIdByte = [](const EvtInt64 &pEvt, MessageParserContext &pContext) {
-        pContext.mInstanceId.push_back(pEvt.mVal);
-    };
-
-    constexpr auto actionStoreInstanceId = [](const EvtEndArray&, MessageParserContext &pContext) {
-        InstanceId myNewId;
-        if(pContext.mInstanceId.size()!=myNewId.size()) {
-            throw std::runtime_error(fmt::format("Instance ID has wrong size - {}, and not {}.",
-                                                 pContext.mInstanceId.size(),myNewId.size()));
-        }
-        std::copy(pContext.mInstanceId.begin(),pContext.mInstanceId.end(),myNewId.begin());
-        pContext.mMessage.setInstanceId(myNewId);
-    };
-
-    constexpr auto actionStoreMethodName = [](const EvtStringVal& pEvt, MessageParserContext &pContext) {
-        pContext.mMessage.setMethodName(pEvt.mVal);
-    };
-
+    /*
     struct MessageParserConfig {
 
         struct ActionAddParameter {
             template<typename TEvent>
             void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
-                pContext.mMessage.getParameters().emplace_back(Parameter(pContext.mKey, pEvent.mVal));
+                pContext.m_message.getParameters().emplace_back(Parameter(pContext.mKey, pEvent.mVal));
             }
 
         };
@@ -570,133 +499,243 @@ namespace striboh::base {
         struct ActionSetReturn {
             template<typename TEvent>
             void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
-                pContext.mMessage.setReturn(Value(pEvent.mVal));
+                pContext.m_message.setReturn(Value(pEvent.mVal));
             }
         };
 
-        auto operator()() const {
-            using namespace sml;
-            /**
-             * Initial state: *initial_state
-             * Transition DSL: src_state + event [ guard ] / action = dst_state
-             */
-            return make_transition_table(
-                    *"BeforeMessageState"_s + event<EvtStartMap> = "ParsingMessageState"_s,
-                    "BeforeMessageState"_s + event<EvtBool> = "ErrorState"_s,
-                    // message type
-                    "ParsingMessageState"_s + event<EvtStringVal>[checkMessageTypeKey] = "ParsingMessageType"_s,
-                    "ParsingMessageType"_s + event<EvtInt64> / actionStoreMessageType = "ParsingMessageState"_s,
-                    // instance id
-                    "ParsingMessageState"_s + event<EvtStringVal>[checkInstanceKey] / actionStartInstanceId = "ParsingInstanceId"_s,
-                    "ParsingInstanceId"_s + event<EvtInt64>   / actionStoreInstanceIdByte,
-                    "ParsingInstanceId"_s + event<EvtEndArray> / actionStoreInstanceId = "ParsingMessageState"_s,
-                    // parameters of a method
-                    "ParsingMessageState"_s + event<EvtStringVal>[checkParametersKey] = "ParsingParameters"_s,
-                    "ParsingParameters"_s + event<EvtStartArray> = "ParsingParametersKey"_s,
-                    "ParsingParameters"_s + event<EvtStartMap> = "ParsingParametersKey"_s,
-                    "ParsingParametersKey"_s + event<EvtStringVal> / actionStoreKey = "ParsingParametersKey"_s,
-                    "ParsingParametersKey"_s + event<EvtEndMapKey> = "ParsingParameterValue"_s,
-                    "ParsingParameterValue"_s + event<EvtInt64> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                    "ParsingParameterValue"_s + event<EvtBool> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                    "ParsingParameterValue"_s + event<EvtStringVal> / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                    "ParsingParameterValue"_s + event<EvtEndMapValue> = "ParsingParameterEnd"_s,
-                    "ParsingParameterEnd"_s + event<EvtEndArrayItem> = "ParsingParameters"_s,
-                    "ParsingParametersKey"_s + event<EvtEndArray> = "ParsingMessageState"_s,
-                    // method name
-                    "ParsingMessageState"_s + event<EvtStringVal>[checkMethodNameKey] = "ParsingMethodName"_s,
-                    "ParsingMethodName"_s + event<EvtStringVal> / actionStoreMethodName = "ParsingMessageState"_s,
-                    // return value
-                    "ParsingMessageState"_s + event<EvtStringVal>[checkReturnKey] = "ParsingReturn"_s,
-                    "ParsingReturn"_s + event<EvtInt64> / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                    "ParsingReturn"_s + event<EvtBool> / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                    "ParsingReturn"_s + event<EvtStringVal> / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                    // finished
-                    "ParsingMessageState"_s + event<EvtEndMap> = "AfterMessageState"_s
-            );
-        }
+    };
+*/
+
+    using msm::front::Row;
+    using msm::front::none;
+
+    class MessageParserContext : public msm::front::state_machine_def<MessageParserContext> {
+        LogIface & /*-------------*/ m_log;
+        Message & /*--------------*/ m_message;
+        std::string  /*-----------*/ mKey;
+        std::vector<uint8_t>  /*--*/ mInstanceId;
+
+    public:
+        MessageParserContext(LogIface &p_log, Message &p_msg)
+                : m_log(p_log), m_message(p_msg) {}
+
+        // The list of FSM states
+        struct Empty : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct AllOk : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        // the initial state of the player SM. Must be defined
+        typedef mpl::vector<Empty, AllOk> initial_state;
+
+        struct BeforeMessageState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ParsingMessageState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+/*
+        std::function actionStoreKey
+                = [](const EvtStringVal &pEvent, MessageParserContext &pContext) {
+                    pContext.mKey = pEvent.mVal;
+                };
+
+        constexpr auto actionStoreMessageType
+                = [](const EvtInt64 &pEvent, MessageParserContext &pContext) {
+                    pContext.m_message.setType(EMessageType(pEvent.mVal));
+                };
+
+        constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+            return pEvt.mVal == Message::K_PARAMETERS_KEY;
+        };
+
+        constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+            return pEvt.mVal == Message::K_METHOD_NAME_KEY;
+        };
+
+        constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+            return pEvt.mVal == Message::K_RETURN_KEY;
+        };
+
+        constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+            return pEvt.mVal == Message::K_INSTANCE_ID_KEY;
+        };
+
+        constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
+            return pEvt.mVal == Message::K_MESSAGE_TYPE_KEY;
+        };
+
+        constexpr auto actionStartInstanceId = [](const EvtStringVal &, MessageParserContext &pContext) {
+            pContext.mInstanceId.clear();
+        };
+
+        constexpr auto actionStoreInstanceIdByte = [](const EvtInt64 &pEvt, MessageParserContext &pContext) {
+            pContext.mInstanceId.push_back(pEvt.mVal);
+        };
+
+        constexpr auto actionStoreInstanceId = [](const EvtEndArray &, MessageParserContext &pContext) {
+            InstanceId myNewId;
+            if (pContext.mInstanceId.size() != myNewId.size()) {
+                throw std::runtime_error(fmt::format("Instance ID has wrong size - {}, and not {}.",
+                                                     pContext.mInstanceId.size(), myNewId.size()));
+            }
+            std::copy(pContext.mInstanceId.begin(), pContext.mInstanceId.end(), myNewId.begin());
+            pContext.m_message.setInstanceId(myNewId);
+        };
+
+        constexpr auto actionStoreMethodName = [](const EvtStringVal &pEvt, MessageParserContext &pContext) {
+            pContext.m_message.setMethodName(pEvt.mVal);
+        };
+*/
+        struct transition_table : mpl::vector<
+                //    Start                    Event            Target                     Action                      Guard
+                //   +-----------------------+-----------------+--------------------------+---------------------------+----------------------------+
+                Row<  BeforeMessageState/*-*/, EvtStartMap/*-*/, ParsingMessageState/*--*/, none/*------------------*/, none/*-*/>
+                /*
+                                   X*"BeforeMessageState"_s + event < EvtStartMap > = "ParsingMessageState"_s,
+                                   "BeforeMessageState"_s + event < EvtBool > = "ErrorState"_s,
+                                   // message type
+                                   "ParsingMessageState"_s + event<EvtStringVal>[checkMessageTypeKey] = "ParsingMessageType"_s,
+                                   "ParsingMessageType"_s + event < EvtInt64 > / actionStoreMessageType = "ParsingMessageState"_s,
+                                   // instance id
+                                   "ParsingMessageState"_s +
+                                   event<EvtStringVal>[checkInstanceKey] / actionStartInstanceId = "ParsingInstanceId"_s,
+                                   "ParsingInstanceId"_s + event < EvtInt64 >   / actionStoreInstanceIdByte,
+                                   "ParsingInstanceId"_s + event < EvtEndArray > / actionStoreInstanceId = "ParsingMessageState"_s,
+                                   // parameters of a method
+                                                                                   "ParsingMessageState"_s +
+                                                                                   event<EvtStringVal>[checkParametersKey] = "ParsingParameters"_s,
+                                                                                   "ParsingParameters"_s + event <
+                                                                                   EvtStartArray > = "ParsingParametersKey"_s,
+                                                                                   "ParsingParameters"_s + event <
+                                                                                   EvtStartMap > = "ParsingParametersKey"_s,
+                                   "ParsingParametersKey"_s + event < EvtStringVal > / actionStoreKey = "ParsingParametersKey"_s,
+                                   "ParsingParametersKey"_s + event < EvtEndMapKey > = "ParsingParameterValue"_s,
+                                   "ParsingParameterValue"_s + event < EvtInt64 > / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                                   "ParsingParameterValue"_s + event < EvtBool > / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                                   "ParsingParameterValue"_s + event <
+                                   EvtStringVal > / (ActionAddParameter{}) = "ParsingParameterValue"_s,
+                                                    "ParsingParameterValue"_s + event < EvtEndMapValue > = "ParsingParameterEnd"_s,
+                                                    "ParsingParameterEnd"_s + event < EvtEndArrayItem > = "ParsingParameters"_s,
+                                                    "ParsingParametersKey"_s + event < EvtEndArray > = "ParsingMessageState"_s,
+                                   // method name
+                                                    "ParsingMessageState"_s +
+                                                    event<EvtStringVal>[checkMethodNameKey] = "ParsingMethodName"_s,
+                                   "ParsingMethodName"_s + event < EvtStringVal > / actionStoreMethodName = "ParsingMessageState"_s,
+                                   // return value
+                                   "ParsingMessageState"_s + event<EvtStringVal>[checkReturnKey] = "ParsingReturn"_s,
+                                   "ParsingReturn"_s + event < EvtInt64 > / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                                   "ParsingReturn"_s + event < EvtBool > / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                                   "ParsingReturn"_s + event < EvtStringVal > / (ActionSetReturn{}) = "ParsingMessageState"_s,
+                                   // finished
+                                   "ParsingMessageState"_s + event < EvtEndMap > = "AfterMessageState"_s
+                 * */
+        > {
+        };
     };
 
+}
+namespace striboh::base {
+
+    using MessageParser = msm::back::state_machine<MessageParserContext>;
 
     struct MessageVisitor1 : msgpack::v2::null_visitor {
 
-        using MessageParser = sml::sm
-                <
-                        MessageParserConfig,
-                        MessageParserContext,
-                        sml::logger<SmlLogger>
-                >;
+        LogIface &/*----------*/ m_log;
+        const ReadBuffer &/*--*/ m_buf;
+        MessageParser /*------*/ m_parser;
 
-        MessageVisitor1(MessageParserContext &pContext, const ReadBuffer &pBuffer, LogIface &pLog)
-                : mLog(pLog), mLogger(pLog), mBuffer(pBuffer), mMessageParser{pContext, mLogger} {
-            mLog.debug("Created MessageVisitor1 &m_Log=={}.",(void*)(&mLog));
+        MessageVisitor1(MessageParserContext &p_ctx, Message& p_message, const ReadBuffer &p_buffer, LogIface &pLog)
+                : m_log(pLog), m_buf(p_buffer), m_parser( m_log, p_message) {
+            m_log.debug("Created MessageVisitor1 &m_Log=={}.", (void *) (&m_log));
         }
 
         inline bool isInErrorState() {
-            using namespace sml;
-            return !mMessageParser.is("ErrorState"_s);
+            return true;
         }
 
         inline bool visit_nil() {
-            mMessageParser.process_event(EvtNil());
+            m_parser.process_event(EvtNil());
             return isInErrorState();
         }
 
         inline bool visit_boolean(bool v) {
-            mMessageParser.process_event(EvtBool(v));
+            m_parser.process_event(EvtBool(v));
             return isInErrorState();
         }
 
         inline bool visit_positive_integer(uint64_t v) {
-            mMessageParser.process_event(EvtInt64(v));
+            m_parser.process_event(EvtInt64(v));
             return isInErrorState();
         }
 
         inline bool visit_negative_integer(int64_t v) {
-            mMessageParser.process_event(EvtInt64(v));
+            m_parser.process_event(EvtInt64(v));
             return isInErrorState();
         }
 
         inline bool visit_str(const char *v, uint32_t pSize) {
-            mMessageParser.process_event(EvtStringVal(std::string(v, pSize)));
+            m_parser.process_event(EvtStringVal(std::string(v, pSize)));
             return isInErrorState();
         }
 
         inline bool start_array(uint32_t pArraySize) {
-            mLog.debug("MessageVisitor1::start_array pArraySize=={}.",pArraySize);
-            mMessageParser.process_event(EvtStartArray());
+            m_log.debug("MessageVisitor1::start_array pArraySize=={}.", pArraySize);
+            m_parser.process_event(EvtStartArray());
             return isInErrorState();
         }
 
         inline bool end_array_item() {
-            mLog.debug("MessageVisitor1::end_array_item.");
-            mMessageParser.process_event(EvtEndArrayItem());
+            m_log.debug("MessageVisitor1::end_array_item.");
+            m_parser.process_event(EvtEndArrayItem());
             return isInErrorState();
         }
 
         inline bool end_array() {
-            mLog.debug("MessageVisitor1::end_array.");
-            mMessageParser.process_event(EvtEndArray());
+            m_log.debug("MessageVisitor1::end_array.");
+            m_parser.process_event(EvtEndArray());
             return isInErrorState();
         }
 
         inline bool start_map(uint32_t pMapSize) {
-            mLog.debug("MessageVisitor1::start_map pMapSize=={}.",pMapSize);
-            mMessageParser.process_event(EvtStartMap());
+            m_log.debug("MessageVisitor1::start_map pMapSize=={}.", pMapSize);
+            m_parser.process_event(EvtStartMap());
             return isInErrorState();
         }
 
         inline bool end_map_key() {
-            mMessageParser.process_event(EvtEndMapKey());
+            m_parser.process_event(EvtEndMapKey());
             return isInErrorState();
         }
 
         inline bool end_map_value() {
-            mMessageParser.process_event(EvtEndMapValue());
+            m_parser.process_event(EvtEndMapValue());
             return isInErrorState();
         }
 
         inline bool end_map() {
-            mMessageParser.process_event(EvtEndMap());
+            m_parser.process_event(EvtEndMap());
             return isInErrorState();
         }
 
@@ -705,8 +744,8 @@ namespace striboh::base {
                     (
                             "Parser error",
                             pErrorOffset,
-                            string_view(mBuffer.data() + pParsedOffset, pErrorOffset - pParsedOffset),
-                            string_view(mBuffer.data() + pErrorOffset, mBuffer.size() - pErrorOffset)
+                            string_view(m_buf.data() + pParsedOffset, pErrorOffset - pParsedOffset),
+                            string_view(m_buf.data() + pErrorOffset, m_buf.size() - pErrorOffset)
                     );
         }
 
@@ -715,22 +754,16 @@ namespace striboh::base {
                     (
                             "Insufficient bytes",
                             pErrorOffset,
-                            string_view(mBuffer.data() + pParsedOffset, pErrorOffset - pParsedOffset),
-                            string_view(mBuffer.data() + pErrorOffset, mBuffer.size() - pErrorOffset)
+                            string_view(m_buf.data() + pParsedOffset, pErrorOffset - pParsedOffset),
+                            string_view(m_buf.data() + pErrorOffset, m_buf.size() - pErrorOffset)
                     );
         }
 
-    private:
-
-        LogIface &mLog;
-        SmlLogger mLogger;
-        const ReadBuffer &mBuffer;
-        MessageParser mMessageParser;
     };
 
-    bool Message::unpackFromBuffer(const ReadBuffer& myBuff) {
-        MessageParserContext myContext(*this);
-        MessageVisitor1 myMessageVisitor(myContext, myBuff, mLog);
+    bool Message::unpackFromBuffer(const ReadBuffer &myBuff) {
+        MessageParserContext myContext(mLog, *this);
+        MessageVisitor1 myMessageVisitor(myContext, *this, myBuff, mLog);
         size_t myOffset = 0;
         bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(),
                                            myOffset, myMessageVisitor);
@@ -740,21 +773,22 @@ namespace striboh::base {
     Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
             : mLog(pLog), mMethodName(pMethodName), mType(EMessageType::K_METHOD),
               mParameters(std::forward<Parameters>(pParameters)) {
-        mLog.debug("Message::Message(pMethodName=={}) &m_Log={}",pMethodName,(void*)(&mLog));
+        mLog.debug("Message::Message(pMethodName=={}) &m_Log={}", pMethodName, (void *) (&mLog));
     }
 
-    Message::Message(const Message& pInReplyTo, Value &&pReturn, LogIface &pLog)
-            : mLog(pLog), mMethodName(pInReplyTo.getMethodName()), mType(EMessageType::K_RETURN), mReturn(std::forward<Value>(pReturn)) {
-        mLog.debug("Message::Message(Return) &m_Log={}",(void*)(&mLog));
+    Message::Message(const Message &pInReplyTo, Value &&pReturn, LogIface &pLog)
+            : mLog(pLog), mMethodName(pInReplyTo.getMethodName()), mType(EMessageType::K_RETURN),
+              mReturn(std::forward<Value>(pReturn)) {
+        mLog.debug("Message::Message(Return) &m_Log={}", (void *) (&mLog));
     }
 
-    Message::Message(LogIface &pLog) :  mLog(pLog), mType(EMessageType::K_UNKNOWN) {
-        mLog.debug("Message::Message(Unknown) &m_Log={}",(void*)(&mLog));
+    Message::Message(LogIface &pLog) : mLog(pLog), mType(EMessageType::K_UNKNOWN) {
+        mLog.debug("Message::Message(Unknown) &m_Log={}", (void *) (&mLog));
     }
 
-    Message::Message(const ReadBuffer &pBuffer, LogIface &pIface): mLog(pIface) {
+    Message::Message(const ReadBuffer &pBuffer, LogIface &pIface) : mLog(pIface) {
         unpackFromBuffer(pBuffer);
-        mLog.debug("Message::Message(Upacked) &m_Log={}",(void*)(&mLog));
+        mLog.debug("Message::Message(Upacked) &m_Log={}", (void *) (&mLog));
     }
 
 
@@ -779,16 +813,15 @@ namespace striboh::base {
 
     void Message::packParameters(msgpack::packer<Buffer> &myPacker) const {
         packString(myPacker, string_view(K_PARAMETERS_KEY));
-        const int32_t myMapSize = getParameters().size();
+        const int32_t myMapSize = static_cast<uint32_t>(getParameters().size());
         myPacker.pack_array(myMapSize);
         for (const Parameter &myPar: getParameters()) {
             myPacker.pack_map(1);
             string_view myName = myPar.getName();
             packString(myPacker, myName);
-            std::visit([&myPacker](auto &&myVal)
-                {
-                    myPacker.pack(myVal);
-                }, myPar.getValue().mVal
+            std::visit([&myPacker](auto &&myVal) {
+                           myPacker.pack(myVal);
+                       }, myPar.getValue().mVal
             );
         }
     }
@@ -801,7 +834,7 @@ namespace striboh::base {
     void Message::packInstanceId(msgpack::packer<Buffer> &pPacker) const {
         packString(pPacker, Message::K_INSTANCE_ID_KEY);
         pPacker.pack_array(mInstanceId.size());
-        for (auto myC : getInstanceId())
+        for (auto myC: getInstanceId())
             pPacker.pack(myC);
     }
 
@@ -821,7 +854,7 @@ namespace striboh::base {
         return jsonToStr(toJson(ReadBuffer(myBuffer)));
     }
 
-    Message::Message(ReadBuffer &&pBuffer, LogIface &pIface): mLog(pIface) {
+    Message::Message(ReadBuffer &&pBuffer, LogIface &pIface) : mLog(pIface) {
         unpackFromBuffer(std::forward<ReadBuffer>(pBuffer));
     }
 

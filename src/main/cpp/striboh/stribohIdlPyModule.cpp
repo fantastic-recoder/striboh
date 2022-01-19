@@ -377,14 +377,19 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include <fmt/format.h>
 #include "striboh/stribohIdlCompiler.hpp"
 #include "striboh/stribohIdlAstVisitor.hpp"
 #include "striboh/stribohIdlAstTypedIdentifierNode.hpp"
 #include "striboh/stribohIdlParser.hpp"
 #include "striboh/stribohBaseLogIface.hpp"
+
+#if(_MSC_VER==1930)
+#   define Py_DEBUG 1
+#endif
+
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 
