@@ -52,7 +52,8 @@ if (MSVC)
     add_definitions( -DBOOST_ALL_NO_LIB )
     add_definitions( -DBOOST_ALL_DYN_LINK )
     add_definitions( -DBOOST_LIB_DIAGNOSTIC )
-    find_package(Boost 1.78.0 REQUIRED COMPONENTS filesystem program_options log log_setup iostreams)
+    set(BCrypt_LIBRARIES bcrypt)
+    find_package(Boost 1.78.0 REQUIRED COMPONENTS filesystem program_options log log_setup iostreams system)
     if(${Boost_FOUND})
         message(STATUS "Boost ${Boost_DIR} found!")
         include_directories(${Boost_INCLUDE_DIRS})
@@ -84,11 +85,13 @@ endif()
 
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
-set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} Threads::Threads ${Python3_LIBRARIES} ${CMAKE_DL_LIBS} ${Boost_LIBRARIES})
+set(STRIBOH_LIBS ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} Threads::Threads ${Python3_LIBRARIES} ${CMAKE_DL_LIBS}
+        ${Boost_LIBRARIES} ${BCrypt_LIBRARIES})
 set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_BOOST} ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS} ${Python3_LIBRARY_DIRS})
 set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON} ${CONAN_INCLUDE_DIRS_FMT}
         ${Python3_INCLUDE_DIRS} ${STRIBOH_INCLUDE_DIR} ${CONAN_INCLUDE_DIRS_MSGPACK}
         ${CONAN_INCLUDE_DIRS_PYBIND11} ${Boost_INCLUDE_DIRS})
+set(STRIBOH_PY_MOD striboh_py)
 
 message(STATUS "STRIBOH_LIB_DIRS=${STRIBOH_LIB_DIRS}")
 add_subdirectory(src/main/cpp/striboh)

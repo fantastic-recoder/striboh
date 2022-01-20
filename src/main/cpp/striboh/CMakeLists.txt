@@ -21,17 +21,19 @@ configure_file(striboh_backend_angular.py ${striboh_BINARY_DIR}/bin/striboh_back
 ########################################################################################################################
 # Frontend
 ########################################################################################################################
-configure_file(striboh_idl.py ${striboh_BINARY_DIR}/bin/striboh_idl.py COPYONLY)
+configure_file(striboh_idl.py ${striboh_BINARY_DIR}/bin/striboh_idl.py)
+configure_file(__init__.py ${striboh_BINARY_DIR}/bin/${STRIBOH_PY_MOD}/__init__.py)
 
 set(striboh_idl_python_scripts ${striboh_BINARY_DIR}/bin/striboh_backend_cpp.py ${striboh_BINARY_DIR}/bin/striboh_backend_angular.py)
 
+########################################################################################################################
+# Striboh Python module
+########################################################################################################################
 # Without this, any build libraries automatically have names "lib{x}.so"
 set(CMAKE_SHARED_MODULE_PREFIX "")
 # Add a shared module - modules are intended to be imported at runtime.
-add_library(stribohIdl MODULE stribohIdlPyModule.cpp stribohIdlCompiler.cpp stribohIdlCompiler.hpp ${striboh_BINARY_DIR}/bin/striboh_idl.py ${striboh_idl_python_scripts})
-if(!MSVC)
-    set_target_properties(stribohIdl PROPERTIES LINK_OPTIONS LINKER:-shared )
-endif()
-target_link_libraries(stribohIdl  ${Python3_LIBRARIES} striboh_base_library striboh_idl_library ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} Threads::Threads ${CMAKE_DL_LIBS})
-target_include_directories(stribohIdl PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${STRIBOH_INCLUDE_DIRS})
-target_link_directories(stribohIdl PRIVATE  ${CONAN_LIB_DIRS_BOOST} ${Boost_LIBRARY_DIR} ${Python3_LIBRARY_DIRS} ${CONAN_LIB_DIRS_FMT})
+add_library(${STRIBOH_PY_MOD} MODULE stribohIdlPyModule.cpp stribohIdlCompiler.cpp stribohIdlCompiler.hpp ${striboh_BINARY_DIR}/bin/striboh_idl.py ${striboh_idl_python_scripts})
+target_link_libraries(${STRIBOH_PY_MOD}  ${Python3_LIBRARIES} striboh_base_library striboh_idl_library ${CONAN_LIBS_BOOST} ${CONAN_LIBS_FMT} Threads::Threads ${CMAKE_DL_LIBS})
+target_include_directories(${STRIBOH_PY_MOD} PRIVATE ${CONAN_INCLUDE_DIRS_PYBIND11} ${STRIBOH_INCLUDE_DIRS})
+target_link_directories(${STRIBOH_PY_MOD} PRIVATE  ${CONAN_LIB_DIRS_BOOST} ${Boost_LIBRARY_DIR} ${Python3_LIBRARY_DIRS} ${CONAN_LIB_DIRS_FMT})
+set_target_properties(${STRIBOH_PY_MOD} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${STRIBOH_PY_MOD})

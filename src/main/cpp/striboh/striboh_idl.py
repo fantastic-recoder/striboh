@@ -1,24 +1,29 @@
 import sys
 import os
+import logging
 
-my_skript_dir=os.path.dirname(sys.argv[0])
+my_skript_dir = os.path.dirname(sys.argv[0])
 
-print("striboh_idl: Skript dir \"{my_skript_dir}\".".format(my_skript_dir=my_skript_dir))
+logging.debug("striboh_idl: Skript dir \"{my_skript_dir}\".".format(my_skript_dir=my_skript_dir))
 
-if len(my_skript_dir)>0:
+if len(my_skript_dir) > 0:
     my_skript_dir += '/'
 
-sys.path += [my_skript_dir+'../lib', my_skript_dir+'../../../cmake-build-debug/lib']
+my_skript_dir = os.path.normpath(my_skript_dir)
+my_striboh_libs = os.path.normpath('${CMAKE_BINARY_DIR}')
+sys.path += [my_striboh_libs, my_skript_dir]
 
-print("striboh_idl: Current directory {my_cur_dir}".format(my_cur_dir=os.path.abspath(os.curdir)))
-print("striboh_idl: Current path {my_cur_path}".format(my_cur_path=sys.path))
+os.add_dll_directory("${CMAKE_BINARY_DIR}/lib")
 
-import stribohIdl
+logging.debug("striboh_idl: Current directory {my_cur_dir}".format(my_cur_dir=os.path.abspath(os.curdir)))
+logging.debug("striboh_idl: Current path {my_cur_path}".format(my_cur_path=sys.path))
+
+import striboh_py as idl
 
 
 def main():
-    print("Version:" + stribohIdl.version())
-    my_ret_val = stribohIdl.process(sys.argv)
+    print("Version:" + idl.version())
+    my_ret_val = idl.process(sys.argv)
     if my_ret_val != 0:
         print(f"\nBackend returned error # {my_ret_val}\n".format(my_ret_val=my_ret_val))
     else:
