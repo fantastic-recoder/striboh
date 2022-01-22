@@ -384,9 +384,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "striboh/stribohIdlParser.hpp"
 #include "striboh/stribohBaseLogIface.hpp"
 
-#if(_MSC_VER==1930)
-#   define Py_DEBUG 1
-#endif
+//#if(_MSC_VER==1930)
+//#   define Py_DEBUG 1
+//#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -554,15 +554,15 @@ IdlContext::loadPyBackend(std::string_view pBackendName, std::string_view pCompi
 
 using ast::TypedIdentifierNode;
 
-PYBIND11_MODULE(stribohIdl, pPyModule)
+PYBIND11_MODULE(stribohmodule, p_pyModule)
 {
-    pPyModule.doc() = "stribohIdlPythonModule"; // optional module docstring
-    pPyModule.def("version", version, "Print module version.");
-    pPyModule.def("process", process, "Process the command the IDL sources specified on command line.");
-    pPyModule.def("setBackendVisitors",setBackendVisitors, "Set the visitors to be called upon backend code "
+    p_pyModule.doc() = "Striboh Python module"; // optional module docstring
+    p_pyModule.def("version", version, "Print module version.");
+    p_pyModule.def("process", process, "Process the command the IDL sources specified on command line.");
+    p_pyModule.def("setBackendVisitors",setBackendVisitors, "Set the visitors to be called upon backend code "
                                                            "generation.");
 
-    py::enum_<ast::EBuildInTypes>(pPyModule, "EBuildInTypes")
+    py::enum_<ast::EBuildInTypes>(p_pyModule, "EBuildInTypes")
             .value("INT",ast::EBuildInTypes::K_INT)
             .value("STRING",ast::EBuildInTypes::K_STRING)
             .value("FLOAT",ast::EBuildInTypes::K_FLOAT)
@@ -570,14 +570,14 @@ PYBIND11_MODULE(stribohIdl, pPyModule)
             .value("NONE",ast::EBuildInTypes::K_NONE_TYPE)
             ;
 
-    py::class_<ast::TypedIdentifierNode>(pPyModule, "TypedIdentifierNode")
+    py::class_<ast::TypedIdentifierNode>(p_pyModule, "TypedIdentifierNode")
             .def(py::init<>())
             .def("getName",&TypedIdentifierNode::getName)
             .def("getType",&TypedIdentifierNode::getType)
             .def("getTypeString",&TypedIdentifierNode::getTypeString)
             ;
 
-    py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(pPyModule, "AstVisitor")
+    py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(p_pyModule, "AstVisitor")
             .def(py::init<>())
             .def("setRuns",&AstVisitor::setRuns)
             .def("beginRun",&AstVisitor::beginRun)

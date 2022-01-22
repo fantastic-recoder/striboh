@@ -3,7 +3,7 @@ message(STATUS "CONAN_INCLUDE_DIRS_GTEST=${CONAN_INCLUDE_DIRS_GTEST}")
 message(STATUS "STRIBOH_LIBS=${STRIBOH_LIBS}")
 
 add_library(striboh_test_utils striboh_test_utils.hpp striboh_test_utils.cpp)
-target_include_directories(striboh_test_utils PRIVATE ${CONAN_INCLUDE_DIRS_BOOST} ${CONAN_INCLUDE_DIRS_FMT} ${STRIBOH_INCLUDE_DIR})
+target_include_directories(striboh_test_utils PRIVATE ${STRIBOH_INCLUDE_DIRS})
 
 add_executable(striboh_idl_tests striboh_idl_tests.cpp)
 target_include_directories(striboh_idl_tests PRIVATE ${CONAN_INCLUDE_DIRS_GTEST} ${STRIBOH_INCLUDE_DIRS})

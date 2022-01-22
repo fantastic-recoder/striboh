@@ -1,0 +1,6 @@
+[submodule "src/main/cpp/boost-cmake"]
+	path = src/main/cpp/boost-cmake
+	url = https://github.com/Orphis/boost-cmake.git
+[submodule "src/main/cpp/boost"]
+	path = src/main/cpp/boost
+	url = https://github.com/boostorg/boost.git

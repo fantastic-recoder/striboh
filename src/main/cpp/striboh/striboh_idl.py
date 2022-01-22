@@ -18,7 +18,7 @@ os.add_dll_directory("${CMAKE_BINARY_DIR}/lib")
 logging.debug("striboh_idl: Current directory {my_cur_dir}".format(my_cur_dir=os.path.abspath(os.curdir)))
 logging.debug("striboh_idl: Current path {my_cur_path}".format(my_cur_path=sys.path))
 
-import striboh_py as idl
+import stribohmodule as idl
 
 
 def main():

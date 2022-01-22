@@ -384,18 +384,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseBroker.hpp>
 
 #include <boost/log/trivial.hpp>
-#include <boost/process.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/filesystem.hpp>
-
-#include <striboh/stribohBaseInterface.hpp>
+#include <boost/process/cmd.hpp>
+#include <boost/process/io.hpp>
+#include <boost/process/system.hpp>
 #include <striboh/stribohBaseMethod.hpp>
 #include <striboh/stribohBaseMessage.hpp>
 #include <striboh/stribohBaseSignature.hpp>
 #include <striboh/stribohBaseBrokerIface.hpp>
 #include <striboh/stribohBaseLogBoostImpl.hpp>
-#include <striboh/stribohBaseUtils.hpp>
-#include <striboh/stribohBaseClient.hpp>
 #include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 

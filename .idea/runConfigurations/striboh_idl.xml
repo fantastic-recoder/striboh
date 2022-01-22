@@ -5,8 +5,9 @@
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
-      <env name="PYTHONPATH" value="C:\dev\projects\striboh\cmake-build-relwithdebinfo-visual-studio-2022\lib" />
       <env name="PYTHONHOME" value="C:\Python310" />
+      <env name="PATH" value="C:\Boost\lib" />
+      <env name="PYTHONPATH" value="C:\dev\projects\striboh\cmake-build-relwithdebinfo-visual-studio-2022\lib" />
     </envs>
     <option name="SDK_HOME" value="C:\Python310\python.exe" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/cmake-build-relwithdebinfo-visual-studio-2022/bin" />

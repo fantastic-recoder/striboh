@@ -517,7 +517,8 @@ namespace {
 
     public:
         MessageParserContext(LogIface &p_log, Message &p_msg)
-                : m_log(p_log), m_message(p_msg) {}
+                : m_log(p_log), m_message(p_msg)
+                {}
 
         // The list of FSM states
         struct Empty : public msm::front::state<> {
@@ -664,10 +665,10 @@ namespace striboh::base {
 
         LogIface &/*----------*/ m_log;
         const ReadBuffer &/*--*/ m_buf;
-        MessageParser /*------*/ m_parser;
+        MessageParser& /*-----*/ m_parser;
 
-        MessageVisitor1(MessageParserContext &p_ctx, Message& p_message, const ReadBuffer &p_buffer, LogIface &pLog)
-                : m_log(pLog), m_buf(p_buffer), m_parser( m_log, p_message) {
+        MessageVisitor1(MessageParser &p_parser, Message& p_message, const ReadBuffer &p_buffer, LogIface &pLog)
+                : m_log(pLog), m_buf(p_buffer), m_parser(p_parser) {
             m_log.debug("Created MessageVisitor1 &m_Log=={}.", (void *) (&m_log));
         }
 
@@ -762,12 +763,11 @@ namespace striboh::base {
     };
 
     bool Message::unpackFromBuffer(const ReadBuffer &myBuff) {
-        MessageParserContext myContext(mLog, *this);
-        MessageVisitor1 myMessageVisitor(myContext, *this, myBuff, mLog);
+        MessageParser myMessageParser(/*mLog, *this*/);
+        //MessageVisitor1 myMessageVisitor(myMessageParser, *this, myBuff, mLog);
         size_t myOffset = 0;
-        bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(),
-                                           myOffset, myMessageVisitor);
-        return myReturn;
+        //bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(), myOffset, myMessageVisitor);
+        return false;// myReturn;
     }
 
     Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
