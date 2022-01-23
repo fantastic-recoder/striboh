@@ -54,23 +54,24 @@ add_subdirectory(src/main/cpp/boost)
 ###############################################################################
 # Python
 find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter Development)
+add_subdirectory(src/main/cpp/pybind11)
 # Python end
 ###############################################################################
 
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 set(STRIBOH_LIBS ${CONAN_LIBS_FMT} Threads::Threads ${Python3_LIBRARIES} ${CMAKE_DL_LIBS}
-        Boost::program_options Boost::log ${BCrypt_LIBRARIES}) #${Boost_LIBRARIES} ${CONAN_LIBS_BOOST}
-set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS} ${Python3_LIBRARY_DIRS}) # ${CONAN_LIB_DIRS_BOOST} ${Boost_LIBRARY_DIRS}
+        Boost::program_options Boost::log ${BCrypt_LIBRARIES})
+set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS} ${Python3_LIBRARY_DIRS})
 set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON} ${CONAN_INCLUDE_DIRS_FMT}
         ${Python3_INCLUDE_DIRS} ${STRIBOH_INCLUDE_DIR} ${CONAN_INCLUDE_DIRS_MSGPACK}
-        ${CONAN_INCLUDE_DIRS_PYBIND11}
+        ${pybind11_SOURCE_DIR}/include
+        ${boost_predef_SOURCE_DIR}/include
         ${boost_asio_SOURCE_DIR}/include
         ${boost_archive_SOURCE_DIR}/include
         ${boost_config_SOURCE_DIR}/include
         ${boost_endian_SOURCE_DIR}/include
         ${boost_format_SOURCE_DIR}/include
         ${boost_logic_SOURCE_DIR}/include
-        ${boost_predef_SOURCE_DIR}/include
         ${boost_property_tree_SOURCE_DIR}/include
         ${boost_process_SOURCE_DIR}/include
         ${boost_random_SOURCE_DIR}/include

@@ -472,8 +472,6 @@ namespace striboh {
 
             virtual ~Compiler();
 
-            int process(int pArgC, char **pArgV);
-
             /**
              * Process the passed input files with passed options with the help of the python backend generator-visitor.
              *

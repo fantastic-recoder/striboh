@@ -5,7 +5,7 @@ import pystache
 
 sys.path.append(['../lib', '../../../cmake-build-debug/lib'])
 
-import stribohIdl as striboh
+import stribohmodule as striboh
 
 
 class NgVisitorBase:

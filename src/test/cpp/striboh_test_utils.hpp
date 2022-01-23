@@ -379,7 +379,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #pragma once
 
 #include <string>
-#include <boost/process/child.hpp>
+#include <boost/process.hpp>
 
 namespace striboh {
     namespace base {
@@ -390,5 +390,4 @@ namespace striboh {
         std::shared_ptr<boost::process::child> runServer(std::string_view pTestServerBinary, ::striboh::base::LogIface&);
     }
 }
-
 

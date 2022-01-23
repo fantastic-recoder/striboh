@@ -5,7 +5,7 @@ import pystache
 
 sys.path.append(['../lib', '../../../cmake-build-debug/lib'])
 
-import stribohIdl as striboh
+import stribohmodule as striboh
 
 def striboh_type_to_type_name(p_striboh_type: striboh.EBuildInTypes) -> str:
     if p_striboh_type == striboh.EBuildInTypes.STRING:

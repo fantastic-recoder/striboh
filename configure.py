@@ -2,6 +2,8 @@
 import subprocess
 import os
 
+## git submodule init update
+# https://github.com/boostorg/boost
 if os.name == 'nt' :
     subprocess.run(["cmake", "install", ".", "-s", "build_type=Release", "--install-folder=cmake-build-release","--build=missing"])
 else:

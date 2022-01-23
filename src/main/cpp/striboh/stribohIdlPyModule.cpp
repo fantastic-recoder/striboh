@@ -377,16 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include <fmt/format.h>
-#include "striboh/stribohIdlCompiler.hpp"
-#include "striboh/stribohIdlAstVisitor.hpp"
-#include "striboh/stribohIdlAstTypedIdentifierNode.hpp"
-#include "striboh/stribohIdlParser.hpp"
-#include "striboh/stribohBaseLogIface.hpp"
-
-//#if(_MSC_VER==1930)
-//#   define Py_DEBUG 1
-//#endif
+#include "striboh/stribohIdlPyModule.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -394,193 +385,153 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace py = pybind11;
 
 namespace {
-    striboh::base::LogIface& m_Log=striboh::base::getGlobalLog();
+    striboh::base::LogIface &m_Log = striboh::base::getGlobalLog();
 }
 
-namespace {
+void ::striboh::idl::PyAstVisitor::beginModule(std::string_view pModuleName) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            beginModule, /* Name of function in C++ (must match Python name) */
+            pModuleName  /* Argument(s) */
+    );
+}
 
-    using namespace striboh::idl;
+void ::striboh::idl::PyAstVisitor::endModule(std::string_view pModuleName) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            endModule, /* Name of function in C++ (must match Python name) */
+            pModuleName  /* Argument(s) */
+    );
+}
 
-    class PyAstVisitor : public AstVisitor {
-    public:
-        using AstVisitor::AstVisitor;
+void ::striboh::idl::PyAstVisitor::beginInterface(std::string_view pInterfaceName) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            beginInterface, /* Name of function in C++ (must match Python name) */
+            pInterfaceName  /* Argument(s) */
+    );
+}
 
-        ~PyAstVisitor() override = default;
+void ::striboh::idl::PyAstVisitor::endInterface(std::string_view pInterfaceName) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            endInterface, /* Name of function in C++ (must match Python name) */
+            pInterfaceName  /* Argument(s) */
+    );
+}
 
-        void beginRun( int pRunNum ) override;
+void ::striboh::idl::PyAstVisitor::beginMethod(const ::striboh::idl::ast::TypedIdentifierNode &pMethod) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            beginMethod, /* Name of function in C++ (must match Python name) */
+            pMethod  /* Argument(s) */
+    );
+}
 
-        void beginModule(std::string_view pModuleName) override;
+void ::striboh::idl::PyAstVisitor::endMethod(const ::striboh::idl::ast::TypedIdentifierNode &pMethod) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            endMethod, /* Name of function in C++ (must match Python name) */
+            pMethod  /* Argument(s) */
+    );
+}
 
-        void endModule(std::string_view pModuleName) override;
+void ::striboh::idl::PyAstVisitor::beginParameter(const ::striboh::idl::ast::TypedIdentifierNode &pPar) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            beginParameter, /* Name of function in C++ (must match Python name) */
+            pPar  /* Argument(s) */
+    );
+}
 
-        void beginInterface(std::string_view pInterfaceName) override;
+void ::striboh::idl::PyAstVisitor::beginRun(int pRunNum) {
+    PYBIND11_OVERRIDE_PURE(
+            void, /*        Return type */
+            AstVisitor, /*  Parent class */
+            beginRun, /* Name of function in C++ (must match Python name) */
+            pRunNum  /* Argument(s) */
+    );
 
-        void endInterface(std::string_view pInterfaceName) override;
+}
 
-        void beginMethod(const ast::TypedIdentifierNode &pMethod) override;
+const char *const ::striboh::idl::version() {
+    return "0.0.2-SNAPSHOT";
+}
 
-        void endMethod(const ast::TypedIdentifierNode &pMethod) override;
+using striboh::idl::Compiler;
 
-        void beginParameter(const ast::TypedIdentifierNode &pPar) override;
-    };
+using CompilerPtr = std::unique_ptr<Compiler>;
 
-    void PyAstVisitor::beginModule(std::string_view pModuleName) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                beginModule, /* Name of function in C++ (must match Python name) */
-                pModuleName  /* Argument(s) */
-        );
+/**
+ * Compiler factory, ensure there is instance...
+ *
+ * @return the compiler instance.
+ */
+CompilerPtr &getCompilerPtr() {
+    static CompilerPtr theCompiler;
+    if (!theCompiler) {
+        theCompiler = std::make_unique<Compiler>(striboh::base::getGlobalLog());
     }
+    return theCompiler;
+}
 
-    void PyAstVisitor::endModule(std::string_view pModuleName) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                endModule, /* Name of function in C++ (must match Python name) */
-                pModuleName  /* Argument(s) */
-        );
+/**
+ * Pass the command line arguments and run the compiler ( process the input files ).
+ *
+ * @pArg the arguments passed to the script on command line.
+ */
+int ::striboh::idl::process(std::vector<std::string> pArg) {
+    const size_t mySz = pArg.size();
+    std::unique_ptr<char *> myArgs(new char *[mySz]);
+    for (size_t pII = 0; pII < mySz; pII++) {
+        myArgs.get()[pII] = pArg[pII].data();
     }
+    const int myRetVal = getCompilerPtr()->pyProcess(mySz, myArgs.get());
+    getCompilerPtr().release();
+    return myRetVal;
+}
 
-    void PyAstVisitor::beginInterface(std::string_view pInterfaceName) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                beginInterface, /* Name of function in C++ (must match Python name) */
-                pInterfaceName  /* Argument(s) */
-        );
-    }
-
-    void PyAstVisitor::endInterface(std::string_view pInterfaceName) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                endInterface, /* Name of function in C++ (must match Python name) */
-                pInterfaceName  /* Argument(s) */
-        );
-    }
-
-    void PyAstVisitor::beginMethod(const ast::TypedIdentifierNode &pMethod) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                beginMethod, /* Name of function in C++ (must match Python name) */
-                pMethod  /* Argument(s) */
-        );
-    }
-
-    void PyAstVisitor::endMethod(const ast::TypedIdentifierNode &pMethod) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                endMethod, /* Name of function in C++ (must match Python name) */
-                pMethod  /* Argument(s) */
-        );
-    }
-
-    void PyAstVisitor::beginParameter(const ast::TypedIdentifierNode &pPar) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                beginParameter, /* Name of function in C++ (must match Python name) */
-                pPar  /* Argument(s) */
-        );
-    }
-
-    void PyAstVisitor::beginRun(int pRunNum) {
-        PYBIND11_OVERRIDE_PURE(
-                void, /*        Return type */
-                AstVisitor, /*  Parent class */
-                beginRun, /* Name of function in C++ (must match Python name) */
-                pRunNum  /* Argument(s) */
-        );
-
-    }
-
-    const char *const version() {
-        return "0.0.2-SNAPSHOT";
-    }
-
-    using striboh::idl::Compiler;
-
-    using CompilerPtr = std::unique_ptr<Compiler> ;
-
-    /**
-     * Compiler factory, ensure there is instance...
-     *
-     * @return the compiler instance.
-     */
-    CompilerPtr & getCompilerPtr() {
-        static CompilerPtr theCompiler;
-        if(!theCompiler) {
-            theCompiler = std::make_unique<Compiler>(striboh::base::getGlobalLog());
-        }
-        return theCompiler;
-    }
-
-    /**
-     * Pass the command line arguments and run the compiler ( process the input files ).
-     *
-     * @pArg the arguments passed to the script on command line.
-     */
-    int process(std::vector<std::string> pArg) {
-        const size_t mySz = pArg.size();
-        std::unique_ptr<char*> myArgs(new char*[mySz]);
-        for (size_t pII=0; pII<mySz; pII++) {
-            myArgs.get()[pII]=pArg[pII].data();
-        }
-        const int myRetVal=getCompilerPtr()->pyProcess(mySz, myArgs.get());
-        getCompilerPtr().release();
-        return myRetVal;
-    }
-
-    void setBackendVisitors( AstVisitor& pClientBackend, AstVisitor& pServantBackend) {
-        getCompilerPtr()->setVisitors(&pClientBackend, &pServantBackend);
-    }
+void ::striboh::idl::setBackendVisitors(AstVisitor &pClientBackend, AstVisitor &pServantBackend) {
+    getCompilerPtr()->setVisitors(&pClientBackend, &pServantBackend);
 }
 
 void
-IdlContext::loadPyBackend(std::string_view pBackendName, std::string_view pCompilerDir) {
-    std::string myFilename(fmt::format("striboh_backend_{}",pBackendName));
+::striboh::idl::IdlContext::loadPyBackend(std::string_view pBackendName, std::string_view pCompilerDir) {
+    std::string myFilename(fmt::format("striboh_backend_{}", pBackendName));
     mBackendScript.clear();
     m_Log.debug("Going to open backend: {}{}.", pCompilerDir, myFilename);
     std::filesystem::current_path(pCompilerDir);
     mBackendModule = pybind11::module_::import(myFilename.c_str());
     mBackendModule.attr("register")();
     mBackendState = EBackendState::ELoaded;
-    return ;
+    return;
 }
 
-
-using ast::TypedIdentifierNode;
-
-PYBIND11_MODULE(stribohmodule, p_pyModule)
-{
-    p_pyModule.doc() = "Striboh Python module"; // optional module docstring
-    p_pyModule.def("version", version, "Print module version.");
-    p_pyModule.def("process", process, "Process the command the IDL sources specified on command line.");
-    p_pyModule.def("setBackendVisitors",setBackendVisitors, "Set the visitors to be called upon backend code "
-                                                           "generation.");
-
+void ::striboh::idl::initPythonTypes(pybind11::module_ p_pyModule) {
     py::enum_<ast::EBuildInTypes>(p_pyModule, "EBuildInTypes")
-            .value("INT",ast::EBuildInTypes::K_INT)
-            .value("STRING",ast::EBuildInTypes::K_STRING)
-            .value("FLOAT",ast::EBuildInTypes::K_FLOAT)
-            .value("VOID",ast::EBuildInTypes::K_VOID)
-            .value("NONE",ast::EBuildInTypes::K_NONE_TYPE)
-            ;
+            .value("INT", ast::EBuildInTypes::K_INT)
+            .value("STRING", ast::EBuildInTypes::K_STRING)
+            .value("FLOAT", ast::EBuildInTypes::K_FLOAT)
+            .value("VOID", ast::EBuildInTypes::K_VOID)
+            .value("NONE", ast::EBuildInTypes::K_NONE_TYPE);
 
     py::class_<ast::TypedIdentifierNode>(p_pyModule, "TypedIdentifierNode")
             .def(py::init<>())
-            .def("getName",&TypedIdentifierNode::getName)
-            .def("getType",&TypedIdentifierNode::getType)
-            .def("getTypeString",&TypedIdentifierNode::getTypeString)
-            ;
+            .def("getName", &ast::TypedIdentifierNode::getName)
+            .def("getType", &ast::TypedIdentifierNode::getType)
+            .def("getTypeString", &ast::TypedIdentifierNode::getTypeString);
 
     py::class_<AstVisitor, PyAstVisitor /* <--- trampoline*/>(p_pyModule, "AstVisitor")
             .def(py::init<>())
-            .def("setRuns",&AstVisitor::setRuns)
-            .def("beginRun",&AstVisitor::beginRun)
+            .def("setRuns", &AstVisitor::setRuns)
+            .def("beginRun", &AstVisitor::beginRun)
             .def("beginModule", &AstVisitor::beginModule)
             .def("endModule", &AstVisitor::endModule)
             .def("beginInterface", &AstVisitor::beginInterface)
@@ -588,6 +539,18 @@ PYBIND11_MODULE(stribohmodule, p_pyModule)
             .def("beginMethod", &AstVisitor::beginMethod)
             .def("endMethod", &AstVisitor::endMethod)
             .def("beginParameter", &AstVisitor::beginParameter)
-            .def("addCode",&AstVisitor::addCode)
-            ;
+            .def("addCode", &AstVisitor::addCode);
+
 }
+
+using ::striboh::idl::ast::TypedIdentifierNode;
+
+PYBIND11_MODULE(stribohmodule, p_pyModule) {
+    p_pyModule.doc() = "Striboh Python module"; // optional module docstring
+    p_pyModule.def("version", ::striboh::idl::version, "Print module version.");
+    p_pyModule.def("process", ::striboh::idl::process, "Process the command the IDL sources specified on command line.");
+    p_pyModule.def("setBackendVisitors", ::striboh::idl::setBackendVisitors, "Set the visitors to be called upon backend code "
+                                                             "generation.");
+    ::striboh::idl::initPythonTypes(p_pyModule);
+}
+
