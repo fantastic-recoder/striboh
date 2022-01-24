@@ -388,7 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace {
 
-    static constexpr const char *const K_TEST_SRV = "http://0.0.0.0:10000";
+    static constexpr const char *const K_TEST_SRV = "http://127.0.0.1:10000";
 
     static constexpr const char *const K_TEST_MTHD_NM = "testMethod";
 }

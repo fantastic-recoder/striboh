@@ -390,7 +390,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "EchoClt.hpp"
 
 namespace {
-    static const char* K_TEST_SRV = "http://0.0.0.0:9998";
+    static const char* K_TEST_SRV = "http://127.0.0.1:9998";
     static striboh::base::LogBoostImpl theLog;
     striboh::base::Broker theBroker(K_TEST_SRV,theLog);
 }

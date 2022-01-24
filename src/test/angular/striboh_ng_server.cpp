@@ -419,7 +419,7 @@ using ng::hello_world::NgServant;
 using striboh::base::Address;
 
 int main() {
-    striboh::base::Broker aBroker("http://0.0.0.0:5600",theLog);
+    striboh::base::Broker aBroker("http://127.0.0.1:5600",theLog);
     NgServant myNgServant(aBroker);
     auto myUiid=aBroker.addServant(myNgServant.getInterface());
     aBroker.getLog().debug("NgServant Uiid = {}.",to_string(myUiid));
