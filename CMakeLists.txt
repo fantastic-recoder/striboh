@@ -65,23 +65,45 @@ set(STRIBOH_LIB_DIRS ${CONAN_LIB_DIRS_FMT} ${CMAKE_DL_LIBS} ${Python3_LIBRARY_DI
 set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NLOHMANN_JSON} ${CONAN_INCLUDE_DIRS_FMT}
         ${Python3_INCLUDE_DIRS} ${STRIBOH_INCLUDE_DIR} ${CONAN_INCLUDE_DIRS_MSGPACK}
         ${pybind11_SOURCE_DIR}/include
-        ${boost_predef_SOURCE_DIR}/include
+        ${BoostPredef_SOURCE_DIR}/include
+        ${BoostOptional_SOURCE_DIR}/include
+        ${boost_algorithm_SOURCE_DIR}/include
         ${boost_asio_SOURCE_DIR}/include
+        ${boost_assert_SOURCE_DIR}/include
         ${boost_archive_SOURCE_DIR}/include
         ${boost_config_SOURCE_DIR}/include
+        ${boost_concept_check_SOURCE_DIR}/include
+        ${boost_core_SOURCE_DIR}/include
+        ${boost_detail_SOURCE_DIR}/include
         ${boost_endian_SOURCE_DIR}/include
         ${boost_format_SOURCE_DIR}/include
+        ${boost_functional_SOURCE_DIR}/include
+        ${boost_fusion_SOURCE_DIR}/include
+        ${boost_container_hash_SOURCE_DIR}/include
+        ${boost_io_SOURCE_DIR}/include
+        ${boost_iterator_SOURCE_DIR}/include
         ${boost_logic_SOURCE_DIR}/include
+        ${boost_move_SOURCE_DIR}/include
+        ${boost_mpl_SOURCE_DIR}/include
+        ${boost_preprocessor_SOURCE_DIR}/include
         ${boost_property_tree_SOURCE_DIR}/include
         ${boost_process_SOURCE_DIR}/include
         ${boost_random_SOURCE_DIR}/include
+        ${boost_range_SOURCE_DIR}/include
+        ${boost_ratio_SOURCE_DIR}/include
+        ${BoostFilesystem_SOURCE_DIR}/include
         ${boost_system_SOURCE_DIR}/include
         ${boost_spirit_SOURCE_DIR}/include
         ${boost_serialization_SOURCE_DIR}/include
+        ${boost_static_assert_SOURCE_DIR}/include
         ${boost_tti_SOURCE_DIR}/include
+        ${boost_throw_exception_SOURCE_DIR}/include
+        ${boost_type_traits_SOURCE_DIR}/include
+        ${boost_type_index_SOURCE_DIR}/include
         ${boost_multi_index_SOURCE_DIR}/include
         ${boost_msm_SOURCE_DIR}/include
         ${boost_foreach_SOURCE_DIR}/include
+        ${boost_utility_SOURCE_DIR}/include
         ${boost_uuid_SOURCE_DIR}/include
         ${boost_winapi_SOURCE_DIR}/include
         ${boost_variant_SOURCE_DIR}/include

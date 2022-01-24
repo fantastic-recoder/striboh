@@ -380,10 +380,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <string>
 #include <chrono>
 
-#include "striboh_test_utils.hpp"
-
 #include <fmt/format.h>
 #include <striboh/stribohBaseLogIface.hpp>
+
+#include "striboh_test_utils.hpp"
 
 namespace striboh {
     namespace test {

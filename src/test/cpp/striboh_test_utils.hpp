@@ -379,7 +379,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #pragma once
 
 #include <string>
-#include <boost/process.hpp>
+
+#include <boost/process/child.hpp>
+#include <boost/process/io.hpp>
 
 namespace striboh {
     namespace base {
