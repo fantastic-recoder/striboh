@@ -377,6 +377,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
+#include <boost/mpl/vector.hpp>
+#include <boost/mpl/vector/vector30.hpp>
+
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
@@ -442,35 +445,52 @@ namespace {
     template<typename T>
     struct EvtVal {
         T mVal;
+        striboh::base::LogIface& m_log;
 
         EvtVal() = delete;
 
-        explicit EvtVal(T pVal) : mVal(pVal) {}
+        explicit EvtVal(T pVal, striboh::base::LogIface& p_log) : mVal(pVal), m_log(p_log){
+            m_log.debug( "{} value = {}", typeid(*this).name(), mVal );
+        }
 
     };
 
-    struct EvtNil {
+    template<typename TEvent>
+    struct TBaseEvent : LogGuard {
+        TBaseEvent(striboh::base::LogIface& p_log): LogGuard(p_log,typeid(TEvent).name())
+        {}
     };
 
-    struct EvtStartMap {
+    struct EvtNil: TBaseEvent<EvtNil> {
+        EvtNil(striboh::base::LogIface& p_log):TBaseEvent<EvtNil>(p_log){}
     };
 
-    struct EvtEndMap {
+    struct EvtStartMap : TBaseEvent<EvtStartMap> {
+        EvtStartMap(striboh::base::LogIface& p_log):TBaseEvent<EvtStartMap>(p_log){}
     };
 
-    struct EvtStartArray {
+    struct EvtEndMap : TBaseEvent<EvtEndMap> {
+        EvtEndMap(striboh::base::LogIface& p_log):TBaseEvent<EvtEndMap>(p_log){}
     };
 
-    struct EvtEndArray {
+    struct EvtStartArray : TBaseEvent<EvtStartArray> {
+        EvtStartArray(striboh::base::LogIface& p_log):TBaseEvent<EvtStartArray>(p_log){}
     };
 
-    struct EvtEndArrayItem {
+    struct EvtEndArray : TBaseEvent<EvtEndArray> {
+        EvtEndArray(striboh::base::LogIface& p_log):TBaseEvent<EvtEndArray>(p_log){}
     };
 
-    struct EvtEndMapKey {
+    struct EvtEndArrayItem : TBaseEvent<EvtEndArrayItem> {
+        EvtEndArrayItem(striboh::base::LogIface& p_log):TBaseEvent<EvtEndArrayItem>(p_log){}
     };
 
-    struct EvtEndMapValue {
+    struct EvtEndMapKey : TBaseEvent<EvtEndMapKey> {
+        EvtEndMapKey(striboh::base::LogIface& p_log):TBaseEvent<EvtEndMapKey>(p_log){}
+    };
+
+    struct EvtEndMapValue : TBaseEvent<EvtEndMapValue> {
+        EvtEndMapValue(striboh::base::LogIface& p_log):TBaseEvent<EvtEndMapValue>(p_log){}
     };
 
     using EvtStringVal = EvtVal<std::string>;
@@ -481,30 +501,11 @@ namespace {
     using striboh::base::LogIface;
     using striboh::base::Message;
     using striboh::base::InstanceId;
+    using striboh::base::Parameter;
+    using striboh::base::Value;
 
     using std::string;
     using std::string_view;
-
-    /*
-    struct MessageParserConfig {
-
-        struct ActionAddParameter {
-            template<typename TEvent>
-            void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
-                pContext.m_message.getParameters().emplace_back(Parameter(pContext.mKey, pEvent.mVal));
-            }
-
-        };
-
-        struct ActionSetReturn {
-            template<typename TEvent>
-            void operator()(const TEvent &pEvent, MessageParserContext &pContext) {
-                pContext.m_message.setReturn(Value(pEvent.mVal));
-            }
-        };
-
-    };
-*/
 
     using msm::front::Row;
     using msm::front::none;
@@ -512,13 +513,12 @@ namespace {
     class MessageParserContext : public msm::front::state_machine_def<MessageParserContext> {
         LogIface & /*-------------*/ m_log;
         Message & /*--------------*/ m_message;
-        std::string  /*-----------*/ mKey;
-        std::vector<uint8_t>  /*--*/ mInstanceId;
+        std::string  /*-----------*/ m_key;
+        std::vector<uint8_t>  /*--*/ m_instanceId;
 
     public:
         MessageParserContext(LogIface &p_log, Message &p_msg)
-                : m_log(p_log), m_message(p_msg)
-                {}
+                : m_log(p_log), m_message(p_msg) {}
 
         // The list of FSM states
         struct Empty : public msm::front::state<> {
@@ -537,9 +537,6 @@ namespace {
             void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
         };
 
-        // the initial state of the player SM. Must be defined
-        typedef mpl::vector<Empty, AllOk> initial_state;
-
         struct BeforeMessageState : public msm::front::state<> {
             template<class Event, class FSM>
             void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
@@ -556,102 +553,244 @@ namespace {
             void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
         };
 
-/*
-        std::function actionStoreKey
-                = [](const EvtStringVal &pEvent, MessageParserContext &pContext) {
-                    pContext.mKey = pEvent.mVal;
-                };
+        struct ParsingParametersKeyState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
 
-        constexpr auto actionStoreMessageType
-                = [](const EvtInt64 &pEvent, MessageParserContext &pContext) {
-                    pContext.m_message.setType(EMessageType(pEvent.mVal));
-                };
-
-        constexpr auto checkParametersKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-            return pEvt.mVal == Message::K_PARAMETERS_KEY;
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
         };
 
-        constexpr auto checkMethodNameKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-            return pEvt.mVal == Message::K_METHOD_NAME_KEY;
+        struct ErrorState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
         };
 
-        constexpr auto checkReturnKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-            return pEvt.mVal == Message::K_RETURN_KEY;
-        };
+        // the initial state of the player SM. Must be defined
+        typedef mpl::vector<BeforeMessageState> initial_state;
 
-        constexpr auto checkInstanceKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-            return pEvt.mVal == Message::K_INSTANCE_ID_KEY;
-        };
-
-        constexpr auto checkMessageTypeKey = [](const EvtStringVal &pEvt, MessageParserContext &) -> bool {
-            return pEvt.mVal == Message::K_MESSAGE_TYPE_KEY;
-        };
-
-        constexpr auto actionStartInstanceId = [](const EvtStringVal &, MessageParserContext &pContext) {
-            pContext.mInstanceId.clear();
-        };
-
-        constexpr auto actionStoreInstanceIdByte = [](const EvtInt64 &pEvt, MessageParserContext &pContext) {
-            pContext.mInstanceId.push_back(pEvt.mVal);
-        };
-
-        constexpr auto actionStoreInstanceId = [](const EvtEndArray &, MessageParserContext &pContext) {
-            InstanceId myNewId;
-            if (pContext.mInstanceId.size() != myNewId.size()) {
-                throw std::runtime_error(fmt::format("Instance ID has wrong size - {}, and not {}.",
-                                                     pContext.mInstanceId.size(), myNewId.size()));
+        struct ActionAddParameter {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                p_fsm.m_message.getParameters().emplace_back(Parameter(p_fsm.m_key, p_event.mVal));
             }
-            std::copy(pContext.mInstanceId.begin(), pContext.mInstanceId.end(), myNewId.begin());
-            pContext.m_message.setInstanceId(myNewId);
         };
 
-        constexpr auto actionStoreMethodName = [](const EvtStringVal &pEvt, MessageParserContext &pContext) {
-            pContext.m_message.setMethodName(pEvt.mVal);
+        struct ActionSetReturn {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_message.setReturn(Value(p_event.mVal));
+            }
         };
-*/
-        struct transition_table : mpl::vector<
-                //    Start                    Event            Target                     Action                      Guard
-                //   +-----------------------+-----------------+--------------------------+---------------------------+----------------------------+
-                Row<  BeforeMessageState/*-*/, EvtStartMap/*-*/, ParsingMessageState/*--*/, none/*------------------*/, none/*-*/>
-                /*
-                                   X*"BeforeMessageState"_s + event < EvtStartMap > = "ParsingMessageState"_s,
-                                   "BeforeMessageState"_s + event < EvtBool > = "ErrorState"_s,
-                                   // message type
-                                   "ParsingMessageState"_s + event<EvtStringVal>[checkMessageTypeKey] = "ParsingMessageType"_s,
-                                   "ParsingMessageType"_s + event < EvtInt64 > / actionStoreMessageType = "ParsingMessageState"_s,
-                                   // instance id
-                                   "ParsingMessageState"_s +
-                                   event<EvtStringVal>[checkInstanceKey] / actionStartInstanceId = "ParsingInstanceId"_s,
-                                   "ParsingInstanceId"_s + event < EvtInt64 >   / actionStoreInstanceIdByte,
-                                   "ParsingInstanceId"_s + event < EvtEndArray > / actionStoreInstanceId = "ParsingMessageState"_s,
-                                   // parameters of a method
-                                                                                   "ParsingMessageState"_s +
-                                                                                   event<EvtStringVal>[checkParametersKey] = "ParsingParameters"_s,
-                                                                                   "ParsingParameters"_s + event <
-                                                                                   EvtStartArray > = "ParsingParametersKey"_s,
-                                                                                   "ParsingParameters"_s + event <
-                                                                                   EvtStartMap > = "ParsingParametersKey"_s,
-                                   "ParsingParametersKey"_s + event < EvtStringVal > / actionStoreKey = "ParsingParametersKey"_s,
-                                   "ParsingParametersKey"_s + event < EvtEndMapKey > = "ParsingParameterValue"_s,
-                                   "ParsingParameterValue"_s + event < EvtInt64 > / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                                   "ParsingParameterValue"_s + event < EvtBool > / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                                   "ParsingParameterValue"_s + event <
-                                   EvtStringVal > / (ActionAddParameter{}) = "ParsingParameterValue"_s,
-                                                    "ParsingParameterValue"_s + event < EvtEndMapValue > = "ParsingParameterEnd"_s,
-                                                    "ParsingParameterEnd"_s + event < EvtEndArrayItem > = "ParsingParameters"_s,
-                                                    "ParsingParametersKey"_s + event < EvtEndArray > = "ParsingMessageState"_s,
-                                   // method name
-                                                    "ParsingMessageState"_s +
-                                                    event<EvtStringVal>[checkMethodNameKey] = "ParsingMethodName"_s,
-                                   "ParsingMethodName"_s + event < EvtStringVal > / actionStoreMethodName = "ParsingMessageState"_s,
-                                   // return value
-                                   "ParsingMessageState"_s + event<EvtStringVal>[checkReturnKey] = "ParsingReturn"_s,
-                                   "ParsingReturn"_s + event < EvtInt64 > / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                                   "ParsingReturn"_s + event < EvtBool > / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                                   "ParsingReturn"_s + event < EvtStringVal > / (ActionSetReturn{}) = "ParsingMessageState"_s,
-                                   // finished
-                                   "ParsingMessageState"_s + event < EvtEndMap > = "AfterMessageState"_s
-                 * */
+
+        struct ActionStoreKey {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_key = p_event.mVal;
+            }
+        };
+
+        struct ActionStoreMessageType {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_message.setType(EMessageType(p_event.mVal));
+            }
+        };
+
+        struct ParsingMessageTypeState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ParsingInstanceId : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ParsingParametersState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct AfterMessageState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ParsingParameterValueState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ParsingMethodNameState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ParsingReturnState : public msm::front::state<> {
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("--> {}", typeid(*this).name()); }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) { p_fsm.m_log.debug("<-- {}", typeid(*this).name()); }
+        };
+
+        struct ActionParsingMessageType {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_message.setType(EMessageType(p_event.mVal));
+            }
+        };
+
+        struct CheckParametersKey {
+            template<class EVT, class FSM, class SourceState, class TargetState>
+            bool operator()(EVT const &p_evt, FSM &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                return p_evt.mVal == Message::K_PARAMETERS_KEY;
+            }
+        };
+
+        struct CheckMethodNameKey {
+            template<class EVT, class FSM, class SourceState, class TargetState>
+            bool operator()(EVT const &p_evt, FSM &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                return p_evt.mVal == Message::K_METHOD_NAME_KEY;
+            }
+        };
+
+        struct CheckReturnKey {
+            template<class EVT, class FSM, class SourceState, class TargetState>
+            bool operator()(EVT const &p_evt, FSM &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                return p_evt.mVal == Message::K_RETURN_KEY;
+            }
+        };
+
+        struct CheckInstanceKey {
+            template<class EVT, class FSM, class SourceState, class TargetState>
+            bool operator()(EVT const &p_evt, FSM &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                return p_evt.mVal == Message::K_INSTANCE_ID_KEY;
+            }
+        };
+
+        struct CheckMessageTypeKey {
+            template<class EVT, class FSM, class SourceState, class TargetState>
+            bool operator()(EVT const &p_evt, FSM &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_log.debug("CheckMessageTypeKey");
+                return p_evt.mVal == Message::K_MESSAGE_TYPE_KEY;
+            }
+        };
+
+        struct ActionStartInstanceId {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_instanceId.clear();
+            }
+        };
+
+        struct ActionStoreInstanceIdByte {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_instanceId.push_back(p_event.mVal);
+            }
+        };
+
+        struct ActionStoreInstanceId {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                InstanceId myNewId;
+                if (p_fsm.m_instanceId.size() != myNewId.size()) {
+                    throw std::runtime_error(fmt::format("Instance ID has wrong size - {}, and not {}.",
+                                                         p_fsm.m_instanceId.size(), myNewId.size()));
+                }
+                std::copy(p_fsm.m_instanceId.begin(), p_fsm.m_instanceId.end(), myNewId.begin());
+                p_fsm.m_message.setInstanceId(myNewId);
+            }
+        };
+
+        struct ActionStoreMethodName {
+            template<class Fsm, class Evt, class SourceState, class TargetState>
+            void operator()(Evt const &p_event, Fsm &p_fsm, SourceState &p_srcState, TargetState &p_targetState) {
+                boost::ignore_unused(p_targetState);
+                boost::ignore_unused(p_srcState);
+                p_fsm.m_message.setMethodName(p_event.mVal);
+            }
+        };
+
+        struct transition_table : mpl::vector22<
+                // +------------------------------+------------------+------------------------------+-----------------------------+-----------------------+
+                // |  Start                       |  Event           |  Target                      |  Action                     |  Guard                |
+                // +------------------------------+------------------+------------------------------+-----------------------------+-----------------------+
+                Row<BeforeMessageState/*---------*/, EvtStartMap/*--*/, ParsingMessageState/*------*/, none/*--------------------*/, none/*----------------*/>, // 00
+                Row<BeforeMessageState/*---------*/, EvtBool/*------*/, ErrorState/*---------------*/, none/*--------------------*/, none/*----------------*/>, // 01
+                // message type
+                Row<ParsingMessageState/*--------*/, EvtStringVal/*-*/, ParsingMessageTypeState/*--*/, none/*--------------------*/, CheckMessageTypeKey/*-*/>, // 02
+                Row<ParsingMessageTypeState/*----*/, EvtInt64/*-----*/, ParsingMessageState/*------*/, ActionStoreMessageType/*--*/, none/*----------------*/>, // 03
+                // instance id
+                Row<ParsingMessageState/*--------*/, EvtStringVal/*-*/, ParsingInstanceId/*--------*/, ActionStartInstanceId/*----*/, CheckInstanceKey/*----*/>, // 04
+                Row<ParsingInstanceId/*----------*/, EvtInt64/*-----*/, ParsingInstanceId/*--------*/, ActionStoreInstanceIdByte/**/, none/*----------------*/>, // 05
+                Row<ParsingInstanceId/*----------*/, EvtEndArray/*--*/, ParsingMessageState/*------*/, ActionStoreInstanceId/*----*/, none/*----------------*/>, // 06
+                // parameters of a method
+                Row<ParsingMessageState/*--------*/, EvtStringVal/*-*/, ParsingParametersState/*----*/, none/*---------------------*/, CheckParametersKey/*-*/>, // 07
+                Row<ParsingParametersState/*-----*/, EvtStartMap/*--*/, ParsingParametersKeyState/*-*/, none/*---------------------*/, none/*---------------*/>, // 08
+                Row<ParsingParametersKeyState/*--*/, EvtStringVal/*-*/, ParsingParametersKeyState/*-*/, ActionStoreKey/*-----------*/, none/*---------------*/>, // 09
+                Row<ParsingParametersKeyState/*--*/, EvtEndMapKey/*-*/, ParsingParameterValueState/**/, none/*---------------------*/, none/*---------------*/>, // 10
+                Row<ParsingParameterValueState/*-*/, EvtInt64 /*----*/, ParsingParameterValueState/**/, ActionAddParameter/*-------*/, none/*---------------*/>, // 11
+                Row<ParsingParameterValueState/*-*/, EvtBool /*-----*/, ParsingParameterValueState/**/, ActionAddParameter/*-------*/, none/*---------------*/>, // 12
+                Row<ParsingParameterValueState/*-*/, EvtStringVal /**/, ParsingParameterValueState/**/, ActionAddParameter/*-------*/, none/*---------------*/>, // 13
+                Row<ParsingParameterValueState/*-*/, EvtEndMap /*---*/, ParsingParametersKeyState/*-*/, none/*---------------------*/, none/*---------------*/>, // 14
+                // method name
+                Row<ParsingMessageState/*--------*/, EvtStringVal/**/, ParsingMethodNameState/*----*/, none/*---------------------*/, CheckMethodNameKey/*--*/>, // 15
+                Row<ParsingMethodNameState/*-----*/, EvtStringVal/**/, ParsingMessageState/*-------*/, ActionStoreMethodName/*----*/, none/*----------------*/>, // 16
+                // return value
+                Row<ParsingMessageState/*--------*/, EvtStringVal/**/, ParsingReturnState/*--------*/, none/*---------------------*/, CheckReturnKey/*-----*/>, // 17
+                Row<ParsingReturnState/*---------*/, EvtInt64/*----*/, ParsingMessageState/*-------*/, ActionSetReturn/*----------*/, none/*---------------*/>, // 18
+                Row<ParsingReturnState/*---------*/, EvtBool/*-----*/, ParsingMessageState/*-------*/, ActionSetReturn/*----------*/, none/*---------------*/>, // 19
+                Row<ParsingReturnState/*---------*/, EvtStringVal/**/, ParsingMessageState/*-------*/, ActionSetReturn/*----------*/, none/*---------------*/>, // 20
+                // finished
+                Row<ParsingMessageState/*--------*/, EvtEndMap/*---*/, AfterMessageState/*---------*/, none/*---------------------*/, none/*---------------*/> // 21
         > {
         };
     };
@@ -665,9 +804,9 @@ namespace striboh::base {
 
         LogIface &/*----------*/ m_log;
         const ReadBuffer &/*--*/ m_buf;
-        MessageParser& /*-----*/ m_parser;
+        MessageParser & /*-----*/ m_parser;
 
-        MessageVisitor1(MessageParser &p_parser, Message& p_message, const ReadBuffer &p_buffer, LogIface &pLog)
+        MessageVisitor1(MessageParser &p_parser, Message &p_message, const ReadBuffer &p_buffer, LogIface &pLog)
                 : m_log(pLog), m_buf(p_buffer), m_parser(p_parser) {
             m_log.debug("Created MessageVisitor1 &m_Log=={}.", (void *) (&m_log));
         }
@@ -677,66 +816,66 @@ namespace striboh::base {
         }
 
         inline bool visit_nil() {
-            m_parser.process_event(EvtNil());
+            m_parser.process_event(EvtNil(m_log));
             return isInErrorState();
         }
 
         inline bool visit_boolean(bool v) {
-            m_parser.process_event(EvtBool(v));
+            m_parser.process_event(EvtBool(v,m_log));
             return isInErrorState();
         }
 
         inline bool visit_positive_integer(uint64_t v) {
-            m_parser.process_event(EvtInt64(v));
+            m_parser.process_event(EvtInt64(v,m_log));
             return isInErrorState();
         }
 
         inline bool visit_negative_integer(int64_t v) {
-            m_parser.process_event(EvtInt64(v));
+            m_parser.process_event(EvtInt64(v,m_log));
             return isInErrorState();
         }
 
         inline bool visit_str(const char *v, uint32_t pSize) {
-            m_parser.process_event(EvtStringVal(std::string(v, pSize)));
+            m_parser.process_event(EvtStringVal(std::string(v, pSize),m_log));
             return isInErrorState();
         }
 
         inline bool start_array(uint32_t pArraySize) {
             m_log.debug("MessageVisitor1::start_array pArraySize=={}.", pArraySize);
-            m_parser.process_event(EvtStartArray());
+            m_parser.process_event(EvtStartArray(m_log));
             return isInErrorState();
         }
 
         inline bool end_array_item() {
             m_log.debug("MessageVisitor1::end_array_item.");
-            m_parser.process_event(EvtEndArrayItem());
+            m_parser.process_event(EvtEndArrayItem(m_log));
             return isInErrorState();
         }
 
         inline bool end_array() {
             m_log.debug("MessageVisitor1::end_array.");
-            m_parser.process_event(EvtEndArray());
+            m_parser.process_event(EvtEndArray(m_log));
             return isInErrorState();
         }
 
         inline bool start_map(uint32_t pMapSize) {
             m_log.debug("MessageVisitor1::start_map pMapSize=={}.", pMapSize);
-            m_parser.process_event(EvtStartMap());
+            m_parser.process_event(EvtStartMap(m_log));
             return isInErrorState();
         }
 
         inline bool end_map_key() {
-            m_parser.process_event(EvtEndMapKey());
+            m_parser.process_event(EvtEndMapKey(m_log));
             return isInErrorState();
         }
 
         inline bool end_map_value() {
-            m_parser.process_event(EvtEndMapValue());
+            m_parser.process_event(EvtEndMapValue(m_log));
             return isInErrorState();
         }
 
         inline bool end_map() {
-            m_parser.process_event(EvtEndMap());
+            m_parser.process_event(EvtEndMap(m_log));
             return isInErrorState();
         }
 
@@ -763,11 +902,11 @@ namespace striboh::base {
     };
 
     bool Message::unpackFromBuffer(const ReadBuffer &myBuff) {
-        MessageParser myMessageParser(/*mLog, *this*/);
-        //MessageVisitor1 myMessageVisitor(myMessageParser, *this, myBuff, mLog);
+        MessageParser myMessageParser(mLog, *this);
+        MessageVisitor1 myMessageVisitor(myMessageParser, *this, myBuff, mLog);
         size_t myOffset = 0;
-        //bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(), myOffset, myMessageVisitor);
-        return false;// myReturn;
+        bool myReturn = msgpack::v2::parse(myBuff.data(), myBuff.size(), myOffset, myMessageVisitor);
+        return myReturn;
     }
 
     Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
