@@ -641,20 +641,6 @@ namespace striboh::base {
         return myRetValStr;
     }
 
-    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName) {
-        string myPath(pAddress.str());
-        std::for_each(p_Path.get().begin(), p_Path.get().end(), [&myPath](const ModuleName &p0) -> void {
-                                     myPath += ('/' + p0.get());
-                                 });
-        myPath += ('/' + p_InterfaceName.get());
-        return myPath;
-    }
-
-    string fullPath(const Address &pAddress, const Interface &pResolved) {
-        string myPath(fullPath(pAddress,pResolved.getPath(),pResolved.getName()));
-        return myPath;
-    }
-
     /**
      * Report a failure
      */

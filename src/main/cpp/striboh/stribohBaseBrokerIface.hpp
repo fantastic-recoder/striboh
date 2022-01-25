@@ -407,8 +407,6 @@ namespace striboh::base {
 
     std::string toString(const EServerState &);
 
-    class Interface;
-
     inline auto operator<(const ModuleName &p0, const ModuleName &p1) {
         return p0.get() < p1.get();
     }
@@ -500,8 +498,19 @@ namespace striboh::base {
 
     std::string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pIface);
 
-    std::string fullPath(const Address &pAddress, const Interface &pResolved);
+    inline std::string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName) {
+        std::string myPath(pAddress.str());
+        std::for_each(p_Path.get().begin(), p_Path.get().end(), [&myPath](const ModuleName &p0) -> void {
+            myPath += ('/' + p0.get());
+        });
+        myPath += ('/' + p_InterfaceName.get());
+        return myPath;
+    }
 
-    std::string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName &p_InterfaceName);
+    inline std::string fullPath(const Address &pAddress, const Interface &pResolved) {
+        std::string myPath(fullPath(pAddress,pResolved.getPath(),pResolved.getName()));
+        return myPath;
+    }
+
 
 } // striboh::base

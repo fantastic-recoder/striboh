@@ -377,8 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_BASE_INTERFACE_HPP
-#define STRIBOH_BASE_INTERFACE_HPP
+#pragma once
 
 #include <vector>
 #include <map>
@@ -387,7 +386,6 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <NamedType/named_type.hpp>
 
 #include "striboh/stribohBase.hpp"
-#include "striboh/stribohBaseBrokerIface.hpp"
 
 namespace striboh::base {
 
@@ -455,4 +453,3 @@ namespace striboh::base {
     static const constexpr char *const K_TAG_SVC_UUID_ARR = "uuid_arr";
 }
 
-#endif //STRIBOH_BASE_INTERFACE_HPP
