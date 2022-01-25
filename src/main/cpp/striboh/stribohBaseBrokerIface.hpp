@@ -377,8 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_BASE_BROKER_IFACE_HPP
-#define STRIBOH_BASE_BROKER_IFACE_HPP
+#pragma once
 
 #include <array>
 #include <atomic>
@@ -422,9 +421,9 @@ namespace striboh::base {
         ModuleNames m_Modules;
         Path m_Path;
         InterfaceNames m_Interfaces;
-        const Address& m_Address;
+        const Address &m_Address;
 
-        ResolvedResult(const Address& p_Address): m_Address(p_Address){};
+        ResolvedResult(const Address &p_Address) : m_Address(p_Address) {};
     };
 
 
@@ -432,7 +431,7 @@ namespace striboh::base {
 
     struct BrokerIface {
 
-        BrokerIface(std::string_view&& pAddress, LogIface &pLogIface) //
+        BrokerIface(std::string_view &&pAddress, LogIface &pLogIface) //
                 : m_Address(std::move(pAddress), pLogIface) //
                 , mLogIface(pLogIface) {}
 
@@ -479,9 +478,9 @@ namespace striboh::base {
         const std::atomic<EServerState> &
         getState() const { return mOperationalState; }
 
-        const Address& getAddress() const { return m_Address; }
+        const Address &getAddress() const { return m_Address; }
 
-        virtual const Interface& getInterface(const InstanceId& pInstanceId ) const = 0;
+        virtual const Interface &getInterface(const InstanceId &pInstanceId) const = 0;
 
     protected:
         void setState(EServerState pState) {
@@ -496,6 +495,13 @@ namespace striboh::base {
         LogIface &mLogIface;
         std::shared_ptr<ServerIface> mServerIface;
     };
-}
 
-#endif //STRIBOH_BASE_BROKER_IFACE_HPP
+    std::string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog);
+
+    std::string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pIface);
+
+    std::string fullPath(const Address &pAddress, const Interface &pResolved);
+
+    std::string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName &p_InterfaceName);
+
+} // striboh::base

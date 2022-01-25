@@ -382,12 +382,17 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseExceptionsWrongAdress.hpp>
 
 #include "striboh/stribohBaseLogBoostImpl.hpp"
+#include "striboh/stribohBase.hpp"
+#include "striboh/stribohBaseBrokerIface.hpp"
 
 using striboh::base::Address;
 using striboh::base::EProtocol;
 using striboh::base::exceptions::WrongAddress;
 using striboh::base::LogBoostImpl;
 using striboh::base::LogIface;
+using striboh::base::ModuleName;
+using striboh::base::InterfaceName;
+using striboh::base::fullPath;
 using std::string;
 
 namespace {
@@ -448,4 +453,11 @@ TEST(testAddress,parse0_0_0_0) {
     EXPECT_EQ(9998,myAddress.getPort()) << "Port parsed wrongly.";
     EXPECT_EQ(0UL,myAddress.getUri().size());
     EXPECT_EQ("http://0.0.0.0:9998",myAddress.str());
+}
+
+TEST(testAddress,fullPath) {
+    Address myAddress("http://0.0.0.0:9998", getLog());
+    ::striboh::base::Path myPath(std::vector<ModuleName>{ModuleName("ng"),ModuleName("hello_world")});
+    auto myFullPath = fullPath(myAddress,myPath,InterfaceName (""));
+    EXPECT_EQ("http://0.0.0.0:9998/ng/hello_world/",myFullPath);
 }

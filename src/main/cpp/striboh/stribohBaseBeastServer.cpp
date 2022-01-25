@@ -416,14 +416,6 @@ namespace striboh::base {
 
     constexpr static const char *const theAppJson = "application/json";
 
-    string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog);
-
-    string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pIface);
-
-    string fullPath(const Address &pAddress, const Interface &pResolved);
-
-    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName);
-
     //! Return a reasonable mime type based on the extension of a file.
     beast::string_view
     mime_type(beast::string_view path) {
@@ -605,7 +597,7 @@ namespace striboh::base {
                     {"interfaces", Json::array()}
             };
             for (auto myModuleName: p_Resolved.m_Modules) {
-                Path myPath;
+                Path myPath(p_Resolved.m_Path);
                 myPath.get().emplace_back(myModuleName);
                 myRetVal["modules"].emplace_back(fullPath(p_Resolved.m_Address, myPath, InterfaceName("")));
             }
