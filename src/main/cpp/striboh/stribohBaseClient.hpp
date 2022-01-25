@@ -459,22 +459,6 @@ namespace striboh {
         };
 
         class ObjectProxy : public std::enable_shared_from_this<ObjectProxy> {
-        private:
-            std::atomic<EConnectionStatus> mConnectionStatus;
-            net::io_context mIoContext;
-            tcp::resolver mResolver;
-            tcp::resolver::results_type mTcpResolverResult;
-            WebSocket mWebSocket;
-            http::request<http::empty_body> mRequest;
-            http::response<http::string_body> mResponse;
-            const HostConnection &mClient;
-            std::string mBaseUrl;
-            InstanceId mUuid;
-            std::string mWebSocketUrl;
-            beast::flat_buffer mFlatBuffer; // (Must persist between reads)
-            bool mUpgraded = false;
-            uint8_t mRetryCnt = 13;
-            LogIface &mLog;
         public:
 
             /**
@@ -485,34 +469,34 @@ namespace striboh {
             ObjectProxy(const HostConnection &pClient,
                         std::string_view pPath,
                         LogIface &pLog) :
-                    mConnectionStatus(EConnectionStatus::K_INITIAL), //< striboh context
-                    mResolver(net::make_strand(mIoContext)), //< log
-                    mWebSocket(net::make_strand(mIoContext)), //
-                    mClient(pClient), //
-                    mBaseUrl(std::move(pPath)), mLog(pLog) {}
+                    m_connectionStatus(EConnectionStatus::K_INITIAL), //< striboh context
+                    mResolver(net::make_strand(m_ioContext)), //< log
+                    m_webSocket(net::make_strand(m_ioContext)), //
+                    m_client(pClient), //
+                    m_baseUrl(std::move(pPath)), m_log(pLog) {}
 
             const WebSocket &getWebSocket() const {
-                return mWebSocket;
+                return m_webSocket;
             }
 
             WebSocket &getWebSocket() {
-                return mWebSocket;
+                return m_webSocket;
             }
 
             EConnectionStatus getConnectionStatus() const {
-                return mConnectionStatus;
+                return m_connectionStatus;
             }
 
             std::atomic<EConnectionStatus> &getConnectionStatus() {
-                return mConnectionStatus;
+                return m_connectionStatus;
             }
 
             bool
             isConnected() {
-                if (mConnectionStatus == EConnectionStatus::K_INITIAL) {
+                if (m_connectionStatus == EConnectionStatus::K_INITIAL) {
                     doTcpResolveAntConnect();
                 }
-                return mConnectionStatus == EConnectionStatus::K_CONNECTED;
+                return m_connectionStatus == EConnectionStatus::K_CONNECTED;
             }
 
             std::shared_ptr<InvocationContext>
@@ -537,8 +521,8 @@ namespace striboh {
 
             void
             onGetInstanceResponse(
-                    beast::error_code ec,
-                    std::size_t bytes_transferred);
+                    beast::error_code p_ec,
+                    std::size_t p_bytesTransferred);
 
             /// Report a failure
             void fail(beast::error_code ec, char const *what);
@@ -555,6 +539,24 @@ namespace striboh {
             void doTcpResolveAntConnect();
 
             void doConnect();
+
+        private:
+            uint8_t m_connectCounter = 0;
+            std::atomic<EConnectionStatus> m_connectionStatus;
+            net::io_context m_ioContext;
+            tcp::resolver mResolver;
+            tcp::resolver::results_type mTcpResolverResult;
+            WebSocket m_webSocket;
+            http::request<http::empty_body> m_request;
+            http::response<http::string_body> m_response;
+            const HostConnection &m_client;
+            std::string m_baseUrl;
+            InstanceId m_uuid;
+            std::string mWebSocketUrl;
+            beast::flat_buffer m_flatBuffer; // (Must persist between reads)
+            bool mUpgraded = false;
+            uint8_t m_retryCnt = 13;
+            LogIface &m_log;
         };
 
         class HostConnection {

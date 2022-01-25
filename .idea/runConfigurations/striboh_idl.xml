@@ -15,7 +15,7 @@
     <option name="ADD_CONTENT_ROOTS" value="false" />
     <option name="ADD_SOURCE_ROOTS" value="false" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/cmake-build-relwithdebinfo-visual-studio-2022/bin/striboh_idl.py" />
-    <option name="PARAMETERS" value="--backend=cpp --stdout C:\dev\projects\striboh\src\test\echo\Echo.striboh.idl" />
+    <option name="PARAMETERS" value="--stdout --backend=cpp C:\dev\projects\striboh\src\test\echo\Echo.striboh.idl" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

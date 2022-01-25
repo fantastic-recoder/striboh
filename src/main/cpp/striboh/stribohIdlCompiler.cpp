@@ -473,6 +473,7 @@ namespace striboh::idl {
         }
         m_Log.info("Backend specified:{}.", m_Backend);
         m_Print2Out = myVarMap.count("stdout");
+        if(m_Print2Out) m_Log.info("Will print generated code to stdandart out.");
         return myRetVal;
     }
 

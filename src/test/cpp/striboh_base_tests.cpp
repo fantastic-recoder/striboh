@@ -399,6 +399,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <striboh/stribohBaseEMessageType.hpp>
 #include <striboh/stribohBaseParameterList.hpp>
 
+#include "striboh_build_constants.hpp"
 #include "striboh_test_utils.hpp"
 #include "striboh_test_echo_server_common.hpp"
 
@@ -639,7 +640,7 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
     aBroker.shutdown();
 }
 
-static constexpr const char *const theTestEchoServerBinary = "./striboh_test_echo_server";
+static constexpr const char *const theTestEchoServerBinary = "striboh_test_echo_server";
 
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
     std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
@@ -671,7 +672,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         EXPECT_EQ(EMessageType::K_RETURN, myReply1.getType());
     }
     if (myServerChildProcess) {
-        myServerChildProcess->wait_for(30s);
+        EXPECT_FALSE(wait4shutdown(myServerChildProcess));
         EXPECT_EQ(0, myServerChildProcess->exit_code());
     }
     return;

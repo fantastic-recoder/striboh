@@ -401,36 +401,30 @@ using namespace std::chrono_literals;
 
 TEST(stribohGeneratedEchoTests, testEcho) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    std::this_thread::sleep_for(5s);
     EchoProxy myEchoClt(K_TEST_SRV,theLog);
     auto myEchoOp = myEchoClt.echo("John");
     auto myRetVal = myEchoOp.getVal();
     EXPECT_EQ("Hello John!",myRetVal);
     myEchoClt.shutdown();
-    std::this_thread::sleep_for(3s);
-    ASSERT_FALSE(myChild->running());
+    ASSERT_FALSE(wait4shutdown(myChild));
 }
 
 TEST(stribohGeneratedEchoTests, testAdd) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    std::this_thread::sleep_for(10s);
     EchoProxy myEchoClt(K_TEST_SRV,theLog);
     auto myAddOp = myEchoClt.add(3,4);
     EXPECT_EQ(7,myAddOp.getVal());
     myEchoClt.shutdown();
-    std::this_thread::sleep_for(10s);
-    ASSERT_FALSE(myChild->running());
+    ASSERT_FALSE(wait4shutdown(myChild));
 }
 
 TEST(stribohGeneratedEchoTests, testEchoAndAdd) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    std::this_thread::sleep_for(10s);
     EchoProxy myEchoPrx(K_TEST_SRV, theLog);
     auto myAddOp = myEchoPrx.add(13, 4);
     EXPECT_EQ(17,myAddOp.getVal());
     auto myEchoOp = myEchoPrx.echo("Striboh");
     EXPECT_EQ("Hello Striboh!",myEchoOp.getVal());
     myEchoPrx.shutdown();
-    std::this_thread::sleep_for(10s);
-    ASSERT_FALSE(myChild->running());
+    ASSERT_FALSE(wait4shutdown(myChild));
 }

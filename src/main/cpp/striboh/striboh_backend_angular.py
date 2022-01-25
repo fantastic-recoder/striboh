@@ -75,8 +75,8 @@ type {{method.method_pascal_name}}ReturnFunction = (pReturn: {{method.method_typ
 })
 export class {{interface_name}}Service {
     private readonly mHostPortMods;
-    private mUuid: Uint8Array | undefined;
-    private mWebSocket: WebSocket | undefined;
+    private m_uuid: Uint8Array | undefined;
+    private m_webSocket: WebSocket | undefined;
 {{#methods}}
 {{#method.parameters}}
     private m{{parameter_name}}Par: {{parameter_type}} | undefined;
@@ -120,9 +120,9 @@ export class {{interface_name}}Service {
 
 {{#methods}}
     private doSend{{method.method_pascal_name}}({{#method.parameters}}{{#comma}}, {{/comma}}p{{parameter_name}}: {{parameter_type}}| undefined{{/method.parameters}}): void {
-        if (this.mWebSocket !== undefined) {
-            const data = {siid: this.mUuid, mthd: '{{method.method_name}}', prms: [ {{#method.parameters}}{{#comma}}, {{/comma}}{ {{parameter_name}}: p{{parameter_name}} }{{/method.parameters}} ], type: 1};
-            this.mWebSocket.send(encode(data));
+        if (this.m_webSocket !== undefined) {
+            const data = {siid: this.m_uuid, mthd: '{{method.method_name}}', prms: [ {{#method.parameters}}{{#comma}}, {{/comma}}{ {{parameter_name}}: p{{parameter_name}} }{{/method.parameters}} ], type: 1};
+            this.m_webSocket.send(encode(data));
             console.log('Sending:' + JSON.stringify(data) + '.');
         }
     }
@@ -134,7 +134,7 @@ export class {{interface_name}}Service {
         this.m{{parameter_name}}Par = p{{parameter_name}};
         console.log('{{parameter_name}}: "' + this.m{{parameter_name}}Par + '".');
         {{/method.parameters}}
-        if (this.mUuid !== undefined && this.mUuid.length === 16) {
+        if (this.m_uuid !== undefined && this.m_uuid.length === 16) {
             this.doSend{{method.method_pascal_name}}({{#method.parameters}}{{#comma}}, {{/comma}}this.m{{parameter_name}}Par{{/method.parameters}});
         } else {
             this.retrieveUuid{{method.method_pascal_name}}();
@@ -142,18 +142,18 @@ export class {{interface_name}}Service {
     }
 
     private onReceive{{method.method_pascal_name}}Uiid(p{{interface_name}}UuidResponse: {{interface_name}}UuidResponse): void {
-        this.mUuid = p{{interface_name}}UuidResponse.svc.uuid_arr;
-        console.log('UUID Response:' + this.mUuid);
-        this.mWebSocket = new WebSocket('ws://' + this.mHostPortMods + '?upgrade');
-        this.mWebSocket.onopen = () => { this.on{{method.method_pascal_name}}WsOpen(); };
-        this.mWebSocket.onerror = (pError: any) => {
+        this.m_uuid = p{{interface_name}}UuidResponse.svc.uuid_arr;
+        console.log('UUID Response:' + this.m_uuid);
+        this.m_webSocket = new WebSocket('ws://' + this.mHostPortMods + '?upgrade');
+        this.m_webSocket.onopen = () => { this.on{{method.method_pascal_name}}WsOpen(); };
+        this.m_webSocket.onerror = (pError: any) => {
             console.log(`WebSocket error: ${pError}`);
         };
-        this.mWebSocket.onclose = () => {
+        this.m_webSocket.onclose = () => {
             console.log('Websocked closed');
-            this.mUuid = new Uint8Array();
+            this.m_uuid = new Uint8Array();
         };
-        this.mWebSocket.onmessage = (pEvent: MessageEvent) => {this.onWsMessage(pEvent); };
+        this.m_webSocket.onmessage = (pEvent: MessageEvent) => {this.onWsMessage(pEvent); };
     }
 
     private retrieveUuid{{method.method_pascal_name}}(): void {

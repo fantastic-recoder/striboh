@@ -271,7 +271,6 @@ namespace {{namespace}} {
 def generate_module_path(p_module_names: [str]):
     my_module_path = ''
     for myModuleName in p_module_names:
-        myModuleName = ('ModuleName('+myModuleName+')')
         if len(my_module_path) == 0:
             my_module_path += myModuleName
         else:
