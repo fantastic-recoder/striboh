@@ -10,7 +10,7 @@ import { NgServerService } from '../ng_server.service';
 export class NgStribohCltComponent implements OnInit {
 
   mTextToSend = '';
-  mServerReturned = 'No answer yet.'
+  mServerReturned = 'No answer yet.';
   mP0 = 0;
   mP1 = 0;
   mAddResult = 0;
