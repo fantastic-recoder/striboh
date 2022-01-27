@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
-project(striboh)
+project(striboh VERSION 0.1.0
+        LANGUAGES C CXX ASM
+        HOMEPAGE_URL "https://www.striboh.org"
+    DESCRIPTION "ReST and binary middleware with own IDL and extendable code generator."
+    )
 
 set(CMAKE_CXX_STANDARD 17)
 set(MSGPACK_CXX17 ON)
@@ -8,7 +12,7 @@ if (MSVC)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS 1)
     set(CONAN_DISABLE_CHECK_COMPILER 1) # allow new shiny VS versions
     # _WIN32_WINNT=0x0A00 == Windows 10 Boost HAS to be compiled according define=BOOST_USE_WINAPI_VERSION=0x0A00
-    add_compile_options(/D_WIN32_WINNT=0x0A00)
+    add_compile_options(/D_WIN32_WINNT=0x0A00 /bigobj)
     set(BCrypt_LIBRARIES bcrypt)
 else()
     # lots of warnings and all warnings as errors
