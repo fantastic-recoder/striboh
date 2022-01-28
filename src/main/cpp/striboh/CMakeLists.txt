@@ -38,7 +38,6 @@ set(STRIBOH_IDL_COMPILER_SRCS stribohIdlPyModule.cpp stribohIdlCompiler.cpp stri
 # Add a shared module - modules are intended to be imported at runtime.
 pybind11_add_module(${STRIBOH_PY_MOD} MODULE ${STRIBOH_IDL_COMPILER_SRCS} ${striboh_idl_python_scripts})
 target_include_directories(${STRIBOH_PY_MOD} PRIVATE ${STRIBOH_INCLUDE_DIRS})
-target_compile_options(${STRIBOH_PY_MOD} PRIVATE /utf-8)
 target_link_libraries(${STRIBOH_PY_MOD} PUBLIC ${Python3_LIBRARIES} striboh_base_library striboh_idl_library
         ${STRIBOH_LIBS} pybind11::module pybind11::windows_extras)
 
