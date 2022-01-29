@@ -10,10 +10,11 @@ if len(my_skript_dir) > 0:
     my_skript_dir += '/'
 
 my_skript_dir = os.path.normpath(my_skript_dir)
-my_striboh_libs = os.path.normpath('${CMAKE_BINARY_DIR}')
+my_striboh_libs = os.path.normpath('${CMAKE_BINARY_DIR}/lib')
 sys.path += [my_striboh_libs, my_skript_dir]
 
-os.add_dll_directory("${CMAKE_BINARY_DIR}/lib")
+if os.name == 'nt':
+    os.add_dll_directory("${CMAKE_BINARY_DIR}/lib")
 
 logging.debug("striboh_idl: Current directory {my_cur_dir}".format(my_cur_dir=os.path.abspath(os.curdir)))
 logging.debug("striboh_idl: Current path {my_cur_path}".format(my_cur_path=sys.path))
