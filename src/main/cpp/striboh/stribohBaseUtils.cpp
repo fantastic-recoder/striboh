@@ -390,8 +390,7 @@ using std::vector;
 namespace {
 }
 
-namespace striboh {
-    namespace base {
+namespace striboh::base {
 
         using namespace std;
 
@@ -419,7 +418,7 @@ namespace striboh {
                     }
                     myUrl = mySMatch.suffix();
                 }
-                if(myRetVal.size()==0) {
+                if(myRetVal.empty()) {
                     myRetVal[K_BASE_URL].push_back(string(pUrl));
                 }
             }
@@ -427,4 +426,3 @@ namespace striboh {
         }
 
     }
-}
