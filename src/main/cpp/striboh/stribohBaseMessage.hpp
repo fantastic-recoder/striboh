@@ -390,6 +390,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <variant>
 #include <nlohmann/json.hpp>
 
+#include <boost/lexical_cast.hpp>
+
 #include "stribohBaseInstanceId.hpp"
 #include "stribohBaseBuffer.hpp"
 #include "stribohBaseSignature.hpp"
@@ -410,17 +412,32 @@ namespace striboh::base {
                     std::shared_ptr<ServantBase>
             >;
 
+    struct VisitValue {
+        VisitValue(std::string& p_str): p_ret(p_str){}
+        std::string& p_ret;
+        void operator() (bool p_val ) const { p_ret = boost::lexical_cast<std::string>(p_val); }
+        void  operator() (int64_t p_val )  const {  p_ret =  boost::lexical_cast<std::string>(p_val); }
+        void  operator() (const std::string& p_val )  const {  p_ret =  p_val; }
+        void  operator() (const std::shared_ptr<ServantBase>& ) {  p_ret =  "ServantBase"; }
+    };
+
     struct Value {
-        ValueVariant mVal;
-        explicit Value(const char* pStr): mVal(std::string(pStr)){}
-        explicit Value(const std::string& pStr): mVal(std::string(pStr)){}
-        explicit Value(std::string_view&& pStr): mVal(std::string(pStr)){}
-        explicit Value(int64_t pInteger): mVal(pInteger) {}
-        explicit Value(bool pBool): mVal(pBool) {}
+        ValueVariant m_val;
+        explicit Value(const char* pStr): m_val(std::string(pStr)){}
+        explicit Value(const std::string& pStr): m_val(std::string(pStr)){}
+        explicit Value(std::string_view&& pStr): m_val(std::string(pStr)){}
+        explicit Value(int64_t pInteger): m_val(pInteger) {}
+        explicit Value(bool pBool): m_val(pBool) {}
         Value() = default;
         ~Value() = default;
-        template<typename T> T get()
-        const { return std::get<T>(mVal); }
+
+        template<typename T> T get() const { return std::get<T>(m_val); }
+
+        std::string str() const {
+            std::string myRetVal("Unknown");
+            std::visit(VisitValue(myRetVal), m_val);
+            return myRetVal;
+        }
     };
 
     struct Parameter {
@@ -573,5 +590,21 @@ namespace striboh::base {
 
 
 }  // namespace striboh::base
+
+template <> struct fmt::formatter<::striboh::base::Value>: formatter<::std::string_view> {
+    // parse is inherited from formatter<string_view>.
+    template <typename FormatContext>
+    auto format(const ::striboh::base::Value& p_b, FormatContext& ctx) {
+        return formatter<string_view>::format(p_b.str(), ctx);
+    }
+};
+
+template <> struct fmt::formatter<::striboh::base::Parameter>: formatter<::std::string_view> {
+    // parse is inherited from formatter<string_view>.
+    template <typename FormatContext>
+    auto format(const ::striboh::base::Parameter& p_p, FormatContext& ctx) {
+        return formatter<string_view>::format("{\""+p_p.getName()+"\":\""+p_p.getValue().str(), ctx);
+    }
+};
 
 #endif //STRIBOH_BASE_PARAMETERS_HPP

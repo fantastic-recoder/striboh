@@ -441,6 +441,7 @@ TEST(stribohMessageTests, testSerailization) {
     EXPECT_EQ(4UL, myInputValues.getParameters().size());
     Buffer myBuff;
     myInputValues.packToBuffer(myBuff);
+    getLog().debug("Packed message: {}.", myInputValues.asJsonString());
     Message myOutputValues(getLog());
     myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
     EXPECT_EQ(4UL, myOutputValues.getParameters().size());
@@ -467,6 +468,24 @@ TEST(stribohMessageTests, testSerailization) {
     BOOST_LOG_TRIVIAL(debug) << myReturnOut.asJsonString();
     ASSERT_EQ(K_HELLO_RETURNED, myReturnOut.getReturn().get<std::string>());
     ASSERT_EQ(EMessageType::K_RETURN, myReturnOut.getType());
+}
+
+static constexpr const char *const K_SHUTDWN_MTHD_NM = "testMethod";
+
+TEST(stribohMessageTests, testMessageWithNoParameters) {
+    Message myInputValues(K_SHUTDWN_MTHD_NM,{}, getLog());
+    const InstanceId myIId = Broker::generateInstanceId();
+    myInputValues.setInstanceId(myIId);
+    EXPECT_EQ(myIId, myInputValues.getInstanceId());
+    EXPECT_EQ(0UL, myInputValues.getParameters().size());
+    Buffer myBuff;
+    myInputValues.packToBuffer(myBuff);
+    getLog().debug("Packed message: {}.", myInputValues.asJsonString());
+    Message myOutputValues(getLog());
+    myOutputValues.unpackFromBuffer(ReadBuffer(myBuff));
+    EXPECT_EQ(0UL, myOutputValues.getParameters().size());
+    EXPECT_EQ(K_SHUTDWN_MTHD_NM, myOutputValues.getMethodName());
+    EXPECT_EQ(EMessageType::K_METHOD, myOutputValues.getType());
 }
 
 TEST(stribohMessageTests, testJson) {
