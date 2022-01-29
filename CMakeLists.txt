@@ -32,7 +32,7 @@ endif()
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 conan_cmake_install(PATH_OR_REFERENCE ${CMAKE_SOURCE_DIR}
         BUILD missing
-        REMOTE conancenter
+        #REMOTE conancenter
         SETTINGS ${settings})
 
 if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
