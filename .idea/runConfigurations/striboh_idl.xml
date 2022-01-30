@@ -9,7 +9,7 @@
       <env name="PATH" value="C:\dev\projects\striboh\cmake-build-relwithdebinfo-visual-studio-2022\lib;;C:\Python310;C:\Python310\lib;" />
       <env name="PYTHONPATH" value="C:\dev\projects\striboh\cmake-build-relwithdebinfo-visual-studio-2022\lib" />
     </envs>
-    <option name="SDK_HOME" value="C:\Python310\python.exe" />
+    <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/cmake-build-relwithdebinfo-visual-studio-2022/bin" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="false" />
