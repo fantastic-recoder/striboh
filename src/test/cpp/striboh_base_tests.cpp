@@ -643,11 +643,13 @@ TEST(stribohBaseTests, testSimpleLocalMessageTransfer) {
 static constexpr const char *const theTestEchoServerBinary = "striboh_test_echo_server";
 
 TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
-    std::shared_ptr<child> myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
+    std::shared_ptr<child> myServerChildProcess;
+    myServerChildProcess = runServer(theTestEchoServerBinary,theLog);
 
-    HostConnection aClient(Address("http://localhost:10000",theLog),theLog);
+    HostConnection aClient(Address(K_TEST_SRV,theLog),theLog);
     auto myProxy = aClient.createProxyFor("/m0/m1/Hello");
-    EXPECT_TRUE(myProxy->isConnected());
+    ASSERT_TRUE(myProxy->isConnected());
+    getLog().debug("CLT is connected.");
     {
         auto myResult0 = myProxy
                 ->invokeMethod(Message("echo", {{"p0", "Peter"}}, getLog()));
@@ -675,6 +677,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         EXPECT_FALSE(wait4shutdown(myServerChildProcess));
         EXPECT_EQ(0, myServerChildProcess->exit_code());
     }
+    getLog().debug("Waiting for server thread...");
     return;
 }
 

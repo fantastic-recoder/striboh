@@ -888,7 +888,7 @@ namespace striboh::base {
 
         MessageVisitor1(MessageParser &p_parser, const ReadBuffer &p_buffer, LogIface &pLog)
                 : m_log(pLog), m_buf(p_buffer), m_parser(p_parser) {
-            m_log.debug("Created MessageVisitor1 &m_Log=={}.", (void *) (&m_log));
+            m_log.debug("Created MessageVisitor1 &m_log=={}.", (void *) (&m_log));
         }
 
         inline bool isInErrorState() {
@@ -993,22 +993,22 @@ namespace striboh::base {
     Message::Message(std::string_view pMethodName, Parameters &&pParameters, LogIface &pLog)
             : mLog(pLog), mMethodName(pMethodName), mType(EMessageType::K_METHOD),
               mParameters(std::forward<Parameters>(pParameters)) {
-        mLog.debug("Message::Message(pMethodName=={}) &m_Log={}", pMethodName, (void *) (&mLog));
+        mLog.debug("Message::Message(pMethodName=={}) &m_log={}", pMethodName, (void *) (&mLog));
     }
 
     Message::Message(const Message &pInReplyTo, Value &&pReturn, LogIface &pLog)
             : mLog(pLog), mMethodName(pInReplyTo.getMethodName()), mType(EMessageType::K_RETURN),
               mReturn(std::forward<Value>(pReturn)) {
-        mLog.debug("Message::Message(Return) &m_Log={}", (void *) (&mLog));
+        mLog.debug("Message::Message(Return) &m_log={}", (void *) (&mLog));
     }
 
     Message::Message(LogIface &pLog) : mLog(pLog), mType(EMessageType::K_UNKNOWN) {
-        mLog.debug("Message::Message(Unknown) &m_Log={}", (void *) (&mLog));
+        mLog.debug("Message::Message(Unknown) &m_log={}", (void *) (&mLog));
     }
 
     Message::Message(const ReadBuffer &pBuffer, LogIface &pIface) : mLog(pIface) {
         unpackFromBuffer(pBuffer);
-        mLog.debug("Message::Message(Upacked) &m_Log={}", (void *) (&mLog));
+        mLog.debug("Message::Message(Upacked) &m_log={}", (void *) (&mLog));
     }
 
 

@@ -404,9 +404,10 @@ namespace striboh {
                 if (p_processChild->running()) {
                     p_processChild->wait_for(1s);
                     std::cout << ".";
-                } else
+                } else {
                     std::cout << " not running - ok." << std::endl;
                     return false;
+                }
             }
             std::cout << "still running?!" << std::endl;
             return true;

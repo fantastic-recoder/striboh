@@ -399,14 +399,14 @@ namespace striboh {
         using namespace std::chrono_literals;
 
         HostConnection::HostConnection(Address &&pAddress, LogIface &pLog)
-                : m_Log(pLog) ///< Log
-                , m_Address(std::move(pAddress)) ///< Address
-                , m_PortStr(boost::lexical_cast<std::string>(m_Address.getPort())) {}
+                : m_log(pLog) ///< Log
+                , m_address(std::move(pAddress)) ///< Address
+                , m_portStr(boost::lexical_cast<std::string>(m_address.getPort())) {}
 
         std::shared_ptr<ObjectProxy>
         HostConnection::createProxyFor(std::string_view pPath) {
-            m_ProxyPtr = std::make_shared<ObjectProxy>(*this, pPath, m_Log);
-            return m_ProxyPtr;
+            m_proxyPtr = std::make_shared<ObjectProxy>(*this, pPath, m_log);
+            return m_proxyPtr;
         }
 
         /**
@@ -417,29 +417,21 @@ namespace striboh {
          */
         std::shared_ptr<InvocationContext>
         ObjectProxy::invokeMethod(Message &&pValues) {
-            if (getConnectionStatus() == EConnectionStatus::K_INITIAL) {
-                m_log.debug("Going to do TCP connect.");
-                doTcpResolveAntConnect();
-                for (uint8_t pII = 0; pII < m_retryCnt; pII++) {
-                    m_ioContext.run();
-                    m_log.debug("run returned upgraded={}.", mUpgraded);
-                    if (mUpgraded)
-                        break;
-                }
-                if (mUpgraded) {
-                    m_log.debug("TCP connect upgraded. UUID={}.", to_string(m_uuid));
-                } else {
-                    const string myMsg(
-                            fmt::format("Failed to connect to {}:{}.", m_client.getHost(), m_client.getPort()));
-                    m_log.error(myMsg);
-                    throw new std::runtime_error(myMsg);
-                }
+            m_log.debug("CLT --> invokeMethod");
+            std::shared_ptr<InvocationContext> myRetVal;
+            dispatch();
+            if (getConnectionStatus() == EConnectionStatus::K_UPGRADED) {
+                pValues.setInstanceId(m_uuid);
+                myRetVal = std::make_shared<InvocationContext>
+                        (*this, m_ioContext, pValues, m_log);
+                myRetVal->startInvocation();
+            } else {
+                const string myMsg(
+                        fmt::format("CLT Failed to connect to {}:{}.", m_client.getHost(), m_client.getPort()));
+                m_log.error(myMsg);
             }
-            pValues.setInstanceId(m_uuid);
-            auto myInvocationContext = std::make_shared<InvocationContext>
-                    (*this, m_ioContext, pValues, m_log);
-            myInvocationContext->startInvocation();
-            return myInvocationContext;
+            m_log.debug("CLT <-- invokeMethod");
+            return myRetVal;
         }
 
         InvocationContext::InvocationContext(
@@ -448,30 +440,32 @@ namespace striboh {
                 const Message &pValues,
                 LogIface &pLog
         )
-                : mLog(pLog), mObjectProxy(pObjectProxy), mIoContext(pIoContext), mValues(pValues),
-                  mReturnValues(mValues, Value(), mLog) {
-            mLog.debug("InvocationContext::InvocationContext m_Log=={}.", (void *) (&mLog));
+                : m_log(pLog), m_objectProxy(pObjectProxy), m_ioContext(pIoContext), m_requestMsg(pValues),
+                  m_responseMsg(m_requestMsg, Value(), m_log) {
+            m_log.debug("CLT InvocationContext::InvocationContext m_log=={}.", (void *) (&m_log));
         }
 
         void
         InvocationContext::startInvocation() {
-            mValues.packToBuffer(mWriteBuffer);
+            m_log.debug("CLT --> startInvocation");
+            m_requestMsg.packToBuffer(m_writeBuffer);
             this->writeWebSocketMessage();
             // Run the I/O service. The call will return when
             // the get operation is complete.
-            mLog.debug("startInvocation restarting ios.");
-            mIoContext.restart();
-            mIoContext.run();
-            mLog.debug("startInvocation finished.");
+            m_log.debug("CLT     startInvocation restarting ios.");
+            m_ioContext.restart();
+            m_ioContext.run();
+            m_log.debug("CLT <-- startInvocation");
             return;
         }
 
         void
-        ObjectProxy::doTcpResolveAntConnect() {
+        ObjectProxy::doTcpResolve() {
             m_connectionStatus = EConnectionStatus::K_RESOLVING;
-            m_log.debug("Going to resolve {}:{}...", m_client.getHost(), m_client.getPort());
+            m_log.debug("CLT --> doTcpResolveAndConnect() status={}.", getConnectionStatus().load());
+            m_log.debug("CLT     Going to resolve {}:{}...", m_client.getHost(), m_client.getPort());
             // Look up the domain name
-            mResolver.async_resolve(
+            m_resolver.async_resolve(
                     m_client.getHost().c_str(),
                     m_client.getPortStr().c_str(),
                     beast::bind_front_handler(
@@ -479,8 +473,6 @@ namespace striboh {
                             shared_from_this()
                     )
             );
-            m_ioContext.run();
-            m_log.debug("doTcpResolveAntConnect() + m_ioContext.run() returned.");
         }
 
         void
@@ -488,34 +480,39 @@ namespace striboh {
                 beast::error_code ec,
                 tcp::resolver::results_type pResults) {
             if (ec)
-                return fail(ec, "resolve");
-            mTcpResolverResult = pResults;
-            m_connectionStatus = EConnectionStatus::K_RESOLVED;
-            m_log.debug("TCP Resolved.");
-            doConnect();
+                fail(ec, "resolve");
+            else {
+                m_tcpResolverResult = pResults;
+                m_connectionStatus = EConnectionStatus::K_RESOLVED;
+                m_log.debug("CLT TCP Resolved.");
+            }
         }
 
         void
         ObjectProxy::doConnect() {
-            m_log.debug("Going to connect ...");
+            m_log.debug("CLT Going to connect ...");
             m_connectionStatus = EConnectionStatus::K_CONNECTING;
             // Set a timeout on the operation
             beast::get_lowest_layer(m_webSocket).expires_after(std::chrono::seconds(30));
             // Make the connection on the IP address we get from a lookup
             beast::get_lowest_layer(m_webSocket).async_connect(
-                    mTcpResolverResult,
+                    m_tcpResolverResult,
                     beast::bind_front_handler(
                             &ObjectProxy::onConnect,
                             shared_from_this()));
+            return;
         }
 
         void
         ObjectProxy::onConnect(beast::error_code ec, tcp::resolver::results_type::endpoint_type) {
             if (ec) {
-                return fail(ec, "ObjectProxy::onConnect");
+                fail(ec, "ObjectProxy::onConnect");
+                getConnectionStatus() = EConnectionStatus::K_CONNECTION_ERROR;
+            } else {
+                m_connectionStatus = EConnectionStatus::K_CONNECTED;
             }
-            m_connectionStatus = EConnectionStatus::K_CONNECTED;
-            sendGetInstanceRequest();
+            m_log.debug("CLT connected");
+            return;
         }
 
         void
@@ -526,7 +523,7 @@ namespace striboh {
             m_request.target(m_baseUrl + "?svc");
             m_request.set(http::field::host, m_client.getHost());
             m_request.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-            m_log.debug("Connected, going to send \"{}\" request...", m_request.target().to_string());
+            m_log.debug("CLT Connected, going to send \"{}\" request...", m_request.target().to_string());
             // Set a timeout on the operation
             beast::get_lowest_layer(m_webSocket).expires_after(std::chrono::seconds(30));
             http::async_write(beast::get_lowest_layer(m_webSocket),
@@ -537,7 +534,7 @@ namespace striboh {
         }
 
         void ObjectProxy::sendUpgradeRequest() {
-
+            m_log.debug("CLT --> sendUpgradeRequest()");
             // Turn off the timeout on the tcp_stream, because
             // the websocket stream has its own timeout system.
             beast::get_lowest_layer(m_webSocket).expires_never();
@@ -558,16 +555,14 @@ namespace striboh {
             // Update the host_ string. This will provide the value of the
             // Host HTTP header during the WebSocket handshake.
             // See https://tools.ietf.org/html/rfc7230#section-5.4
-            mWebSocketUrl = m_client.getHost() + ':' + m_client.getPortStr();
+            m_webSocketUrl = m_client.getHost() + ':' + m_client.getPortStr();
 
             // Perform the websocket handshaketimeout
-            m_webSocket.async_handshake(mWebSocketUrl, m_baseUrl + "?upgrade",
+            m_webSocket.async_handshake(m_webSocketUrl, m_baseUrl + "?upgrade",
                                         beast::bind_front_handler(
-                                               &ObjectProxy::onUpgradeHandshake,
-                                               shared_from_this()));
-
-            m_log.debug("sending upgrade request.");
-            // Set up an HTTP GET request message
+                                                &ObjectProxy::onUpgradeHandshake,
+                                                shared_from_this()));
+            m_log.debug("CLT <-- sendUpgradeRequest()");
         }
 
 
@@ -576,14 +571,69 @@ namespace striboh {
                 beast::error_code ec,
                 std::size_t bytes_transferred) {
             boost::ignore_unused(bytes_transferred);
-            if (ec)
-                return fail(ec, "ObjectProxy::onGetInstanceSend");
-            m_log.debug("Write succeeded going to read ...");
-            // Receive the HTTP response
-            http::async_read(beast::get_lowest_layer(m_webSocket), m_flatBuffer, m_response,
-                             beast::bind_front_handler(
-                                     &ObjectProxy::onGetInstanceResponse,
-                                     shared_from_this()));
+            if (ec) {
+                fail(ec, "ObjectProxy::onGetInstanceSend");
+                getConnectionStatus() = EConnectionStatus::K_INSTANCE_ERROR;
+            } else {
+                m_log.debug("CLT Write succeeded going to read ...");
+                // Receive the HTTP response
+                http::async_read(beast::get_lowest_layer(m_webSocket), m_flatBuffer, m_response,
+                                 beast::bind_front_handler(
+                                         &ObjectProxy::onGetInstanceResponse,
+                                         shared_from_this()));
+            }
+        }
+
+        void
+        ObjectProxy::dispatch() {
+            EConnectionStatus myCurrentState = getConnectionStatus();
+            m_log.debug("CLT --> dispatch state={}", myCurrentState);
+            do {
+                if (getConnectionStatus() == EConnectionStatus::K_INITIAL) {
+                    m_connectCounter = 0;
+                    doTcpResolve();
+                } else if(getConnectionStatus() == EConnectionStatus::K_RESOLVED) {
+                    m_connectCounter = 0;
+                    doConnect();
+                } else if (getConnectionStatus() == EConnectionStatus::K_CONNECTED) {
+                    m_connectCounter = 0;
+                    getConnectionStatus() = EConnectionStatus::K_READIND_INSTANCE_ID;
+                    sendGetInstanceRequest();
+                } else if (getConnectionStatus() == EConnectionStatus::K_GOT_INSTANCE) {
+                    m_connectCounter = 0;
+                    getConnectionStatus() = EConnectionStatus::K_UPGRADING;
+                    sendUpgradeRequest();
+                } else if (getConnectionStatus() == EConnectionStatus::K_CONNECTION_ERROR) {
+                    m_log.debug("CLT retry connect {} out of {}.", m_connectCounter, m_retryCnt);
+                    std::this_thread::sleep_for(1s);
+                    doConnect();
+                    m_connectCounter++;
+                } else if (getConnectionStatus() == EConnectionStatus::K_INSTANCE_ERROR) {
+                    m_log.debug("CLT retry get instance {} out of {}.", m_connectCounter, m_retryCnt);
+                    std::this_thread::sleep_for(1s);
+                    sendGetInstanceRequest();
+                    m_connectCounter++;
+                } else if (getConnectionStatus() == EConnectionStatus::K_UPGRADE_ERROR) {
+                    m_log.debug("CLT retry get upgrade {} out of {}.", m_connectCounter, m_retryCnt);
+                    std::this_thread::sleep_for(1s);
+                    sendUpgradeRequest();
+                    m_connectCounter++;
+                }
+                if (m_connectCounter > m_retryCnt) {
+                    getConnectionStatus() = EConnectionStatus::K_ERROR;
+                } else {
+                    m_log.debug("CLT     restarting and running context...");
+                    m_ioContext.restart();
+                    m_ioContext.run_one();
+                }
+                myCurrentState = getConnectionStatus();
+                m_log.debug("CLT <-> dispatch state={}", myCurrentState);
+            } while (
+                    myCurrentState != EConnectionStatus::K_UPGRADED
+                    &&
+                    myCurrentState != EConnectionStatus::K_ERROR
+                    );
+            m_log.debug("CLT <-- dispatch state={}", getConnectionStatus().load());
         }
 
         void
@@ -591,31 +641,21 @@ namespace striboh {
                 beast::error_code p_ec,
                 std::size_t p_bytesTransferred) {
             boost::ignore_unused(p_bytesTransferred);
-            if (p_ec)
-                return fail(p_ec, "ObjectProxy::onGetInstanceResponse");
-            string myResponse(m_response.body());
-            // Write the message to standard out
-            m_log.debug("Received getInstance response \"{}\"", myResponse);
-            ResolvedService mySvc = Broker::resolveServiceFromStr(myResponse);
-            static InstanceId myZeroUuid;
-            if(mySvc.second==myZeroUuid) {
-                m_connectCounter++;
-                m_log.warn("{} attempt to get instance id failed.", m_connectCounter);
-                m_flatBuffer.clear();
-                m_response.body().clear();
-                m_response.clear();
-                sendGetInstanceRequest();
-                if(m_connectCounter>=m_retryCnt) {
-                    // TODO create own exception
-                    throw std::runtime_error("Failed to retrieve instance id.");
-                }
-                std::this_thread::sleep_for(m_connectCounter*1s);
+            if (p_ec) {
+                getConnectionStatus() = EConnectionStatus::K_INSTANCE_ERROR;
+                fail(p_ec, "ObjectProxy::onGetInstanceResponse");
             } else {
-                m_log.debug("Read succeeded going to upgrade ...");
-                m_uuid = mySvc.second;
-                m_log.debug("Resolved uuid={} from {}.", boost::lexical_cast<string>(m_uuid), myResponse);
-                if (getConnectionStatus() != EConnectionStatus::K_UPGRADED) {
-                    sendUpgradeRequest();
+                string myResponse(m_response.body());
+                // Write the message to standard out
+                m_log.debug("CLT Received getInstance response \"{}\"", myResponse);
+                ResolvedService mySvc = Broker::resolveServiceFromStr(myResponse);
+                static InstanceId myZeroUuid;
+                if (mySvc.second == myZeroUuid) {
+                    getConnectionStatus() = EConnectionStatus::K_INSTANCE_ERROR;
+                } else {
+                    m_uuid = mySvc.second;
+                    m_log.debug("CLT Resolved uuid={} from {}.", boost::lexical_cast<string>(m_uuid), myResponse);
+                    getConnectionStatus() = EConnectionStatus::K_GOT_INSTANCE;
                 }
             }
         }
@@ -634,18 +674,22 @@ namespace striboh {
 
         void
         ObjectProxy::onUpgradeHandshake(beast::error_code ec) {
-            if (ec)
-                return fail(ec, "ObjectProxy::onUpgradeHandshake");
-            m_webSocket.binary(true);
-            m_log.debug("ObjectProxy::onUpgradeHandshake ok.");
-            mUpgraded = true;
+            if (ec) {
+                fail(ec, "CLT ObjectProxy::onUpgradeHandshake");
+                getConnectionStatus() = EConnectionStatus::K_UPGRADE_ERROR;
+            } else {
+                getConnectionStatus() = EConnectionStatus::K_UPGRADED;
+                m_webSocket.binary(true);
+                m_log.debug("CLT TCP connect upgraded. UUID={}.", to_string(m_uuid));
+            }
+            return;
         }
 
         void
         InvocationContext::writeWebSocketMessage() {// Send the message
-            mLog.debug("Writing {} bytes to web socket.", mWriteBuffer.size());
-            mObjectProxy.getWebSocket().async_write(
-                    mWriteBuffer.cdata(),
+            m_log.debug("CLT Writing {} bytes to web socket.", m_writeBuffer.size());
+            m_objectProxy.getWebSocket().async_write(
+                    m_writeBuffer.cdata(),
                     beast::bind_front_handler(
                             &InvocationContext::onWriteWebSocket,
                             shared_from_this()));
@@ -653,62 +697,65 @@ namespace striboh {
 
         void
         ObjectProxy::fail(beast::error_code ec, char const *what) {
-            m_log.error("ObjectProxy error {} : {}.", what, ec.message());
+            m_log.warn("CLT ObjectProxy error {} : {}.", what, ec.message());
         }
 
         void
         InvocationContext::fail(beast::error_code ec, char const *what) {
-            mLog.error("ObjectProxy error {} : {}.", what, ec.message());
+            m_log.warn("CLT ObjectProxy error {} : {}.", what, ec.message());
         }
 
         void InvocationContext::onWriteWebSocket(beast::error_code ec,
                                                  std::size_t pBytesTransferred) {
             boost::ignore_unused(pBytesTransferred);
-            if (ec)
-                return fail(ec, "InvocationContext::onWriteWebSocket");
-            mLog.debug("Web socket wrote {} bytes.", pBytesTransferred);
-            readWebSocketMessage();
+            if (ec) {
+                fail(ec, "InvocationContext::onWriteWebSocket");
+            } else {
+                m_log.debug("CLT Web socket wrote {} bytes.", pBytesTransferred);
+                readWebSocketMessage();
+            }
         }
 
         void InvocationContext::readWebSocketMessage() {
-            mReadBuffer.clear();
-            mLog.debug("Going to read a message into our buffer.");
-            mObjectProxy.getWebSocket().async_read(
-                    mReadBuffer,
+            m_readBuffer.clear();
+            m_log.debug("CLT Going to read a message into our buffer.");
+            m_objectProxy.getWebSocket().async_read(
+                    m_readBuffer,
                     beast::bind_front_handler(
                             &InvocationContext::onReadWebSocket,
                             shared_from_this()));
         }
 
         void InvocationContext::onReadWebSocket(beast::error_code ec, std::size_t pBytesTransferred) {
-            if (ec)
+            if (ec) {
                 return fail(ec, "InvocationContext::onReadWebSocket");
-            else {
-                const ReadBuffer myReadBuffer(mReadBuffer.cdata().data(), mReadBuffer.size());
-                mLog.debug("Read {}({}) bytes.", myReadBuffer.size(), pBytesTransferred);
-                mReturnValues.unpackFromBuffer(myReadBuffer);
-                if (mReturnValues.getType() == EMessageType::K_CLOSE) {
+            } else {
+                const ReadBuffer myReadBuffer(m_readBuffer.cdata().data(), m_readBuffer.size());
+                m_log.debug("CLT Read {}({}) bytes.", myReadBuffer.size(), pBytesTransferred);
+                m_responseMsg.unpackFromBuffer(myReadBuffer);
+                if (m_responseMsg.getType() == EMessageType::K_CLOSE) {
                     // Close the WebSocket connection
-                    mObjectProxy.getWebSocket().async_close(websocket::close_code::normal,
-                                                            beast::bind_front_handler(
-                                                                    &InvocationContext::onCloseWebSocket,
-                                                                    shared_from_this()));
+                    m_objectProxy.getWebSocket().async_close(websocket::close_code::normal,
+                                                             beast::bind_front_handler(
+                                                                     &InvocationContext::onCloseWebSocket,
+                                                                     shared_from_this()));
                 }
             }
         }
 
         void
         InvocationContext::onCloseWebSocket(beast::error_code ec) {
-            if (ec)
-                return fail(ec, "InvocationContext::onCloseWebSocket");
-            mLog.debug("close() -->");
+            m_log.debug("CLT close() -->");
+            if (ec) {
+                fail(ec, "InvocationContext::onCloseWebSocket");
+            }
 
             // If we get here then the connection is closed gracefully
 
             // The make_printable() function helps print a ConstBufferSequence
             std::ostringstream myOstream;
-            myOstream << beast::make_printable(mReadBuffer.data()) << std::endl;
-            mLog.debug("close() <-- rest buffer:{}", myOstream.str());
+            myOstream << beast::make_printable(m_readBuffer.data()) << std::endl;
+            m_log.debug("CLT close() <-- rest buffer:{}", myOstream.str());
         }
     }
 }

@@ -377,8 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_BASE_CLIENT_HPP
-#define STRIBOH_BASE_CLIENT_HPP
+#pragma once
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -415,19 +414,26 @@ namespace striboh {
             K_RESOLVED,
             K_CONNECTING,
             K_CONNECTED,
-            K_UPGRADED
+            K_UPGRADING,
+            K_UPGRADED,
+            K_ERROR,
+            K_CONNECTION_ERROR,
+            K_INSTANCE_ERROR,
+            K_GOT_INSTANCE,
+            K_UPGRADE_ERROR,
+            K_READIND_INSTANCE_ID
         };
 
         class ObjectProxy;
 
         class InvocationContext : public std::enable_shared_from_this<InvocationContext> {
-            LogIface &mLog;
-            ObjectProxy &mObjectProxy;
-            net::io_context &mIoContext;
-            Message mValues;
-            Message mReturnValues;
-            beast::flat_buffer mReadBuffer; // (Must persist between reads)
-            Buffer mWriteBuffer; // (Must persist between reads)
+            LogIface &m_log;
+            ObjectProxy &m_objectProxy;
+            net::io_context &m_ioContext;
+            Message m_requestMsg;
+            Message m_responseMsg;
+            beast::flat_buffer m_readBuffer; // (Must persist between reads)
+            Buffer m_writeBuffer; // (Must persist between reads)
         public:
             InvocationContext(
                     ObjectProxy &pObjectProxy,
@@ -435,7 +441,7 @@ namespace striboh {
                     const Message &pValues,
                     LogIface &pLog);
 
-            Message getReturnValue() { return mReturnValues; }
+            Message getReturnValue() { return m_responseMsg; }
 
             /**
              * Start the asynchronous operation
@@ -470,7 +476,7 @@ namespace striboh {
                         std::string_view pPath,
                         LogIface &pLog) :
                     m_connectionStatus(EConnectionStatus::K_INITIAL), //< striboh context
-                    mResolver(net::make_strand(m_ioContext)), //< log
+                    m_resolver(net::make_strand(m_ioContext)), //< log
                     m_webSocket(net::make_strand(m_ioContext)), //
                     m_client(pClient), //
                     m_baseUrl(std::move(pPath)), m_log(pLog) {}
@@ -494,13 +500,15 @@ namespace striboh {
             bool
             isConnected() {
                 if (m_connectionStatus == EConnectionStatus::K_INITIAL) {
-                    doTcpResolveAntConnect();
+                    dispatch();
                 }
-                return m_connectionStatus == EConnectionStatus::K_CONNECTED;
+                return m_connectionStatus == EConnectionStatus::K_UPGRADED;
             }
 
             std::shared_ptr<InvocationContext>
             invokeMethod(Message &&pValues);
+
+            void dispatch();
 
         private:
 
@@ -536,65 +544,114 @@ namespace striboh {
 
             void onUpgradeHandshake(beast::error_code ec);
 
-            void doTcpResolveAntConnect();
-
             void doConnect();
 
         private:
             uint8_t m_connectCounter = 0;
             std::atomic<EConnectionStatus> m_connectionStatus;
             net::io_context m_ioContext;
-            tcp::resolver mResolver;
-            tcp::resolver::results_type mTcpResolverResult;
+            tcp::resolver m_resolver;
+            tcp::resolver::results_type m_tcpResolverResult;
             WebSocket m_webSocket;
             http::request<http::empty_body> m_request;
             http::response<http::string_body> m_response;
             const HostConnection &m_client;
             std::string m_baseUrl;
             InstanceId m_uuid;
-            std::string mWebSocketUrl;
+            std::string m_webSocketUrl;
             beast::flat_buffer m_flatBuffer; // (Must persist between reads)
-            bool mUpgraded = false;
             uint8_t m_retryCnt = 13;
             LogIface &m_log;
+
+            void doTcpResolve();
         };
 
         class HostConnection {
-            LogIface &m_Log;
-            Address m_Address;
-            std::string m_PortStr;
-            std::shared_ptr<ObjectProxy> m_ProxyPtr;
-        private:
-            int mVersion = 11;
+            LogIface &m_log;
+            Address m_address;
+            std::string m_portStr;
+            std::shared_ptr<ObjectProxy> m_proxyPtr;
+            int m_version = 11;
 
         public:
-            HostConnection(Address&& pAddress, LogIface &pLog);
+            HostConnection(Address &&pAddress, LogIface &pLog);
 
             std::shared_ptr<ObjectProxy>
             createProxyFor(std::string_view pPath);
 
             LogIface &getLog() const {
-                return m_Log;
+                return m_log;
             }
 
             unsigned short getPort() const {
-                return m_Address.getPort();
+                return m_address.getPort();
             }
 
             int getVersion() const {
-                return mVersion;
+                return m_version;
             }
 
             const std::string &getHost() const {
-                return m_Address.getHost();
+                return m_address.getHost();
             }
 
             const std::string &getPortStr() const {
-                return m_PortStr;
+                return m_portStr;
             }
         };
 
     }
 }
 
-#endif //STRIBOH_BASE_CLIENT_HPP
+template<>
+struct fmt::formatter<::striboh::base::EConnectionStatus> : formatter<::std::string_view> {
+    // parse is inherited from formatter<string_view>.
+    template<typename FormatContext>
+    auto format(const ::striboh::base::EConnectionStatus p_status, FormatContext &ctx) {
+        std::string myStrVal;
+        switch (p_status) {
+            case striboh::base::EConnectionStatus::K_INITIAL:
+                myStrVal = "EConnectionStatus::K_INITIAL";
+                break;
+            case striboh::base::EConnectionStatus::K_RESOLVING:
+                myStrVal = "EConnectionStatus::K_RESOLVING";
+                break;
+            case striboh::base::EConnectionStatus::K_RESOLVED:
+                myStrVal = "EConnectionStatus::K_RESOLVED";
+                break;
+            case striboh::base::EConnectionStatus::K_CONNECTING:
+                myStrVal = "EConnectionStatus::K_CONNECTING";
+                break;
+            case striboh::base::EConnectionStatus::K_CONNECTED:
+                myStrVal = "EConnectionStatus::K_CONNECTED";
+                break;
+            case striboh::base::EConnectionStatus::K_UPGRADED:
+                myStrVal = "EConnectionStatus::K_UPGRADED";
+                break;
+            case striboh::base::EConnectionStatus::K_ERROR:
+                myStrVal = "EConnectionStatus::K_ERROR";
+                break;
+            case striboh::base::EConnectionStatus::K_CONNECTION_ERROR:
+                myStrVal = "EConnectionStatus::K_CONNECTION_ERROR";
+                break;
+            case striboh::base::EConnectionStatus::K_INSTANCE_ERROR:
+                myStrVal = "EConnectionStatus::K_INSTANCE_ERROR";
+                break;
+            case striboh::base::EConnectionStatus::K_GOT_INSTANCE:
+                myStrVal = "EConnectionStatus::K_GOT_INSTANCE";
+                break;
+            case striboh::base::EConnectionStatus::K_UPGRADE_ERROR:
+                myStrVal = "EConnectionStatus::K_UPGRADE_ERROR";
+                break;
+            case striboh::base::EConnectionStatus::K_READIND_INSTANCE_ID:
+                myStrVal = "EConnectionStatus::K_READIND_INSTANCE_ID";
+                break;
+            case striboh::base::EConnectionStatus::K_UPGRADING:
+                myStrVal = "EConnectionStatus::K_UPGRADING";
+                break;
+            default:
+                myStrVal = "EConnectionStatus::" + boost::lexical_cast<std::string>(int(p_status));
+        }
+        return formatter<string_view>::format(myStrVal, ctx);
+    }
+};
