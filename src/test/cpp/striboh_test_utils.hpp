@@ -379,7 +379,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #pragma once
 
 #include <string>
-#include <boost/process.hpp>
+#include <iostream>
+
+#include <boost/process/child.hpp>
+#include <boost/process/io.hpp>
 
 namespace striboh {
     namespace base {
@@ -387,8 +390,29 @@ namespace striboh {
     }
 
     namespace test {
-        std::shared_ptr<boost::process::child> runServer(std::string_view pTestServerBinary, ::striboh::base::LogIface&);
+        using namespace std::chrono_literals;
+        std::shared_ptr<boost::process::child>
+        runServer(std::string_view pTestServerBinary, ::striboh::base::LogIface &);
+
+        /**
+         * @return false on shutdown (runing==false)
+         */
+        inline bool wait4shutdown(std::shared_ptr<boost::process::child> p_processChild) {
+            constexpr const auto myMaxWaitTimeInSecs = 20;
+            std::cout << std::endl << "Wait 4 shutdown ";
+            for (int mII = 0; mII < myMaxWaitTimeInSecs; mII++) {
+                if (p_processChild->running()) {
+                    p_processChild->wait_for(1s);
+                    std::cout << ".";
+                } else {
+                    std::cout << " not running - ok." << std::endl;
+                    return false;
+                }
+            }
+            std::cout << "still running?!" << std::endl;
+            return true;
+        }
+
     }
 }
-
 

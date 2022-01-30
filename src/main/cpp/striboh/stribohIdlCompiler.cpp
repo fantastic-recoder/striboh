@@ -473,6 +473,7 @@ namespace striboh::idl {
         }
         m_Log.info("Backend specified:{}.", m_Backend);
         m_Print2Out = myVarMap.count("stdout");
+        if(m_Print2Out) m_Log.info("Will print generated code to stdandart out.");
         return myRetVal;
     }
 
@@ -498,7 +499,8 @@ namespace striboh::idl {
             std::filesystem::path myOutFile = m_Outdir / pMapElement.first;
             ofstream myOutput(myOutFile, std::ios::out);
             if (!myOutput) {
-                m_Log.error("Failed to open output file \"{}\", reason: \"{}\".", myOutFile.string(),std::strerror(errno));
+                m_Log.error("Failed to open output file \"{}\", reason: \"{}\".", myOutFile.string(),
+                            std::strerror(errno));
                 myRetVal = K_RET_VAL_BAD_OUTPUT;
                 break;
             }

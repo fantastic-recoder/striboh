@@ -43,11 +43,12 @@ CMakeLists.txt.user
 /.settings/language.settings.xml
 /src/test/echo/Echo.hpp
 /src/test/echo/EchoClt.hpp
-/cmake-build-debug/**/*
-/cmake-build-release/
-/cmake-build-debug-visual-studio/
+/cmake-*
 /.metadata/
 /.settings/
 /striboh.creator.user
 /.idea/markdown.xml
-/cmake-build-debug-coverage/
+/.vs
+/out/build/x64-Debug
+/CMakeSettings.json
+/out/

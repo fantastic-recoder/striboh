@@ -1,0 +1,9 @@
+[submodule "src/main/cpp/boost-cmake"]
+	path = src/main/cpp/boost-cmake
+	url = https://github.com/Orphis/boost-cmake.git
+[submodule "src/main/cpp/boost"]
+	path = src/main/cpp/boost
+	url = https://github.com/boostorg/boost.git
+[submodule "src/main/cpp/pybind11"]
+	path = src/main/cpp/pybind11
+	url = https://github.com/pybind/pybind11.git

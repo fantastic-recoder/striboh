@@ -390,46 +390,41 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "EchoClt.hpp"
 
 namespace {
-    static const char* K_TEST_SRV = "http://0.0.0.0:9998";
+    static const char* K_TEST_SRV = "http://127.0.0.1:9998";
     static striboh::base::LogBoostImpl theLog;
     striboh::base::Broker theBroker(K_TEST_SRV,theLog);
 }
 
 using namespace generated_echo_test;
 using namespace striboh::test;
+using namespace std::chrono_literals;
 
 TEST(stribohGeneratedEchoTests, testEcho) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    sleep(5);
     EchoProxy myEchoClt(K_TEST_SRV,theLog);
     auto myEchoOp = myEchoClt.echo("John");
     auto myRetVal = myEchoOp.getVal();
     EXPECT_EQ("Hello John!",myRetVal);
     myEchoClt.shutdown();
-    sleep(3);
-    ASSERT_FALSE(myChild->running());
+    ASSERT_FALSE(wait4shutdown(myChild));
 }
 
 TEST(stribohGeneratedEchoTests, testAdd) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    sleep(10);
     EchoProxy myEchoClt(K_TEST_SRV,theLog);
     auto myAddOp = myEchoClt.add(3,4);
     EXPECT_EQ(7,myAddOp.getVal());
     myEchoClt.shutdown();
-    sleep(10);
-    ASSERT_FALSE(myChild->running());
+    ASSERT_FALSE(wait4shutdown(myChild));
 }
 
 TEST(stribohGeneratedEchoTests, testEchoAndAdd) {
     auto myChild = runServer("./striboh_generated_echo_server",theLog);
-    sleep(10);
     EchoProxy myEchoPrx(K_TEST_SRV, theLog);
     auto myAddOp = myEchoPrx.add(13, 4);
     EXPECT_EQ(17,myAddOp.getVal());
     auto myEchoOp = myEchoPrx.echo("Striboh");
     EXPECT_EQ("Hello Striboh!",myEchoOp.getVal());
     myEchoPrx.shutdown();
-    sleep(10);
-    ASSERT_FALSE(myChild->running());
+    ASSERT_FALSE(wait4shutdown(myChild));
 }

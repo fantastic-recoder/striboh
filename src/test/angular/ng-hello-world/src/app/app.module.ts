@@ -16,7 +16,7 @@ import { NgServerService } from './ng_server.service';
     BrowserModule,
     HttpClientModule
   ],
-  providers: [NgServerService, { provide: 'mHostAndPort', useValue: '0.0.0.0:5600' }, ],
+  providers: [NgServerService, { provide: 'mHostAndPort', useValue: '127.0.0.1:5600' }, ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

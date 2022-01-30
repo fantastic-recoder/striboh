@@ -387,8 +387,12 @@ using std::string_view;
 using std::string;
 using std::vector;
 
-namespace striboh {
-    namespace base {
+namespace {
+}
+
+namespace striboh::base {
+
+        using namespace std;
 
         Parameters_t
         parseUrlParameters(string_view pUrl) {
@@ -398,7 +402,7 @@ namespace striboh {
             static const std::regex myParamsRegExp1(
                     R"(([^=?&]+)=([^?&]+))");
             std::cmatch myMatch;
-            if (std::regex_match (pUrl.begin(),pUrl.end(),myMatch,myParamsRegExp0)) {
+            if (regex_match(&pUrl[0], &pUrl[pUrl.size()],myMatch,myParamsRegExp0) ) {
                 myRetVal[myMatch[2]]=vector<string>();
                 myRetVal[K_BASE_URL].push_back(myMatch[1]);
             } else {
@@ -414,7 +418,7 @@ namespace striboh {
                     }
                     myUrl = mySMatch.suffix();
                 }
-                if(myRetVal.size()==0) {
+                if(myRetVal.empty()) {
                     myRetVal[K_BASE_URL].push_back(string(pUrl));
                 }
             }
@@ -422,4 +426,3 @@ namespace striboh {
         }
 
     }
-}

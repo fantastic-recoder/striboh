@@ -418,7 +418,7 @@ namespace generated_echo_test {
 using generated_echo_test::EchoServant;
 
 int main() {
-    striboh::base::Broker aBroker("http://0.0.0.0:9998",theLog);
+    striboh::base::Broker aBroker("http://127.0.0.1:9998",theLog);
     EchoServant myEchoServant(aBroker);
     auto myUiid=aBroker.addServant(myEchoServant.getInterface());
     aBroker.getLog().debug("EchoServant Uiid = {}.",to_string(myUiid));

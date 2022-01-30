@@ -10,3 +10,7 @@ When connecting two completely different languages like for example C++ and Java
 There is currently no easy way to use C++ backend and Typescript/Angular frontend/client middleware.
 C++ still lacks reflections and they are not in C++20. Current C++ template based reflection 
 solutions like for example Boost Hana, are incredibly complex and result in hard to debug code. 
+
+#### Note
+Build Boost for Win 10 target  "b2 --build-dir=C:\dev\boost_1_78_0_build --toolset=msvc --build-type=complete define=BOOST_USE_WINAPI_VERSION=0x0501=0x0A00 stage install".
+Boost 1.78.1 cannot handle C++20 because of allocator::pointer

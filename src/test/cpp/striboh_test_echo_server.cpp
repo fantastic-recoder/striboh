@@ -404,7 +404,7 @@ namespace striboh::base {
 int main( const int argc, const char* argv[]) {
     myLog.info("Server {} starting.", argv[0]);
     // Declare the supported options.
-    int myTotalWorkTimeInSeconds = 45;
+    int myTotalWorkTimeInSeconds = 120;
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
@@ -436,15 +436,18 @@ int main( const int argc, const char* argv[]) {
     int myStep=1;
     do {
         std::this_thread::sleep_for(std::chrono::seconds(myStep));
-        if(mySecondsCounter % 30 ==0 ) {
+        if(mySecondsCounter % 30 == 0 ) {
             myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
                         toString(aBroker.getState()),
-                        mySecondsCounter += myStep,
+                        mySecondsCounter,
                         myTotalWorkTimeInSeconds,
                         myStep);
+            aBroker.serveOnce();
         }
+        mySecondsCounter += myStep;
     } while ((mySecondsCounter < myTotalWorkTimeInSeconds) &&
              (aBroker.getState()!= EServerState::K_NOMINAL));
+    cout << endl;
     if(aBroker.getState()!= EServerState::K_NOMINAL) {
         aBroker.shutdown();
         myLog.error("Test echo servant timed out.");

@@ -20,7 +20,12 @@
     "@angular/router": "~11.0.5",
     "rxjs": "~6.6.0",
     "tslib": "^2.0.0",
-    "zone.js": "~0.10.2"
+    "zone.js": "~0.10.2",
+    "engine.io": ">=6.1.1",
+    "follow-redirects": ">=1.14.7",
+    "xmlhttprequest-ssl": ">=1.6.2",
+    "ua-parser-js": ">=0.7.24",
+    "is-svg": ">=4.3.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "~0.1100.5",

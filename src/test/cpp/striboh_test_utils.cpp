@@ -382,28 +382,36 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include <fmt/format.h>
 #include <striboh/stribohBaseLogIface.hpp>
+
 #include "striboh_test_utils.hpp"
+#include "striboh_build_constants.hpp"
+
 
 namespace striboh {
     namespace test {
 
         using std::string_view;
+        using std::string;
         using boost::process::child;
         using boost::process::std_out;
+        using boost::process::std_err;
         using namespace std::chrono_literals;
 
-        std::shared_ptr<child> runServer( std::string_view pTestEchoServerBinary, ::striboh::base::LogIface& pLog) {
+        std::shared_ptr<child> runServer(std::string_view pTestEchoServerBinary, ::striboh::base::LogIface &pLog) {
+            string myBinDir(K_BUILD_DIR);
+            (myBinDir += "/bin/") += pTestEchoServerBinary;
             const char *const myNoServerVariable = std::getenv("NO_SRV");
             if (myNoServerVariable == nullptr || string_view(myNoServerVariable).compare("yes")) {
-                std::shared_ptr<child> myServerChildProcess = std::make_shared<child>(pTestEchoServerBinary.data(), std_out > "out.txt");
+                std::shared_ptr<child> myServerChildProcess
+                        = std::make_shared<child>(myBinDir.data(),
+                                                  std_out > stdout, std_err > stderr);
                 pLog.debug("Starting test echo server...");
-                if(!myServerChildProcess->valid())
+                if (!myServerChildProcess->valid())
                     throw new std::runtime_error(fmt::format("Failed to start {}.", pTestEchoServerBinary));
-                std::this_thread::sleep_for(std::chrono::seconds(3s));
-                pLog.info("Server {} started.",pTestEchoServerBinary);
+                pLog.info("Server {} started.", pTestEchoServerBinary);
                 return myServerChildProcess;
             }
-            pLog.info("Server {} not started, env is {}.",pTestEchoServerBinary, myNoServerVariable);
+            pLog.info("Server {} not started, env is {}.", pTestEchoServerBinary, myNoServerVariable);
             return std::shared_ptr<child>();
         }
 

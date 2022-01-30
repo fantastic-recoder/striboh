@@ -416,14 +416,6 @@ namespace striboh::base {
 
     constexpr static const char *const theAppJson = "application/json";
 
-    string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog);
-
-    string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pIface);
-
-    string fullPath(const Address &pAddress, const Interface &pResolved);
-
-    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName);
-
     //! Return a reasonable mime type based on the extension of a file.
     beast::string_view
     mime_type(beast::string_view path) {
@@ -596,7 +588,7 @@ namespace striboh::base {
     }
 
     string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog) {
-        pLog.debug("--> module request");
+        pLog.debug("SRV --> module request");
         string myReply;
         if (p_Resolved.m_Result == EResolveResult::OK) {
             Json myRetVal{
@@ -605,7 +597,7 @@ namespace striboh::base {
                     {"interfaces", Json::array()}
             };
             for (auto myModuleName: p_Resolved.m_Modules) {
-                Path myPath;
+                Path myPath(p_Resolved.m_Path);
                 myPath.get().emplace_back(myModuleName);
                 myRetVal["modules"].emplace_back(fullPath(p_Resolved.m_Address, myPath, InterfaceName("")));
             }
@@ -614,7 +606,7 @@ namespace striboh::base {
             }
             myReply = myRetVal.dump();
         }
-        pLog.debug("<-- module request");
+        pLog.debug("SRV <-- module request");
         return myReply;
     }
 
@@ -626,7 +618,7 @@ namespace striboh::base {
        * @return the interface as Json string.
        */
     string serviceToJsonStr(const Address &pAddress, const Interface &pAnInterface, LogIface &pLog) {
-        pLog.debug("--> api request");
+        pLog.debug("SRV --> api request");
         string myPathToId = fullPath(pAddress, pAnInterface) + "?svc";
         Json myRetVal =
                 {
@@ -645,22 +637,8 @@ namespace striboh::base {
             pLog.debug("    method: {}", myMethod.getName());
         }
         string myRetValStr(myRetVal.dump());
-        pLog.debug("<-- api request: {}", myRetValStr);
+        pLog.debug("SRV <-- api request: {}", myRetValStr);
         return myRetValStr;
-    }
-
-    string fullPath(const Address &pAddress, const Path &p_Path, const InterfaceName& p_InterfaceName) {
-        string myPath(pAddress.str());
-        std::for_each(p_Path.get().begin(), p_Path.get().end(), [&myPath](const ModuleName &p0) -> void {
-                                     myPath += ('/' + p0.get());
-                                 });
-        myPath += ('/' + p_InterfaceName.get());
-        return myPath;
-    }
-
-    string fullPath(const Address &pAddress, const Interface &pResolved) {
-        string myPath(fullPath(pAddress,pResolved.getPath(),pResolved.getName()));
-        return myPath;
     }
 
     /**
@@ -668,7 +646,7 @@ namespace striboh::base {
      */
     void
     fail(beast::error_code ec, char const *what, LogIface &pLogger) {
-        pLogger.error("{}:{}", what, ec.message());
+        pLogger.error("SRV {}:{}", what, ec.message());
     }
 
     /**
@@ -696,7 +674,7 @@ namespace striboh::base {
 
                 // Store a type-erased version of the shared
                 // pointer in the class to keep it alive.
-                self_.mRes = sp;
+                self_.m_res = sp;
 
                 // Write the response
                 http::async_write(
@@ -717,7 +695,7 @@ namespace striboh::base {
         http::request<http::string_body> mRequest;
         HttpSendLambda mLambda;
         BrokerIface &mBroker;
-        std::shared_ptr<void> mRes;
+        std::shared_ptr<void> m_res;
         LogIface &mLog;
     public:
         // Take ownership of the socket
@@ -757,26 +735,26 @@ namespace striboh::base {
 
         void
         onHttpRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
-            mBroker.getLog().debug("--> onHttpRead");
+            mBroker.getLog().debug("SRV --> onHttpRead");
             boost::ignore_unused(pBytesTransferred);
             try {
                 // This means they closed the connection
                 if (pErrorCode == http::error::end_of_stream)
                     return doCloseHttpStream();
                 if (pErrorCode)
-                    return fail(pErrorCode, "onHttpRead", mLog);
+                    return fail(pErrorCode, "SRV onHttpRead", mLog);
                 // Send the response
                 if (handleOrUpgradeHttpRequest(std::move(mRequest), mLambda, mBroker,
                                                mWebSocketStream, mTcpStream)) {
-                    mBroker.getLog().debug("Upgraded!");
+                    mBroker.getLog().debug("SRV Upgraded!");
                     doWsRead();
                 }
             } catch (std::exception &pExc) {
-                mBroker.getLog().error("std::exception caught: {}.", pExc.what());
+                mBroker.getLog().error("SRV std::exception caught: {}.", pExc.what());
             } catch (...) {
-                mBroker.getLog().error("Unknown exception happened.");
+                mBroker.getLog().error("SRV Unknown exception happened.");
             }
-            mBroker.getLog().debug("<-- onHttpRead");
+            mBroker.getLog().debug("SRV <-- onHttpRead");
         }
 
         void
@@ -790,7 +768,7 @@ namespace striboh::base {
 
         void
         doWsRead() {
-            mLog.debug("Going to read the Websocket.");
+            mLog.debug("SRV Going to read the Websocket.");
             mReadBuffer.clear();
             // Read a message into our buffer
             mWebSocketStream->async_read(
@@ -809,17 +787,17 @@ namespace striboh::base {
         onWsRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
             // This indicates that the session was closed
             if (pErrorCode == websocket::error::closed) {
-                mLog.debug("WebSocket closed.");
+                mLog.debug("SRV WebSocket closed.");
                 return;
             }
             if (pErrorCode) {
                 fail(pErrorCode, "onWsRead", mLog);
             } else {
-                mLog.debug("WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
+                mLog.debug("SRV WS Read {}({}) bytes from WebSocket.", mReadBuffer.size(), pBytesTransferred);
                 Message myMsg(mLog);
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
-                mLog.debug("Unpacked, {} values.", myMsg.getParameters().size());
+                mLog.debug("SRV Unpacked, {} values.", myMsg.getParameters().size());
                 const Message myReply = mBroker.invokeMethod(std::forward<Message>(myMsg));
                 mWriteBuffer.clear();
                 myReply.packToBuffer(mWriteBuffer);
@@ -860,7 +838,7 @@ namespace striboh::base {
             }
 
             // We're done with the response so delete it
-            mRes = nullptr;
+            m_res = nullptr;
 
             // Read another request
             doHttpRead();
@@ -978,9 +956,9 @@ namespace striboh::base {
         setState(EServerState::K_SHUTTING_DOWN);
         int myCnt = 0;
         for (auto &aTask: mAcceptTasks) {
-            mLog.debug("BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
+            mLog.debug("SRV BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
             aTask.wait_for(std::chrono::duration(10s));
-            mLog.debug("BeastServer: Task {} down.", myCnt, mAcceptTasks.size());
+            mLog.debug("SRV BeastServer: Task {} down.", myCnt, mAcceptTasks.size());
         }
         mLog.info("BeastServer: ... shutdown completed.");
         setState(EServerState::K_NOMINAL);
@@ -1002,17 +980,17 @@ namespace striboh::base {
 
 
     void BeastServer::run() {
-        mLog.debug("BeastServer::run() -->");
+        mLog.debug("SRV BeastServer::run() -->");
         auto const aAddress = net::ip::make_address(getBroker().getAddress().getHost());
         auto const aPort = getBroker().getAddress().getPort();
         auto myIocRun = [this]() -> void {
-            this->mLog.debug("BeastServer::run() Thread {} started.",
+            this->mLog.debug("SRV BeastServer::run() Thread {} started.",
                              toString(std::this_thread::get_id()));
             while (this->getState() == EServerState::K_STARTED ||
                    this->getState() == EServerState::K_STARTING) {
                 mIoc.run_for(10s);
             }
-            this->mLog.debug("BeastServer::run() Thread {} finished.",
+            this->mLog.debug("SRV BeastServer::run() Thread {} finished.",
                              toString(std::this_thread::get_id()));
         };
         // Create and launch a listening on Port aPort
@@ -1025,7 +1003,7 @@ namespace striboh::base {
             mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
         mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
         setState(EServerState::K_STARTED);
-        mLog.debug("BeastServer::run() <--");
+        mLog.debug("SRV BeastServer::run() <--");
         return;
     }
 

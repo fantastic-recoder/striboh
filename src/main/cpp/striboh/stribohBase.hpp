@@ -379,6 +379,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #pragma once
 
+#include <NamedType/named_type.hpp>
+
 namespace striboh::base {
 
     using ModuleName /*---*/  = fluent::NamedType<std::string, struct PathSegmentTag>;
