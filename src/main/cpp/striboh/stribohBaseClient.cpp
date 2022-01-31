@@ -461,9 +461,7 @@ namespace striboh {
 
         void
         ObjectProxy::doTcpResolve() {
-            m_connectionStatus = EConnectionStatus::K_RESOLVING;
-            m_log.debug("CLT --> doTcpResolveAndConnect() status={}.", getConnectionStatus().load());
-            m_log.debug("CLT     Going to resolve {}:{}...", m_client.getHost(), m_client.getPort());
+            m_log.debug("CLT --> TCP resolve {}:{}...", m_client.getHost(), m_client.getPort());
             // Look up the domain name
             m_resolver.async_resolve(
                     m_client.getHost().c_str(),
@@ -484,7 +482,7 @@ namespace striboh {
             else {
                 m_tcpResolverResult = pResults;
                 m_connectionStatus = EConnectionStatus::K_RESOLVED;
-                m_log.debug("CLT TCP Resolved.");
+                m_log.debug("CLT <-- TCP Resolved.");
             }
         }
 
@@ -589,35 +587,48 @@ namespace striboh {
             EConnectionStatus myCurrentState = getConnectionStatus();
             m_log.debug("CLT --> dispatch state={}", myCurrentState);
             do {
-                if (getConnectionStatus() == EConnectionStatus::K_INITIAL) {
-                    m_connectCounter = 0;
-                    doTcpResolve();
-                } else if(getConnectionStatus() == EConnectionStatus::K_RESOLVED) {
-                    m_connectCounter = 0;
-                    doConnect();
-                } else if (getConnectionStatus() == EConnectionStatus::K_CONNECTED) {
-                    m_connectCounter = 0;
-                    getConnectionStatus() = EConnectionStatus::K_READIND_INSTANCE_ID;
-                    sendGetInstanceRequest();
-                } else if (getConnectionStatus() == EConnectionStatus::K_GOT_INSTANCE) {
-                    m_connectCounter = 0;
-                    getConnectionStatus() = EConnectionStatus::K_UPGRADING;
-                    sendUpgradeRequest();
-                } else if (getConnectionStatus() == EConnectionStatus::K_CONNECTION_ERROR) {
-                    m_log.debug("CLT retry connect {} out of {}.", m_connectCounter, m_retryCnt);
-                    std::this_thread::sleep_for(1s);
-                    doConnect();
-                    m_connectCounter++;
-                } else if (getConnectionStatus() == EConnectionStatus::K_INSTANCE_ERROR) {
-                    m_log.debug("CLT retry get instance {} out of {}.", m_connectCounter, m_retryCnt);
-                    std::this_thread::sleep_for(1s);
-                    sendGetInstanceRequest();
-                    m_connectCounter++;
-                } else if (getConnectionStatus() == EConnectionStatus::K_UPGRADE_ERROR) {
-                    m_log.debug("CLT retry get upgrade {} out of {}.", m_connectCounter, m_retryCnt);
-                    std::this_thread::sleep_for(1s);
-                    sendUpgradeRequest();
-                    m_connectCounter++;
+                switch (myCurrentState) {
+                    case EConnectionStatus::K_INITIAL:
+                        getConnectionStatus().compare_exchange_weak(myCurrentState, EConnectionStatus::K_RESOLVING);
+                        m_connectCounter = 0;
+                        doTcpResolve();
+                        break;
+                    case EConnectionStatus::K_RESOLVED:
+                        getConnectionStatus().compare_exchange_weak(myCurrentState, EConnectionStatus::K_CONNECTING);
+                        m_connectCounter = 0;
+                        doConnect();
+                        break;
+                    case EConnectionStatus::K_CONNECTED:
+                        getConnectionStatus().compare_exchange_weak(myCurrentState,
+                                                                    EConnectionStatus::K_GETTING_INSTANCE_ID);
+                        m_connectCounter = 0;
+                        sendGetInstanceRequest();
+                        break;
+                    case EConnectionStatus::K_GOT_INSTANCE:
+                        getConnectionStatus().compare_exchange_weak(myCurrentState, EConnectionStatus::K_UPGRADING);
+                        m_connectCounter = 0;
+                        sendUpgradeRequest();
+                        break;
+                    case EConnectionStatus::K_CONNECTION_ERROR:
+                        m_log.debug("CLT retry connect {} out of {}.", m_connectCounter, m_retryCnt);
+                        std::this_thread::sleep_for(1s);
+                        doConnect();
+                        m_connectCounter++;
+                        break;
+                    case EConnectionStatus::K_INSTANCE_ERROR:
+                        m_log.debug("CLT retry get instance {} out of {}.", m_connectCounter, m_retryCnt);
+                        std::this_thread::sleep_for(1s);
+                        sendGetInstanceRequest();
+                        m_connectCounter++;
+                        break;
+                    case EConnectionStatus::K_UPGRADE_ERROR:
+                        m_log.debug("CLT retry get upgrade {} out of {}.", m_connectCounter, m_retryCnt);
+                        std::this_thread::sleep_for(1s);
+                        sendUpgradeRequest();
+                        m_connectCounter++;
+                        break;
+                    default:
+                        break;
                 }
                 if (m_connectCounter > m_retryCnt) {
                     getConnectionStatus() = EConnectionStatus::K_ERROR;

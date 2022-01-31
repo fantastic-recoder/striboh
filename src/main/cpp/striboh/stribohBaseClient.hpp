@@ -420,8 +420,8 @@ namespace striboh {
             K_CONNECTION_ERROR,
             K_INSTANCE_ERROR,
             K_GOT_INSTANCE,
-            K_UPGRADE_ERROR,
-            K_READIND_INSTANCE_ID
+            K_GETTING_INSTANCE_ID,
+            K_UPGRADE_ERROR
         };
 
         class ObjectProxy;
@@ -643,8 +643,8 @@ struct fmt::formatter<::striboh::base::EConnectionStatus> : formatter<::std::str
             case striboh::base::EConnectionStatus::K_UPGRADE_ERROR:
                 myStrVal = "EConnectionStatus::K_UPGRADE_ERROR";
                 break;
-            case striboh::base::EConnectionStatus::K_READIND_INSTANCE_ID:
-                myStrVal = "EConnectionStatus::K_READIND_INSTANCE_ID";
+            case striboh::base::EConnectionStatus::K_GETTING_INSTANCE_ID:
+                myStrVal = "EConnectionStatus::K_GETTING_INSTANCE_ID";
                 break;
             case striboh::base::EConnectionStatus::K_UPGRADING:
                 myStrVal = "EConnectionStatus::K_UPGRADING";
