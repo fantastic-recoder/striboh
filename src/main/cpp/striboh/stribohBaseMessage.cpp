@@ -432,17 +432,25 @@ namespace msgpack {
 } // namespace msgpack
 
 namespace {
-    struct LogGuard {
+
+    using striboh::base::EStateMachineLogVerbosity;
+
+    static EStateMachineLogVerbosity theVerbosity = EStateMachineLogVerbosity::K_NOLOG;
+
+
+    struct EventLogger {
         LogIface &m_log;
         std::string m_msg;
 
-        LogGuard(striboh::base::LogIface &p_log, std::string_view p_msg)
+        EventLogger(striboh::base::LogIface &p_log, std::string_view p_msg)
                 : m_log(p_log), m_msg(p_msg) {
-            m_log.debug("--> {}", m_msg);
+            if (theVerbosity & EStateMachineLogVerbosity::K_EVENT)
+                m_log.debug("--> {}", m_msg);
         }
 
-        ~LogGuard() {
-            m_log.debug("<-- {}", m_msg);
+        ~EventLogger() {
+            if (theVerbosity & EStateMachineLogVerbosity::K_EVENT)
+                m_log.debug("<-- {}", m_msg);
         }
     };
 
@@ -456,7 +464,8 @@ namespace {
         EvtVal() = delete;
 
         explicit EvtVal(T p_val, striboh::base::LogIface &p_log) : m_val(p_val), m_log(p_log) {
-            m_log.debug("{} value = '{}'", theirType, m_val);
+            if (theVerbosity & EStateMachineLogVerbosity::K_EVENT)
+                m_log.debug("{} value = '{}'", theirType, m_val);
         }
 
     };
@@ -464,8 +473,8 @@ namespace {
     template<typename T> const std::string EvtVal<T>::theirType = bcr::demangle(typeid(T).name());
 
     template<typename TEvent>
-    struct TBaseEvent : LogGuard {
-        TBaseEvent(striboh::base::LogIface &p_log) : LogGuard(p_log, bcr::demangle(typeid(TEvent).name())) {}
+    struct TBaseEvent : EventLogger {
+        TBaseEvent(striboh::base::LogIface &p_log) : EventLogger(p_log, bcr::demangle(typeid(TEvent).name())) {}
     };
 
     struct EvtNil : TBaseEvent<EvtNil> {
@@ -549,125 +558,50 @@ namespace {
         }
 
         template<typename T>
-        struct StateLogger {
+        struct StateLogger : public msm::front::state<> {
             static string theirTypename;
 
             template<class FSM>
-            void log_on_entry(FSM &p_fsm) { p_fsm.m_log.debug("--> STATE {}", theirTypename); }
+            constexpr inline void log_on_entry(FSM &p_fsm) { p_fsm.m_log.debug("--> STATE {}", theirTypename); }
 
             template<class FSM>
-            void log_on_exit(FSM &p_fsm) { p_fsm.m_log.debug("<-- STATE {}", theirTypename); }
+            constexpr inline void log_on_exit(FSM &p_fsm) { p_fsm.m_log.debug("<-- STATE {}", theirTypename); }
+
+
+            template<class Event, class FSM>
+            void on_entry(Event const &, FSM &p_fsm) {
+                if (EStateMachineLogVerbosity::K_STATE & theVerbosity)
+                    log_on_entry(p_fsm);
+            }
+
+            template<class Event, class FSM>
+            void on_exit(Event const &, FSM &p_fsm) {
+                if (EStateMachineLogVerbosity::K_STATE & theVerbosity)
+                    log_on_exit(p_fsm);
+            }
         };
 
-        struct BeforeMessageState : public msm::front::state<> {
-            StateLogger<BeforeMessageState> myStateLogger;
+        struct BeforeMessageState : public StateLogger<BeforeMessageState> {};
 
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
+        struct ParsingMessageState : public StateLogger<ParsingMessageState> {};
 
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
+        struct ParsingParametersKeyState : public StateLogger<ParsingParametersKeyState> {};
 
-        struct ParsingMessageState : public msm::front::state<> {
-            StateLogger<ParsingMessageState> myStateLogger;
+        struct ErrorState : public StateLogger<ErrorState>{};
 
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
+        struct ParsingMessageTypeState : public StateLogger<ParsingMessageTypeState> {};
 
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
+        struct ParsingInstanceId : public StateLogger<ParsingInstanceId> {};
 
-        struct ParsingParametersKeyState : public msm::front::state<> {
-            StateLogger<ParsingParametersKeyState> myStateLogger;
+        struct ParsingParametersState :public StateLogger<ParsingParametersState> {};
 
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
+        struct AfterMessageState : public StateLogger<AfterMessageState> {};
 
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
+        struct ParsingParameterValueState : public StateLogger<ParsingParameterValueState> {};
 
-        struct ErrorState : public msm::front::state<> {
-            StateLogger<ErrorState> myStateLogger;
+        struct ParsingMethodNameState : public StateLogger<ParsingMethodNameState> {};
 
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct ParsingMessageTypeState : public msm::front::state<> {
-            StateLogger<ParsingMessageTypeState> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct ParsingInstanceId : public msm::front::state<> {
-            StateLogger<ParsingInstanceId> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct ParsingParametersState : public msm::front::state<> {
-            StateLogger<ParsingParametersState> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct AfterMessageState : public msm::front::state<> {
-            StateLogger<AfterMessageState> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct ParsingParameterValueState : public msm::front::state<> {
-            StateLogger<ParsingParameterValueState> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct ParsingMethodNameState : public msm::front::state<> {
-            StateLogger<ParsingMethodNameState> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
-
-        struct ParsingReturnState : public msm::front::state<> {
-            StateLogger<ParsingReturnState> myStateLogger;
-
-            template<class Event, class FSM>
-            void on_entry(Event const &, FSM &p_fsm) { myStateLogger.log_on_entry(p_fsm); }
-
-            template<class Event, class FSM>
-            void on_exit(Event const &, FSM &p_fsm) { myStateLogger.log_on_exit(p_fsm); }
-        };
+        struct ParsingReturnState : public StateLogger<ParsingReturnState> {};
 
         // the initial state of the player SM. Must be defined
         typedef mpl::vector<BeforeMessageState> initial_state;
@@ -1076,6 +1010,14 @@ namespace striboh::base {
 
     Message::Message(ReadBuffer &&pBuffer, LogIface &pIface) : mLog(pIface) {
         unpackFromBuffer(std::forward<ReadBuffer>(pBuffer));
+    }
+
+    void setStateMachineLogVerbosity(const EStateMachineLogVerbosity p_lV) {
+        theVerbosity = p_lV;
+    }
+
+    EStateMachineLogVerbosity getStateMachineLogVerbosity() {
+        return theVerbosity;
     }
 
 } // end namespace striboh::base

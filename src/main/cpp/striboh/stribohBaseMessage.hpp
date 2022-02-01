@@ -588,6 +588,19 @@ namespace striboh::base {
         void packParameters(msgpack::packer<Buffer> &myPacker) const;
     };
 
+    enum class EStateMachineLogVerbosity: int {
+        K_NOLOG = 0,
+        K_EVENT = 1,
+        K_STATE = 2,
+        K_EVENT_AND_STATE = 3
+    };
+
+    inline constexpr bool operator & (const EStateMachineLogVerbosity p_l, const EStateMachineLogVerbosity p_r) {
+        return (int(p_l)&int(p_r))>0;
+    }
+
+    void setStateMachineLogVerbosity(const EStateMachineLogVerbosity p_lV) ;
+    EStateMachineLogVerbosity getStateMachineLogVerbosity();
 
 }  // namespace striboh::base
 
