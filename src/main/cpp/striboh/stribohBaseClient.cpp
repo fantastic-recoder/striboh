@@ -634,8 +634,8 @@ namespace striboh {
                     getConnectionStatus() = EConnectionStatus::K_ERROR;
                 } else {
                     m_log.debug("CLT     restarting and running context...");
-                    m_ioContext.restart();
-                    m_ioContext.run_one();
+                    if(m_ioContext.run_one()==0)
+                        m_ioContext.restart();
                 }
                 myCurrentState = getConnectionStatus();
                 m_log.debug("CLT <-> dispatch state={}", myCurrentState);
