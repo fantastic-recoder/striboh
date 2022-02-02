@@ -946,6 +946,8 @@ namespace striboh::base {
         }
     };
 
+    static const int theShutdownTime = 10;
+
     void
     BeastServer::shutdown() {
         if (getState() == EServerState::K_NOMINAL || getState() == EServerState::K_SHUTTING_DOWN) {
@@ -957,8 +959,17 @@ namespace striboh::base {
         int myCnt = 0;
         for (auto &aTask: mAcceptTasks) {
             mLog.debug("SRV BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
-            aTask.wait_for(std::chrono::duration(10s));
-            mLog.debug("SRV BeastServer: Task {} down.", myCnt, mAcceptTasks.size());
+            int myShutdownTime = 0;
+            for (; myShutdownTime < theShutdownTime; myShutdownTime++) {
+                if (aTask.wait_for(std::chrono::duration(2s)) == std::future_status::timeout) {
+                    mLog.debug("SRV BeastServer: Task {}/{} still running.", myCnt, mAcceptTasks.size());
+                } else break;
+            }
+            if(myShutdownTime == theShutdownTime) {
+                mLog.error("SRV BeastServer: Task {}/{} failed to shutdown.", myCnt, mAcceptTasks.size());
+            } else {
+                mLog.debug("SRV BeastServer: Task {}/{} down.", myCnt, mAcceptTasks.size());
+            }
         }
         mLog.info("BeastServer: ... shutdown completed.");
         setState(EServerState::K_NOMINAL);
@@ -988,10 +999,12 @@ namespace striboh::base {
                              toString(std::this_thread::get_id()));
             while (this->getState() == EServerState::K_STARTED ||
                    this->getState() == EServerState::K_STARTING) {
-                mIoc.run_for(10s);
+                if(mIoc.run_for(5s)==0)
+                    mIoc.restart();
             }
             this->mLog.debug("SRV BeastServer::run() Thread {} finished.",
                              toString(std::this_thread::get_id()));
+            return;
         };
         // Create and launch a listening on Port aPort
         std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker(), mLog)->run();
