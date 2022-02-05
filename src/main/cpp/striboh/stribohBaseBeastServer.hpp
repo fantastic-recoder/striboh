@@ -406,7 +406,7 @@ namespace striboh {
 
             const auto &getState() const { return mStatus; }
 
-            void setState(EServerState pState) { mStatus = pState; }
+            void setState(EORBState pState) { mStatus = pState; }
 
         private:
 
@@ -423,7 +423,7 @@ namespace striboh {
 
             BrokerIface &mBroker;
 
-            std::atomic<EServerState> mStatus = EServerState::K_NOMINAL;
+            std::atomic<EORBState> mStatus = EORBState::K_NOMINAL;
 
             void waitUntilAcceptingTasksReturn();
         };

@@ -381,7 +381,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #define STRIBOH_BASE_E_SERVER_STATE_HPP
 
 namespace striboh::base {
-    enum class EServerState {
+    enum class EORBState {
         K_NOMINAL,
         K_STARTING,
         K_STARTED,

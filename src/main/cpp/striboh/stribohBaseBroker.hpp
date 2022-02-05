@@ -415,7 +415,7 @@ namespace striboh::base {
         void
         initialize() override;
 
-        const std::atomic<EServerState> &
+        const std::atomic<EORBState> &
         serveOnce() override;
 
         std::future<void>
@@ -475,6 +475,8 @@ namespace striboh::base {
         const Interface& getInterface(const InstanceId& pInstanceId ) const override {
             return m_Instances.find(pInstanceId)->second;
         }
+
+        void dispatchSleep() const;
 
     private:
 

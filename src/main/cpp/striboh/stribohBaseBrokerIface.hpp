@@ -403,9 +403,9 @@ namespace striboh::base {
         OK
     };
 
-    std::ostream &operator<<(std::ostream &, const EServerState &);
+    std::ostream &operator<<(std::ostream &, const EORBState &);
 
-    std::string toString(const EServerState &);
+    std::string toString(const EORBState &);
 
     inline auto operator<(const ModuleName &p0, const ModuleName &p1) {
         return p0.get() < p1.get();
@@ -447,7 +447,7 @@ namespace striboh::base {
         virtual void
         initialize() = 0;
 
-        virtual const std::atomic<EServerState> &
+        virtual const std::atomic<EORBState> &
         serveOnce() = 0;
 
         virtual std::future<void>
@@ -473,7 +473,7 @@ namespace striboh::base {
 
         void setServer(std::shared_ptr<ServerIface> &&pServerIface);
 
-        const std::atomic<EServerState> &
+        const std::atomic<EORBState> &
         getState() const { return mOperationalState; }
 
         const Address &getAddress() const { return m_Address; }
@@ -481,14 +481,14 @@ namespace striboh::base {
         virtual const Interface &getInterface(const InstanceId &pInstanceId) const = 0;
 
     protected:
-        void setState(EServerState pState) {
+        void setState(EORBState pState) {
             mOperationalState = pState;
         }
 
         Address m_Address;
     private:
-        std::atomic<EServerState>
-                mOperationalState = EServerState::K_NOMINAL;
+        std::atomic<EORBState>
+                mOperationalState = EORBState::K_NOMINAL;
 
         LogIface &mLogIface;
         std::shared_ptr<ServerIface> mServerIface;

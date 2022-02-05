@@ -435,20 +435,20 @@ int main( const int argc, const char* argv[]) {
     int mySecondsCounter=0;
     int myStep=1;
     do {
-        std::this_thread::sleep_for(std::chrono::seconds(myStep));
-        if(mySecondsCounter % 30 == 0 ) {
+        aBroker.serveOnce();
+        std::this_thread::sleep_for(5s);
+        if (mySecondsCounter % 30 == 0) {
             myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
                         toString(aBroker.getState()),
                         mySecondsCounter,
                         myTotalWorkTimeInSeconds,
                         myStep);
-            aBroker.serveOnce();
         }
         mySecondsCounter += myStep;
     } while ((mySecondsCounter < myTotalWorkTimeInSeconds) &&
-             (aBroker.getState()!= EServerState::K_NOMINAL));
+             (aBroker.getState() != EORBState::K_NOMINAL));
     cout << endl;
-    if(aBroker.getState()!= EServerState::K_NOMINAL) {
+    if(aBroker.getState() != EORBState::K_NOMINAL) {
         aBroker.shutdown();
         myLog.error("Test echo servant timed out.");
         return 2;
