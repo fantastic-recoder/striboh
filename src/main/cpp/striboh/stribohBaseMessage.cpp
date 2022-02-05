@@ -612,7 +612,8 @@ namespace {
                 p_fsm.m_message.getParameters().emplace_back(Parameter(p_fsm.m_key, p_event.m_val));
                 boost::ignore_unused(p_targetState);
                 boost::ignore_unused(p_srcState);
-                p_fsm.m_log.debug("Adding parameter: {}={}", p_fsm.m_key, p_event.m_val);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("Adding parameter: {}={}", p_fsm.m_key, p_event.m_val);
             }
         };
 
@@ -622,7 +623,8 @@ namespace {
                 boost::ignore_unused(p_targetState);
                 boost::ignore_unused(p_srcState);
                 p_fsm.m_message.setReturn(Value(p_event.m_val));
-                p_fsm.m_log.debug("Set return: {}", p_fsm.m_message.getReturn());
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("Set return: {}", p_fsm.m_message.getReturn());
             }
         };
 
@@ -632,7 +634,8 @@ namespace {
                 boost::ignore_unused(p_targetState);
                 boost::ignore_unused(p_srcState);
                 p_fsm.m_key = p_event.m_val;
-                p_fsm.m_log.debug("Set key: {}", p_fsm.m_key);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("Set key: {}", p_fsm.m_key);
             }
         };
 
@@ -642,7 +645,8 @@ namespace {
                 boost::ignore_unused(p_targetState);
                 boost::ignore_unused(p_srcState);
                 p_fsm.m_message.setType(EMessageType(p_event.m_val));
-                p_fsm.m_log.debug("Set message type: {}", p_fsm.m_message.getType());
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("Set message type: {}", p_fsm.m_message.getType());
             }
         };
 
@@ -653,7 +657,8 @@ namespace {
                 boost::ignore_unused(p_srcState);
                 boost::ignore_unused(p_fsm);
                 const bool myRetVal = (p_evt.m_val == Message::K_PARAMETERS_KEY);
-                p_fsm.m_log.debug("CheckParametersKey is {} value='{}'", myRetVal, p_evt.m_val);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("CheckParametersKey is {} value='{}'", myRetVal, p_evt.m_val);
                 return myRetVal;
             }
         };
@@ -665,7 +670,8 @@ namespace {
                 boost::ignore_unused(p_srcState);
                 boost::ignore_unused(p_fsm);
                 const bool myRetVal = (p_evt.m_val == Message::K_METHOD_NAME_KEY);
-                p_fsm.m_log.debug("CheckMethodNameKey is {} value='{}'", myRetVal, p_evt.m_val);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("CheckMethodNameKey is {} value='{}'", myRetVal, p_evt.m_val);
                 return myRetVal;
             }
         };
@@ -677,7 +683,8 @@ namespace {
                 boost::ignore_unused(p_srcState);
                 boost::ignore_unused(p_fsm);
                 const bool myRetVal = (p_evt.m_val == Message::K_RETURN_KEY);
-                p_fsm.m_log.debug("CheckReturnKey is {} value='{}'", myRetVal, p_evt.m_val);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("CheckReturnKey is {} value='{}'", myRetVal, p_evt.m_val);
                 return myRetVal;
             }
         };
@@ -689,7 +696,8 @@ namespace {
                 boost::ignore_unused(p_srcState);
                 boost::ignore_unused(p_fsm);
                 const bool myRetVal = (p_evt.m_val == Message::K_INSTANCE_ID_KEY);
-                p_fsm.m_log.debug("CheckInstanceKey is {} value='{}'", myRetVal, p_evt.m_val);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("CheckInstanceKey is {} value='{}'", myRetVal, p_evt.m_val);
                 return myRetVal;
             }
         };
@@ -700,7 +708,8 @@ namespace {
                 boost::ignore_unused(p_targetState);
                 boost::ignore_unused(p_srcState);
                 const bool myRetVal = (p_evt.m_val == Message::K_MESSAGE_TYPE_KEY);
-                p_fsm.m_log.debug("CheckMessageTypeKey is {} value='{}'", myRetVal, p_evt.m_val);
+                if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
+                    p_fsm.m_log.debug("CheckMessageTypeKey is {} value='{}'", myRetVal, p_evt.m_val);
                 return myRetVal;
             }
         };
@@ -856,25 +865,21 @@ namespace striboh::base {
         }
 
         inline bool start_array(uint32_t pArraySize) {
-            m_log.debug("MessageVisitor1::start_array pArraySize=={}.", pArraySize);
             m_parser.process_event(EvtStartArray(m_log));
             return isInErrorState();
         }
 
         inline bool end_array_item() {
-            m_log.debug("MessageVisitor1::end_array_item.");
             m_parser.process_event(EvtEndArrayItem(m_log));
             return isInErrorState();
         }
 
         inline bool end_array() {
-            m_log.debug("MessageVisitor1::end_array.");
             m_parser.process_event(EvtEndArray(m_log));
             return isInErrorState();
         }
 
         inline bool start_map(uint32_t pMapSize) {
-            m_log.debug("MessageVisitor1::start_map pMapSize=={}.", pMapSize);
             m_parser.process_event(EvtStartMap(m_log));
             return isInErrorState();
         }

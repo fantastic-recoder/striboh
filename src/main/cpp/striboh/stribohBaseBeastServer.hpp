@@ -396,24 +396,24 @@ namespace striboh {
          */
         class BeastServer : public ServerIface {
         public:
-            explicit BeastServer(int pNum, BrokerIface& pBroker, LogIface& pLog);
+            explicit BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog);
 
             void run() override;
 
             void shutdown() override;
 
-            BrokerIface& getBroker() { return mBroker; }
+            BrokerIface &getBroker() { return mBroker; }
 
-            const auto& getState() const { return mStatus; }
+            const auto &getState() const { return mStatus; }
 
-            void setState( EServerState pState ) { mStatus=pState; }
+            void setState(EServerState pState) { mStatus = pState; }
 
         private:
 
-            LogIface& mLog;
+            LogIface &mLog;
 
             //! The number of acceptor tasks - the reserved size of \sa BeastServer::mAcceptTasks
-            int mThreadNum ;
+            int mThreadNum;
 
             //! The tasks will end up here
             std::vector<std::future<void>> mAcceptTasks;
@@ -421,9 +421,11 @@ namespace striboh {
             //! \brief The io_context is required for all boost::asio I/O.
             boost::asio::io_context mIoc;
 
-            BrokerIface& mBroker;
+            BrokerIface &mBroker;
 
             std::atomic<EServerState> mStatus = EServerState::K_NOMINAL;
+
+            void waitUntilAcceptingTasksReturn();
         };
     } // base
 } // striboh

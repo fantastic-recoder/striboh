@@ -390,31 +390,27 @@ namespace striboh {
             return myUuid;
         }
 
-        void BrokerIface::setServer(std::shared_ptr<ServerIface>&& pServerIface) {
-            mServerIface=std::move(pServerIface);
+        void BrokerIface::setServer(std::shared_ptr<ServerIface> &&pServerIface) {
+            mServerIface = std::move(pServerIface);
         }
 
-        std::string toString(const EServerState& pOrbState) {
-            switch(pOrbState) {
+        std::string toString(const EServerState &pOrbState) {
+            switch (pOrbState) {
                 case EServerState::K_STARTED:
                     return "started";
-                    break;
                 case EServerState::K_STARTING:
                     return "starting";
-                    break;
                 case EServerState::K_NOMINAL:
                     return "nominal";
-                    break;
                 case EServerState::K_SHUTTING_DOWN:
                     return "shutting-down";
-                    break;
                 default:
                     break;
             }
             return "unknown";
         }
 
-        std::ostream& operator << (std::ostream& pOstream, const EServerState& pOrbState) {
+        std::ostream &operator<<(std::ostream &pOstream, const EServerState &pOrbState) {
             pOstream << toString(pOrbState);
             return pOstream;
         }

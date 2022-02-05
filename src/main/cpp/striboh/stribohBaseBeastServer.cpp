@@ -602,7 +602,8 @@ namespace striboh::base {
                 myRetVal["modules"].emplace_back(fullPath(p_Resolved.m_Address, myPath, InterfaceName("")));
             }
             for (auto myInterface: p_Resolved.m_Interfaces) {
-                myRetVal["interfaces"].emplace_back(fullPath(p_Resolved.m_Address, p_Resolved.m_Path, myInterface)+"?api");
+                myRetVal["interfaces"].emplace_back(
+                        fullPath(p_Resolved.m_Address, p_Resolved.m_Path, myInterface) + "?api");
             }
             myReply = myRetVal.dump();
         }
@@ -626,7 +627,7 @@ namespace striboh::base {
                                 "interface",
                                 {
                                         {"name", pAnInterface.getName().get()},
-                                        {"id", myPathToId },
+                                        {"id", myPathToId},
                                         {"methods", Json::array()}
                                 }
                         }
@@ -721,6 +722,10 @@ namespace striboh::base {
 
         void
         doHttpRead() {
+            if (mBroker.getState() != EServerState::K_STARTED) {
+                mLog.debug("SRV http read aborted.");
+                return;
+            }
             // Make the request empty before reading,
             // otherwise the operation behavior is undefined.
             mRequest = {};
@@ -768,6 +773,10 @@ namespace striboh::base {
 
         void
         doWsRead() {
+            if (mBroker.getState() != EServerState::K_STARTED) {
+                mLog.debug("SRV Websocket read aborted.");
+                return;
+            }
             mLog.debug("SRV Going to read the Websocket.");
             mReadBuffer.clear();
             // Read a message into our buffer
@@ -806,6 +815,10 @@ namespace striboh::base {
         }
 
         void doWriteBufferToWebSocket() {
+            if (mBroker.getState() != EServerState::K_STARTED) {
+                mLog.debug("SRV Websocket read aborted.");
+                return;
+            }
             mBroker.getLog().debug("WS Send {} bytes.",
                                    mWriteBuffer.size());
             mWebSocketStream->async_write(mWriteBuffer.data(),
@@ -919,7 +932,7 @@ namespace striboh::base {
     private:
         void
         doAccept() {
-            mLog.info("Accepting.");
+            mLog.debug("SRV Accepting.");
             // The new connection gets its own strand
             mAcceptor.async_accept(
                     net::make_strand(mIoc),
@@ -941,7 +954,8 @@ namespace striboh::base {
                 // Create the session and run it
                 std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
                 // Accept another connection
-                doAccept();
+                if (mBroker.getState() == EServerState::K_STARTED)
+                    doAccept();
             }
         }
     };
@@ -956,27 +970,33 @@ namespace striboh::base {
         }
         mLog.info("BeastServer: Commencing shutdown...");
         setState(EServerState::K_SHUTTING_DOWN);
+        waitUntilAcceptingTasksReturn();
+        setState(EServerState::K_NOMINAL);
+        if (getBroker().getState() != EServerState::K_NOMINAL
+            && (getBroker().getState() == EServerState::K_SHUTTING_DOWN)) {
+            getBroker().shutdown();
+        }
+    }
+
+    void BeastServer::waitUntilAcceptingTasksReturn() {
         int myCnt = 0;
         for (auto &aTask: mAcceptTasks) {
             mLog.debug("SRV BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
             int myShutdownTime = 0;
             for (; myShutdownTime < theShutdownTime; myShutdownTime++) {
-                if (aTask.wait_for(std::chrono::duration(2s)) == std::future_status::timeout) {
+                if (aTask.wait_for(std::chrono::duration(5s)) == std::future_status::timeout) {
                     mLog.debug("SRV BeastServer: Task {}/{} still running.", myCnt, mAcceptTasks.size());
-                } else break;
+                } else {
+                    break;
+                }
             }
-            if(myShutdownTime == theShutdownTime) {
+            if (myShutdownTime == theShutdownTime) {
                 mLog.error("SRV BeastServer: Task {}/{} failed to shutdown.", myCnt, mAcceptTasks.size());
             } else {
                 mLog.debug("SRV BeastServer: Task {}/{} down.", myCnt, mAcceptTasks.size());
             }
         }
         mLog.info("BeastServer: ... shutdown completed.");
-        setState(EServerState::K_NOMINAL);
-        if (getBroker().getState() != EServerState::K_NOMINAL
-            && (getBroker().getState() == EServerState::K_SHUTTING_DOWN)) {
-            getBroker().shutdown();
-        }
     }
 
     BeastServer::BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog)
@@ -997,11 +1017,29 @@ namespace striboh::base {
         auto myIocRun = [this]() -> void {
             this->mLog.debug("SRV BeastServer::run() Thread {} started.",
                              toString(std::this_thread::get_id()));
-            while (this->getState() == EServerState::K_STARTED ||
-                   this->getState() == EServerState::K_STARTING) {
-                if(mIoc.run_for(5s)==0)
-                    mIoc.restart();
-            }
+            EServerState myCurrentState = this->getState().load();
+            do {
+                switch (myCurrentState) {
+                    case EServerState::K_NOMINAL:
+                        this->mLog.debug("SRV BeastServer::run() Thread {} state {}.",
+                                         toString(std::this_thread::get_id()), toString(myCurrentState));
+                        return;
+                    case EServerState::K_STARTING:
+                        setState(EServerState::K_STARTED);
+                        this->mLog.debug("SRV BeastServer::run() Thread {} started.",
+                                         toString(std::this_thread::get_id()));
+                        break;
+                    case EServerState::K_STARTED:
+                        mIoc.run_for(30s);
+                        this->mLog.debug("SRV BeastServer::run() Thread {} state {}.",
+                                         toString(std::this_thread::get_id()), toString(myCurrentState));
+                        break;
+                    case EServerState::K_SHUTTING_DOWN:
+                        mIoc.poll();
+                        break;
+                }
+                myCurrentState = this->getState().load();
+            } while (myCurrentState != EServerState::K_SHUTTING_DOWN);
             this->mLog.debug("SRV BeastServer::run() Thread {} finished.",
                              toString(std::this_thread::get_id()));
             return;
@@ -1015,7 +1053,6 @@ namespace striboh::base {
         for (auto i = mThreadNum - 1; i > 0; --i)
             mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
         mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
-        setState(EServerState::K_STARTED);
         mLog.debug("SRV BeastServer::run() <--");
         return;
     }

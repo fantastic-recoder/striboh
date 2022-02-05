@@ -408,7 +408,7 @@ namespace striboh::base {
 
     using json = ::nlohmann::json;
 
-    std::chrono::duration<float> Broker::theirTraceInterval=std::chrono::duration<float>(10.0f);
+    std::chrono::duration<float> Broker::theirTraceInterval = std::chrono::duration<float>(10.0f);
 
     void
     Broker::doRunServer() {
@@ -423,12 +423,12 @@ namespace striboh::base {
     const std::atomic<EServerState> &
     Broker::serveOnce() {
         if (getState() == EServerState::K_STARTED) {
-            static std::chrono::time_point<std::chrono::system_clock> start=system_clock::now(), end;
+            static std::chrono::time_point<std::chrono::system_clock> start = system_clock::now(), end;
             end = system_clock::now();
             const std::chrono::duration<float> elapsed_seconds = end - start;
-            if(theirTraceInterval <= elapsed_seconds) {
+            if (theirTraceInterval <= elapsed_seconds) {
                 getLog().debug("ORB is started.");
-                start=end;
+                start = end;
             }
         } else if (getState() == EServerState::K_NOMINAL) {
             setState(EServerState::K_STARTING);
@@ -699,8 +699,9 @@ namespace striboh::base {
         if (!getServer()) {
             setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
         }
-        for (EServerState currentState=getState(); currentState != striboh::base::EServerState::K_SHUTTING_DOWN; currentState=serveOnce()) {
-                std::this_thread::sleep_for(m_DispatchSleep);
+        for (EServerState currentState = getState();
+             currentState != striboh::base::EServerState::K_SHUTTING_DOWN; currentState = serveOnce()) {
+            std::this_thread::sleep_for(m_DispatchSleep);
         }
     }
 
