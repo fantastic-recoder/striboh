@@ -377,11 +377,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_BASE_E_SERVER_STATE_HPP
-#define STRIBOH_BASE_E_SERVER_STATE_HPP
+#pragma once
 
 namespace striboh::base {
-    enum class EORBState {
+    enum class EBrokerState {
         K_NOMINAL,
         K_STARTING,
         K_STARTED,
@@ -389,4 +388,3 @@ namespace striboh::base {
     };
 }
 
-#endif //STRIBOH_BASE_E_SERVER_STATE_HPP

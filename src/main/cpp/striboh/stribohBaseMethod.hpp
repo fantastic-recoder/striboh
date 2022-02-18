@@ -388,18 +388,18 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-    class Broker;
+    class BrokerIface;
 
     class Context {
     public:
-        Context(Broker &pBroker) : mBroker(pBroker) {}
+        Context(BrokerIface &pBroker) : m_broker(pBroker) {}
 
-        Broker &getBroker() { return mBroker; }
+        BrokerIface &getBroker() { return m_broker; }
 
-        const Broker &getBroker() const { return mBroker; }
+        const BrokerIface &getBroker() const { return m_broker; }
 
     private:
-        Broker &mBroker;
+        BrokerIface &m_broker;
     };
 
     class Message;

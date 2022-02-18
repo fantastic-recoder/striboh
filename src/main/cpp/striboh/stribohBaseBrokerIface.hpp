@@ -403,9 +403,9 @@ namespace striboh::base {
         OK
     };
 
-    std::ostream &operator<<(std::ostream &, const EORBState &);
+    std::ostream &operator<<(std::ostream &, const EBrokerState &);
 
-    std::string toString(const EORBState &);
+    std::string toString(const EBrokerState &);
 
     inline auto operator<(const ModuleName &p0, const ModuleName &p1) {
         return p0.get() < p1.get();
@@ -431,14 +431,14 @@ namespace striboh::base {
 
         BrokerIface(std::string_view &&pAddress, LogIface &pLogIface) //
                 : m_Address(std::move(pAddress), pLogIface) //
-                , mLogIface(pLogIface) {}
+                , m_log(pLogIface) {}
 
         const LogIface &getLog() const {
-            return mLogIface;
+            return m_log;
         }
 
         LogIface &getLog() {
-            return mLogIface;
+            return m_log;
         }
 
         static InstanceId
@@ -447,7 +447,7 @@ namespace striboh::base {
         virtual void
         initialize() = 0;
 
-        virtual const std::atomic<EORBState> &
+        virtual const std::atomic<EBrokerState> &
         serveOnce() = 0;
 
         virtual std::future<void>
@@ -469,29 +469,28 @@ namespace striboh::base {
         resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) const = 0;
 
         const std::shared_ptr<ServerIface> &
-        getServer() const { return mServerIface; }
+        getServer() const { return m_server; }
 
         void setServer(std::shared_ptr<ServerIface> &&pServerIface);
 
-        const std::atomic<EORBState> &
-        getState() const { return mOperationalState; }
+        const std::atomic<EBrokerState> &
+        getState() const { return m_state; }
 
         const Address &getAddress() const { return m_Address; }
 
         virtual const Interface &getInterface(const InstanceId &pInstanceId) const = 0;
 
     protected:
-        void setState(EORBState pState) {
-            mOperationalState = pState;
-        }
+
+        std::atomic<EBrokerState> m_state = EBrokerState::K_NOMINAL;
 
         Address m_Address;
     private:
-        std::atomic<EORBState>
-                mOperationalState = EORBState::K_NOMINAL;
 
-        LogIface &mLogIface;
-        std::shared_ptr<ServerIface> mServerIface;
+        LogIface &m_log;
+
+        /// serves incoming
+        std::shared_ptr<ServerIface> m_server;
     };
 
     std::string createResolvedModuleReply(const ResolvedResult &p_Resolved, LogIface &pLog);

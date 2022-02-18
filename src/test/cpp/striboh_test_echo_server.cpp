@@ -430,6 +430,7 @@ int main( const int argc, const char* argv[]) {
     aBroker.serveOnce();
 
     myLog.debug("Adding echo servant...") ;
+    EchoServantObject theEchoServant;
     InstanceId  myUuid = aBroker.addServant(theEchoServant.getInterface() );
     myLog.info( "Test echo servant added. UUID={}", toString(myUuid) );
     int mySecondsCounter=0;
@@ -446,9 +447,9 @@ int main( const int argc, const char* argv[]) {
         }
         mySecondsCounter += myStep;
     } while ((mySecondsCounter < myTotalWorkTimeInSeconds) &&
-             (aBroker.getState() != EORBState::K_NOMINAL));
+             (aBroker.getState() != EBrokerState::K_NOMINAL));
     cout << endl;
-    if(aBroker.getState() != EORBState::K_NOMINAL) {
+    if(aBroker.getState() != EBrokerState::K_NOMINAL) {
         aBroker.shutdown();
         myLog.error("Test echo servant timed out.");
         return 2;

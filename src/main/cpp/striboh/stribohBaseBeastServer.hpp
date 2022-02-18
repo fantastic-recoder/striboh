@@ -377,8 +377,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_BASE_BEAST_SERVER_HPP
-#define STRIBOH_BASE_BEAST_SERVER_HPP
+#pragma once
 
 #include <boost/asio.hpp>
 
@@ -402,15 +401,7 @@ namespace striboh {
 
             void shutdown() override;
 
-            BrokerIface &getBroker() { return mBroker; }
-
-            const auto &getState() const { return mStatus; }
-
-            void setState(EORBState pState) { mStatus = pState; }
-
         private:
-
-            LogIface &mLog;
 
             //! The number of acceptor tasks - the reserved size of \sa BeastServer::mAcceptTasks
             int mThreadNum;
@@ -421,14 +412,8 @@ namespace striboh {
             //! \brief The io_context is required for all boost::asio I/O.
             boost::asio::io_context mIoc;
 
-            BrokerIface &mBroker;
-
-            std::atomic<EORBState> mStatus = EORBState::K_NOMINAL;
-
             void waitUntilAcceptingTasksReturn();
         };
     } // base
 } // striboh
 
-
-#endif //STRIBOH_BASE_BEAST_SERVER_HPP

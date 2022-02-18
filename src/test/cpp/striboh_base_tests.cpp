@@ -470,7 +470,7 @@ TEST(stribohBaseTests, testStribohBrokerShutdown) {
     Broker aBroker("http://0.0.0.0:10000",theLog);
     aBroker.serveOnce();
     aBroker.shutdown();
-    ASSERT_EQ(EORBState::K_NOMINAL, aBroker.getState());
+    ASSERT_EQ(EBrokerState::K_NOMINAL, aBroker.getState());
 }
 
 TEST(stribohBaseTests, testMethodParametersConstructor) {

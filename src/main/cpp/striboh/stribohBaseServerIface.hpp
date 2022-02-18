@@ -377,10 +377,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#ifndef STRIBOH_BASE_SERVER_IFACE_HPP
-#define STRIBOH_BASE_SERVER_IFACE_HPP
+#pragma once
 
 #include <memory>
+#include <atomic>
 
 namespace striboh {
     namespace base {
@@ -388,14 +388,66 @@ namespace striboh {
         static constexpr const char *const K_DEFAULT_HOST = "0.0.0.0";
         static constexpr const unsigned short K_DEFAULT_PORT = 63898;
 
+        /**
+         * Holds all possible #ServerIface states.
+         */
+        enum class EServerState {
+            K_STOPPED,
+            K_STARTING,
+            K_STARTED,
+            K_STOPPING
+        };
+
+        constexpr
+        static std::string_view const toString(EServerState p_state) {
+            switch(p_state) {
+                case EServerState::K_STOPPED:
+                    return "EServerState::K_STOPPED";
+                case EServerState::K_STARTING:
+                    return "EServerState::K_STARTING";
+                case EServerState::K_STARTED:
+                    return "EServerState::K_STARTED";
+                case EServerState::K_STOPPING:
+                    return "EServerState::K_STOPPING";
+                default:break;
+            }
+            // break constexpr
+            throw std::runtime_error("Unknown EServerState value.");
+        }
+
+        class BrokerIface;
+        class LogIface;
+
+        /**
+         * Serving servant instances. Common functionalit for all servers, tcp, udp, shared memory(?).
+         */
         struct ServerIface : public std::enable_shared_from_this<ServerIface> {
+
+            ServerIface(BrokerIface& p_broker, LogIface& p_log) : m_broker(p_broker), m_log(p_log){}
 
             virtual void run() = 0;
 
             virtual void shutdown() = 0;
+
+            const std::atomic<EServerState>& getState() const { return m_state; }
+
+            BrokerIface &getBroker() { return m_broker; }
+
+            const LogIface &getLog() const {
+                return m_log;
+            }
+
+            LogIface &getLog() {
+                return m_log;
+            }
+
+        protected:
+            std::atomic<EServerState>& getState() { return m_state; }
+
+        private:
+            std::atomic<EServerState> m_state;
+            BrokerIface &m_broker;
+            LogIface &m_log;
         };
     }
 }
-
-
-#endif //STRIBOH_BASE_SERVER_IFACE_HPP

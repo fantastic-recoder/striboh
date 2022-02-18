@@ -376,63 +376,82 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
+#include <gtest/gtest.h>
 
-#pragma once
-
+#include <string>
 #include <iostream>
+#include <chrono>
+#include <striboh/stribohBaseBroker.hpp>
 
-#include "striboh/stribohBase.hpp"
-#include "striboh/stribohBaseInterface.hpp"
-#include "striboh/stribohBaseEMessageType.hpp"
-#include "striboh/stribohBaseParameterList.hpp"
+#include <boost/log/trivial.hpp>
+#include <boost/process.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/core/demangle.hpp>
 
-namespace {
+#include <striboh/stribohBaseInterface.hpp>
+#include <striboh/stribohBaseMethod.hpp>
+#include <striboh/stribohBaseMessage.hpp>
+#include <striboh/stribohBaseSignature.hpp>
+#include <striboh/stribohBaseBrokerIface.hpp>
+#include <striboh/stribohBaseLogBoostImpl.hpp>
+#include <striboh/stribohBaseUtils.hpp>
+#include <striboh/stribohBaseClient.hpp>
+#include <striboh/stribohBaseEMessageType.hpp>
+#include <striboh/stribohBaseParameterList.hpp>
 
-    static constexpr const char *const K_TEST_SRV = "http://127.0.0.1:10000";
+#include "striboh_build_constants.hpp"
+#include "striboh_test_utils.hpp"
+#include "striboh_test_echo_server_common.hpp"
 
-    static constexpr const char *const K_TEST_MTHD_NM = "testMethod";
+using namespace striboh::base;
+using namespace striboh::test;
+using namespace std::chrono_literals;
+using std::endl;
+using std::string;
+using std::string_view;
+using std::count;
+using striboh::base::InterfaceName;
+using striboh::base::Method;
+using striboh::base::ParameterDescriptionList;
+using striboh::base::Message;
+using striboh::base::ETypes;
+using boost::process::child;
+using boost::process::system;
+using boost::process::std_in;
+using boost::process::std_out;
+using boost::process::std_err;
+
+using json = nlohmann::json;
+
+static striboh::base::LogBoostImpl theLog;
+
+namespace striboh::base {
+    LogIface &getLog() {
+        return theLog;
+    }
 }
 
-namespace striboh {
-    namespace base {
+enum class ETestState : uint8_t {
+    K_T000,
+    K_T001
+};
 
-        LogIface &getLog();
-
-        struct EchoServantObject : public ServantBase {
-
-            Interface mEchoServerInterface {
-                    *this,
-                    {ModuleName{"m0"}, ModuleName{"m1"}}, InterfaceName{"Hello"},
-                    {
-                            Method{"echo",
-                                   ParameterDescriptionList{
-                                           {ParameterDescription{EDirection::K_IN, ETypes::K_STRING, "p0"}}
-                                   },
-                                   [this](const Message &pIncoming, Context /*pCtx*/) {
-                                       std::string myWhom(std::string("Server greats ") +
-                                                          pIncoming.getParameters()[0].getValue().get<std::string>() +
-                                                          "!");
-                                       std::cout << myWhom << std::endl;
-                                       return Message(pIncoming, Value{myWhom}, getLog());
-                                   },
-                                   getLog()
-                            },
-                            Method{"shutdown",
-                                   ParameterDescriptionList{},
-                                   [this](const Message &pIncoming, Context pCtx) {
-                                       pCtx.getBroker().shutdown();
-                                       return Message(pIncoming, Value{}, getLog());
-                                   },
-                                   getLog()
-                            }
-                    }
-            };
-
-            const Interface& getInterface() const override {
-                return mEchoServerInterface;
-            }
-
-        };
+inline constexpr std::string_view toString(ETestState p_state) {
+    switch(p_state) {
+        case ETestState::K_T000: return "t000";
+        case ETestState::K_T001: return "t001";
+        default: break;
     }
+    throw std::runtime_error("unknown enum value foe ETestState.");
+}
+
+
+TEST(stribohBrokerTests, testEnumNames) {
+    ASSERT_EQ(string("t000"), string(toString(ETestState::K_T000)));
+    ASSERT_EQ(string("t000"), string(toString(ETestState::K_T001)));
+}
+
+TEST(stribohBrokerTests, testTimedShutdownNoServer) {
 }
 

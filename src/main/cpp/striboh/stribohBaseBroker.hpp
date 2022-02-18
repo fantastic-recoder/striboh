@@ -415,7 +415,7 @@ namespace striboh::base {
         void
         initialize() override;
 
-        const std::atomic<EORBState> &
+        const std::atomic<EBrokerState> &
         serveOnce() override;
 
         std::future<void>
