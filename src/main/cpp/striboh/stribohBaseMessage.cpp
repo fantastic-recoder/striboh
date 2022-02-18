@@ -519,6 +519,7 @@ namespace {
     using striboh::base::InstanceId;
     using striboh::base::Parameter;
     using striboh::base::Value;
+    using striboh::base::EMessageType;
 
     using std::string;
     using std::string_view;
@@ -646,7 +647,7 @@ namespace {
                 boost::ignore_unused(p_srcState);
                 p_fsm.m_message.setType(EMessageType(p_event.m_val));
                 if(theVerbosity!=EStateMachineLogVerbosity::K_NOLOG)
-                    p_fsm.m_log.debug("Set message type: {}", p_fsm.m_message.getType());
+                    p_fsm.m_log.debug("Set message type: {}", toString(p_fsm.m_message.getType()));
             }
         };
 

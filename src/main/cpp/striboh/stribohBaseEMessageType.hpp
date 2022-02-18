@@ -376,23 +376,34 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   @author coder.peter.grobarcik@gmail.com
 */
-#ifndef STRIBOH_BASE_E_INVOCATION_TYPE_HPP
-#define STRIBOH_BASE_E_INVOCATION_TYPE_HPP
+#pragma once
 
 #include <cstdint>
 
-enum class EMessageType : int8_t {
-    K_METHOD = 1,
-    K_RETURN = 2,
-    K_ERROR = 4,
-    K_CLOSE = 5,
-    K_UNKNOWN = 0 //< unpackFromBuffer error
-};
+namespace striboh::base {
+    enum class EMessageType : int8_t {
+        K_METHOD = 1,
+        K_RETURN = 2,
+        K_ERROR = 4,
+        K_CLOSE = 5,
+        K_UNKNOWN = 0 //< unpackFromBuffer error
+    };
 
-inline const EMessageType &operator<<=(EMessageType &pType, int8_t pTypeVale) {
+inline constexpr const char * toString(EMessageType p_type) {
+    switch(p_type) {
+        case EMessageType::K_METHOD: return "EMessageType::K_METHOD";
+        case EMessageType::K_RETURN: return "EMessageType::K_RETURN";
+        case EMessageType::K_ERROR: return "EMessageType::K_ERROR";
+        case EMessageType::K_CLOSE: return "EMessageType::K_CLOSE";
+        default:
+        case EMessageType::K_UNKNOWN: return "EMessageType::K_UNKNOWN";
+    }
+}
+
+inline constexpr const EMessageType &operator<<=(EMessageType &pType, int8_t pTypeVale) {
     pType = EMessageType{pTypeVale};
     return pType;
 }
 
 
-#endif //STRIBOH_BASE_E_INVOCATION_TYPE_HPP
+}

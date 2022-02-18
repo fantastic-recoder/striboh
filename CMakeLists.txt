@@ -5,7 +5,7 @@ project(striboh VERSION 0.1.0
     DESCRIPTION "ReST and binary middleware with own IDL and extendable code generator."
     )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(MSGPACK_CXX17 ON)
 set(CONAN_REVISIONS_ENABLED 1)
 if (MSVC)
@@ -16,7 +16,7 @@ if (MSVC)
     set(BCrypt_LIBRARIES bcrypt)
 else()
     # lots of warnings and all warnings as errors
-    add_compile_options(-std=c++2a -fPIC -Wall -Wextra -pedantic)
+    add_compile_options(-std=c++2a -fPIC -pedantic)
 endif()
 
 ########################################################################################################################
@@ -62,6 +62,7 @@ add_subdirectory(src/main/cpp/pybind11)
 # Python end
 ###############################################################################
 
+message("CONAN_LIBS_FMT=${CONAN_LIBS_FMT}")
 set(STRIBOH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/main/cpp)
 set(STRIBOH_LIBS ${CONAN_LIBS_FMT} Threads::Threads ${Python3_LIBRARIES} ${CMAKE_DL_LIBS}
         Boost::program_options Boost::log ${BCrypt_LIBRARIES})
@@ -81,9 +82,11 @@ set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NL
         ${boost_detail_SOURCE_DIR}/include
         ${boost_endian_SOURCE_DIR}/include
         ${boost_format_SOURCE_DIR}/include
+        ${boost_function_SOURCE_DIR}/include
         ${boost_functional_SOURCE_DIR}/include
         ${boost_fusion_SOURCE_DIR}/include
         ${boost_container_hash_SOURCE_DIR}/include
+        ${boost_integer_SOURCE_DIR}/include
         ${boost_io_SOURCE_DIR}/include
         ${boost_iterator_SOURCE_DIR}/include
         ${boost_logic_SOURCE_DIR}/include
@@ -95,6 +98,7 @@ set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NL
         ${boost_random_SOURCE_DIR}/include
         ${boost_range_SOURCE_DIR}/include
         ${boost_ratio_SOURCE_DIR}/include
+        ${boost_smart_ptr_SOURCE_DIR}/include
         ${BoostFilesystem_SOURCE_DIR}/include
         ${boost_system_SOURCE_DIR}/include
         ${boost_spirit_SOURCE_DIR}/include
@@ -111,6 +115,7 @@ set(STRIBOH_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_NAMEDTYPE} ${CONAN_INCLUDE_DIRS_NL
         ${boost_uuid_SOURCE_DIR}/include
         ${boost_winapi_SOURCE_DIR}/include
         ${boost_variant_SOURCE_DIR}/include
+        ${boost_bind_SOURCE_DIR}/include
         ${boost_beast_SOURCE_DIR}/include)
 set(STRIBOH_PY_MOD stribohmodule)
 

@@ -595,6 +595,17 @@ namespace striboh::base {
         K_EVENT_AND_STATE = 3
     };
 
+    inline constexpr const char * toString(EStateMachineLogVerbosity p_level) {
+        switch(p_level) {
+            case EStateMachineLogVerbosity::K_NOLOG: return "EStateMachineLogVerbosity::K_NOLOG";
+            case EStateMachineLogVerbosity::K_EVENT: return "EStateMachineLogVerbosity::K_EVENT";
+            case EStateMachineLogVerbosity::K_STATE: return "EStateMachineLogVerbosity::K_STATE";
+            case EStateMachineLogVerbosity::K_EVENT_AND_STATE: return "EStateMachineLogVerbosity::K_EVENT_AND_STATE";
+            default: throw std::runtime_error(fmt::format("Unknwn value of EStateMachineLogVerbosity::{}",
+                        static_cast<int>(p_level)));
+        }
+    }
+
     inline constexpr bool operator & (const EStateMachineLogVerbosity p_l, const EStateMachineLogVerbosity p_r) {
         return (int(p_l)&int(p_r))>0;
     }

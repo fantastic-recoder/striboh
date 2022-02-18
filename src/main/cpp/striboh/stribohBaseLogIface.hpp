@@ -394,6 +394,19 @@ namespace striboh {
             FATAL=0
         };
 
+        constexpr const char* toString(ELogLevel p_level) {
+            switch(p_level) {
+                case ELogLevel::NO_LOG: return "ELogLevel::NO_LOG";
+                case ELogLevel::TRACE: return "ELogLevel::TRACE";
+                case ELogLevel::DEBUG: return "ELogLevel::DEBUG";
+                case ELogLevel::WARN : return "ELogLevel::WARN";
+                case ELogLevel::INFO  : return "ELogLevel::INFO";
+                case ELogLevel::ERRORS: return "ELogLevel::ERRORS";
+                case ELogLevel::FATAL: return "ELogLevel::FATAL";
+                default: throw std::runtime_error(fmt::format("Unknown ELogLevel::{}",(int32_t)p_level));
+            }
+        }
+
         class LogIface {
             ELogLevel mThreshold=ELogLevel::DEBUG;
 
@@ -403,7 +416,7 @@ namespace striboh {
             }
 
             void setThreshold(ELogLevel pLevel) {
-                info("Setting log level {}",pLevel);
+                info("Setting log level {}",toString(pLevel));
                 mThreshold = pLevel;
             }
 
@@ -492,6 +505,7 @@ namespace striboh {
         };
 
         LogIface& getGlobalLog();
+
     }
 }
 
