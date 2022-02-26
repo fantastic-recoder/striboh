@@ -411,11 +411,11 @@ namespace striboh {
             ELogLevel mThreshold=ELogLevel::DEBUG;
 
         public:
-            ELogLevel getThreshold() const {
+            constexpr ELogLevel getThreshold() const {
                 return mThreshold;
             }
 
-            void setThreshold(ELogLevel pLevel) {
+            constexpr void setThreshold(ELogLevel pLevel) {
                 info("Setting log level {}",toString(pLevel));
                 mThreshold = pLevel;
             }
@@ -448,48 +448,42 @@ namespace striboh {
             }
 
             template<class ...TArgs>
-            void
-            trace(std::string_view pFmt, TArgs ...pTArgs) {
+            constexpr void trace(std::string_view pFmt, TArgs ...pTArgs) {
                 if(mThreshold >= ELogLevel::TRACE) {
                     doTrace(fmt::format(pFmt,pTArgs...));
                 }
             }
 
             template<class ...TArgs>
-            void
-            debug(std::string_view pFmt, TArgs ...pTArgs) {
+            constexpr void debug(std::string_view pFmt, TArgs ...pTArgs) {
                 if(mThreshold >= ELogLevel::DEBUG) {
                     doDebug(fmt::format(pFmt,pTArgs...));
                 }
             }
 
             template<class ...TArgs>
-            void
-            warn(std::string_view pFmt, TArgs ...pTArgs) {
+            constexpr void warn(std::string_view pFmt, TArgs ...pTArgs) {
                 if(mThreshold >= ELogLevel::WARN) {
                     doWarn(fmt::format(pFmt,pTArgs...));
                 }
             }
 
             template<class ...TArgs>
-            void
-            info(std::string_view pFmt, TArgs ...pTArgs) {
+            constexpr void info(std::string_view pFmt, TArgs ...pTArgs) {
                 if(mThreshold >= ELogLevel::INFO) {
                     doInfo(fmt::format(pFmt,pTArgs...));
                 }
             }
 
             template<class ...TArgs>
-            void
-            error(std::string_view pFmt, TArgs ...pTArgs) {
+            constexpr void error(std::string_view pFmt, TArgs ...pTArgs) {
                 if(mThreshold >= ELogLevel::ERRORS) {
                     doError(fmt::format(pFmt,pTArgs...));
                 }
             }
 
             template<class ...TArgs>
-            void
-            fatal(std::string_view pFmt, TArgs ...pTArgs) {
+            constexpr void fatal(std::string_view pFmt, TArgs ...pTArgs) {
                 if(mThreshold >= ELogLevel::FATAL) {
                     doFatal(fmt::format(pFmt,pTArgs...));
                 }

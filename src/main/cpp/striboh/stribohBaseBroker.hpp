@@ -482,13 +482,11 @@ namespace striboh::base {
 
         Instances_t /*---------------*/ m_Instances;
         RootNode /*------------------*/ m_RootNode;
-        std::future<void> /*---------*/ m_Receiver;
-        std::chrono::seconds /*------*/ m_Step /*--------------*/ = std::chrono::seconds(10);
-        std::chrono::milliseconds /*-*/ m_DispatchSleep /*-----*/ = std::chrono::milliseconds(10);
+        std::vector<std::shared_future<void>> m_serverHandles;
+        std::chrono::seconds /*------*/ m_Step /*----------*/ = std::chrono::seconds(10);
+        std::chrono::milliseconds /*-*/ m_DispatchSleep /*-*/ = std::chrono::milliseconds(10);
 
         static std::chrono::duration<float> theirTraceInterval;
-
-        void dispatch();
 
         const ModuleNode *resolveSubNodes(PathIterator &pSegmentPtr,
                                           PathIterator pSegmentEnd,
@@ -505,8 +503,11 @@ namespace striboh::base {
 
         void doShutdown();
 
-        void doRunServer();
+        EServerState doRunServerInBackgroundIfPresent();
 
+        void logStateEveryTraceInterval();
+
+        void doLogState();
     };
 
 }

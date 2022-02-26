@@ -377,10 +377,32 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   @author coder.peter.grobarcik@gmail.com
 */
 
-#include "stribohBaseServerIface.hpp"
+#include "striboh/stribohBaseInterface.hpp"
+#include "striboh/stribohBaseServerIface.hpp"
+#include "striboh/stribohBaseBrokerIface.hpp"
 
 namespace striboh {
     namespace base{
+
+        ResolvedResult ServerIface::resolve(std::string_view p_path) {
+            return m_broker.resolve(p_path);
+        }
+
+        const Interface &ServerIface::getInterface(InstanceId p_uuid) {
+            return m_broker.getInterface(p_uuid);
+        }
+
+        Message ServerIface::invokeMethod(Message &&p_message) {
+            return m_broker.invokeMethod(std::forward<Message>(p_message));
+        }
+
+        ResolvedService ServerIface::resolveService(std::string_view pPath) {
+            return m_broker.resolveService(pPath);
+        }
+
+        std::string ServerIface::resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc) {
+            return m_broker.resolvedServiceIdToJsonStr(pPath,pSvc);
+        }
 
     }
 }

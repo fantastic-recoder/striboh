@@ -384,7 +384,28 @@ namespace striboh::base {
         K_NOMINAL,
         K_STARTING,
         K_STARTED,
-        K_SHUTTING_DOWN
+        K_SHUTTING_DOWN,
+        K_STOPPED
     };
+
+    inline constexpr std::string_view toString(const EBrokerState &pOrbState) {
+        switch (pOrbState) {
+            case EBrokerState::K_STARTED:
+                return "started";
+            case EBrokerState::K_STARTING:
+                return "starting";
+            case EBrokerState::K_NOMINAL:
+                return "nominal";
+            case EBrokerState::K_SHUTTING_DOWN:
+                return "shutting-down";
+            case EBrokerState::K_STOPPED:
+                return "stopped";
+            default:
+                break;
+        }
+        throw std::runtime_error("Unknown value of EBrokerState");
+    }
+
+
 }
 

@@ -392,52 +392,33 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseInterface.hpp"
-#include "stribohBaseEServerState.hpp"
+#include "stribohBaseEBrokerState.hpp"
 #include "stribohBaseMessage.hpp"
 #include "stribohBaseAddress.hpp"
+#include "stribohBaseResolvedResult.hpp"
 
 namespace striboh::base {
 
-    enum class EResolveResult {
-        NOT_FOUND,
-        OK
-    };
-
     std::ostream &operator<<(std::ostream &, const EBrokerState &);
-
-    std::string toString(const EBrokerState &);
 
     inline auto operator<(const ModuleName &p0, const ModuleName &p1) {
         return p0.get() < p1.get();
     }
 
-    typedef std::set<ModuleName> ModuleNames;
-    typedef std::set<InterfaceName> InterfaceNames;
-
-    struct ResolvedResult {
-        EResolveResult m_Result = EResolveResult::NOT_FOUND;
-        ModuleNames m_Modules;
-        Path m_Path;
-        InterfaceNames m_Interfaces;
-        const Address &m_Address;
-
-        ResolvedResult(const Address &p_Address) : m_Address(p_Address) {};
-    };
-
-
-    using ResolvedService = std::pair<bool, InstanceId>;
-
+    /**
+     * Broker operates the miscellaneous servers (SHM, UDP, TCP).
+     */
     struct BrokerIface {
 
         BrokerIface(std::string_view &&pAddress, LogIface &pLogIface) //
-                : m_Address(std::move(pAddress), pLogIface) //
+                : m_address(std::forward<std::string_view>(pAddress), pLogIface) //
                 , m_log(pLogIface) {}
 
-        const LogIface &getLog() const {
+        constexpr inline const LogIface &getLog() const {
             return m_log;
         }
 
-        LogIface &getLog() {
+        constexpr inline LogIface &getLog() {
             return m_log;
         }
 
@@ -471,12 +452,15 @@ namespace striboh::base {
         const std::shared_ptr<ServerIface> &
         getServer() const { return m_server; }
 
+        std::shared_ptr<ServerIface> &
+        getServer() { return m_server; }
+
         void setServer(std::shared_ptr<ServerIface> &&pServerIface);
 
-        const std::atomic<EBrokerState> &
+        constexpr const std::atomic<EBrokerState> &
         getState() const { return m_state; }
 
-        const Address &getAddress() const { return m_Address; }
+        const Address &getAddress() const { return m_address; }
 
         virtual const Interface &getInterface(const InstanceId &pInstanceId) const = 0;
 
@@ -484,7 +468,7 @@ namespace striboh::base {
 
         std::atomic<EBrokerState> m_state = EBrokerState::K_NOMINAL;
 
-        Address m_Address;
+        Address m_address;
     private:
 
         LogIface &m_log;

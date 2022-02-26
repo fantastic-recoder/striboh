@@ -390,9 +390,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "EchoClt.hpp"
 
 namespace {
-    static const char* K_TEST_SRV = "http://127.0.0.1:9998";
+    static constexpr const char* K_TEST_SRV = "http://127.0.0.1:9998";
     static striboh::base::LogBoostImpl theLog;
-    striboh::base::Broker theBroker(K_TEST_SRV,theLog);
+    //striboh::base::Broker theBroker(K_TEST_SRV,theLog);
 }
 
 using namespace generated_echo_test;
@@ -407,6 +407,7 @@ TEST(stribohGeneratedEchoTests, testEcho) {
     EXPECT_EQ("Hello John!",myRetVal);
     myEchoClt.shutdown();
     ASSERT_FALSE(wait4shutdown(myChild));
+    theLog.debug("testEchoFinished");
 }
 
 TEST(stribohGeneratedEchoTests, testAdd) {

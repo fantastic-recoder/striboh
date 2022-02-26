@@ -382,6 +382,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <memory>
 #include <atomic>
 
+#include "striboh/stribohBaseResolvedResult.hpp"
+#include "striboh/stribohBaseMessage.hpp"
+
 namespace striboh {
     namespace base {
 
@@ -400,7 +403,7 @@ namespace striboh {
 
         constexpr
         static std::string_view const toString(EServerState p_state) {
-            switch(p_state) {
+            switch (p_state) {
                 case EServerState::K_STOPPED:
                     return "EServerState::K_STOPPED";
                 case EServerState::K_STARTING:
@@ -409,45 +412,67 @@ namespace striboh {
                     return "EServerState::K_STARTED";
                 case EServerState::K_STOPPING:
                     return "EServerState::K_STOPPING";
-                default:break;
+                default:
+                    break;
             }
             // break constexpr
             throw std::runtime_error("Unknown EServerState value.");
         }
 
         class BrokerIface;
+
         class LogIface;
+
+        class Interface;
 
         /**
          * Serving servant instances. Common functionalit for all servers, tcp, udp, shared memory(?).
          */
-        struct ServerIface : public std::enable_shared_from_this<ServerIface> {
-
-            ServerIface(BrokerIface& p_broker, LogIface& p_log) : m_broker(p_broker), m_log(p_log){}
+        class ServerIface : public std::enable_shared_from_this<ServerIface> {
+        public:
+            ServerIface(BrokerIface &p_broker, const Address &p_address, LogIface &p_log)
+                    : m_broker(p_broker), m_address(p_address), m_log(p_log) {}
 
             virtual void run() = 0;
 
             virtual void shutdown() = 0;
 
-            const std::atomic<EServerState>& getState() const { return m_state; }
+            constexpr BrokerIface &getBroker() { return m_broker; }
 
-            BrokerIface &getBroker() { return m_broker; }
-
-            const LogIface &getLog() const {
+            constexpr const LogIface &getLog() const {
                 return m_log;
             }
 
-            LogIface &getLog() {
+            constexpr LogIface &getLog() {
                 return m_log;
+            }
+
+            bool compareAndSwitchState(EServerState p_expected, EServerState p_new) {
+                return m_state.compare_exchange_strong(p_expected, p_new);
+            }
+
+            ResolvedResult resolve(std::string_view p_path);
+
+            ResolvedService resolveService(std::string_view pPath);
+
+            std::string resolvedServiceIdToJsonStr(std::string_view pPath, const ResolvedService &pSvc);
+
+            const Interface &getInterface(InstanceId p_uuid);
+
+            std::atomic<EServerState> &getState() { return m_state; }
+
+            Message invokeMethod(Message &&message);
+
+            constexpr const Address &getAddress() const {
+                return m_address;
             }
 
         protected:
-            std::atomic<EServerState>& getState() { return m_state; }
-
+            LogIface &m_log;
         private:
             std::atomic<EServerState> m_state;
             BrokerIface &m_broker;
-            LogIface &m_log;
+            Address m_address;
         };
     }
 }

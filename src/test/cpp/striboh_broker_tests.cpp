@@ -449,9 +449,32 @@ inline constexpr std::string_view toString(ETestState p_state) {
 
 TEST(stribohBrokerTests, testEnumNames) {
     ASSERT_EQ(string("t000"), string(toString(ETestState::K_T000)));
-    ASSERT_EQ(string("t000"), string(toString(ETestState::K_T001)));
+    ASSERT_EQ(string("t001"), string(toString(ETestState::K_T001)));
 }
 
 TEST(stribohBrokerTests, testTimedShutdownNoServer) {
+    Broker aBroker("http://0.0.0.0:10000",theLog);
+    std::chrono::duration myDispatchTime = aBroker.getDispatchSleep();
+    auto myBrokerTask = std::async(std::launch::async,[&aBroker]{
+        aBroker.serve();
+    });
+    for(int myI=0; aBroker.getState()!=EBrokerState::K_STARTED;myI++) {
+        getLog().debug("Broker ist starting, state={}. cntr={}", toString(aBroker.getState()),myI);
+        std::this_thread::sleep_for(myDispatchTime);
+        if(myI>4) {
+            FAIL() << "Broker startup took too long.";
+            break;
+        }
+    }
+    aBroker.shutdown();
+    for(int myI=0; aBroker.getState()!=EBrokerState::K_STOPPED;myI++) {
+        getLog().debug("Broker ist shuting down, state={}. cntr={}", toString(aBroker.getState()),myI);
+        std::this_thread::sleep_for(myDispatchTime);
+        if(myI>4) {
+            FAIL() << "Broker startup took too long.";
+            break;
+        }
+    }
 }
+
 

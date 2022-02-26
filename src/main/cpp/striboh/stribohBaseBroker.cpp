@@ -410,57 +410,44 @@ namespace striboh::base {
 
     std::chrono::duration<float> Broker::theirTraceInterval = std::chrono::duration<float>(10.0f);
 
-    void
-    Broker::doRunServer() {
+    EServerState
+    Broker::doRunServerInBackgroundIfPresent() {
         if (getServer()) {
-            getLog().debug("We have a server attached, going to run it.");
-            getServer()->run();
-            getLog().debug("Server is running.");
+            if (getServer()->compareAndSwitchState(EServerState::K_STOPPED, EServerState::K_STARTING)) {
+                getLog().debug("We have a stopped server, going to run it.");
+                std::shared_future<void> myThread = std::async(std::launch::async,
+                                                               [this]() -> void { this->getServer()->run(); });
+                m_serverHandles.push_back(myThread);
+            }
         }
-
+        return getServer() ? getServer()->getState().load() : EServerState::K_STOPPED ;
     }
 
     const std::atomic<EBrokerState> &
     Broker::serveOnce() {
-        if (getState() == EBrokerState::K_STARTED) {
-            static std::chrono::time_point<std::chrono::system_clock> start = system_clock::now(), end;
-            end = system_clock::now();
-            const std::chrono::duration<float> elapsed_seconds = end - start;
-            if (theirTraceInterval <= elapsed_seconds) {
-                getLog().debug("ORB is started.");
-                start = end;
-            }
-        } else if (getState() == EBrokerState::K_NOMINAL) {
-            m_state=EBrokerState::K_STARTING;
-            m_Receiver = std::async(std::launch::async, [this]() -> void { this->dispatch(); });
-            doRunServer();
-            int myCounter = 0;
-            do {
-                if (++myCounter % 100 == 0) {
-                    getLog().debug("Waiting for main servant. state = {}",
-                                   toString(getState()));
-                }
-                m_Receiver.wait_for(std::chrono::duration<int, std::milli>(m_DispatchSleep));
-            } while (getState() != EBrokerState::K_STARTED);
-            getLog().info("ORB state is {}.", toString(getState()));
-        } else if (getState() == EBrokerState::K_STARTING) {
-            getLog().debug("ORB is starting.");
-        } else if(getState() == EBrokerState::K_SHUTTING_DOWN) {
-            getLog().debug("ORB is shutting down.");
-        } else {
-            getLog().warn("ORB state is {} - returning immediately.", toString(getState()));
+        EBrokerState myExpectedState = EBrokerState::K_NOMINAL;
+        // nominal -> starting
+        if (m_state.compare_exchange_strong(myExpectedState, EBrokerState::K_STARTING)) {
+            doRunServerInBackgroundIfPresent();
         }
+        if(getServer() && getServer()->getState()==EServerState::K_STARTED) {
+            m_state=EBrokerState::K_STARTED;
+        }
+        logStateEveryTraceInterval();
         return getState();
     }
 
-    void
-    Broker::dispatch() {
-        do {
-            m_state=EBrokerState::K_STARTED;
-            m_Receiver.wait_for(std::chrono::duration<int, std::milli>(m_DispatchSleep));
-        } while (getState() == EBrokerState::K_STARTED);
-        getLog().info("Shutdown completed. state = {}", toString(getState()));
+    void Broker::logStateEveryTraceInterval() {
+        static std::chrono::time_point<std::chrono::system_clock> start = system_clock::now(), end;
+        end = system_clock::now();
+        const std::chrono::duration<float> elapsed_seconds = end - start;
+        if (theirTraceInterval <= elapsed_seconds) {
+            doLogState();
+            start = end;
+        }
     }
+
+    void Broker::doLogState() { getLog().debug("ORB state is {}.", toString(getState())); }
 
     std::future<void>
     Broker::shutdown() {
@@ -474,18 +461,23 @@ namespace striboh::base {
     }
 
     void Broker::doShutdown() {
-        EBrokerState myShutdownStateWas = getState();
-        m_state=EBrokerState::K_SHUTTING_DOWN;
-        getLog().info("Going to shutdown. state = {}", toString(getState()));
-        if (myShutdownStateWas != EBrokerState::K_NOMINAL) {
-            m_Receiver.wait();
+        if (getState() != EBrokerState::K_STARTED) {
+            return;
         }
+        m_state = EBrokerState::K_SHUTTING_DOWN;
+        getLog().info("Going to shutdown. state = {}", toString(getState()));
         if (getServer()) {
             getLog().debug("We have a server attached, going to shutdown it.");
             getServer()->shutdown();
+            std::for_each(
+                    m_serverHandles.begin(), m_serverHandles.end(),
+                    [](auto &p_serverHandle) {
+                        p_serverHandle.wait();
+                    }
+            );
             getLog().debug("Server shut down.");
         }
-        m_state=EBrokerState::K_NOMINAL;
+        m_state = EBrokerState::K_STOPPED;
         getLog().info("ORB shut down. state = {}", toString(getState()));
     }
 
@@ -702,7 +694,7 @@ namespace striboh::base {
             setServer(std::make_shared<striboh::base::BeastServer>(3, *this, getLog()));
         }
         for (EBrokerState currentState = getState();
-             currentState != striboh::base::EBrokerState::K_SHUTTING_DOWN; currentState = serveOnce()) {
+             currentState != striboh::base::EBrokerState::K_STOPPED; currentState = serveOnce()) {
             dispatchSleep();
         }
     }

@@ -401,7 +401,9 @@ namespace striboh {
             string myBinDir(K_BUILD_DIR);
             (myBinDir += "/bin/") += pTestEchoServerBinary;
             const char *const myNoServerVariable = std::getenv("NO_SRV");
-            if (myNoServerVariable == nullptr || string_view(myNoServerVariable).compare("yes")) {
+            if (myNoServerVariable != nullptr && (0!= *myNoServerVariable) && ((string_view(myNoServerVariable).compare("yes") == 0)||(string_view(myNoServerVariable).compare("true") == 0))) {
+                pLog.info("Starting NO test echo server!");
+            } else {
                 std::shared_ptr<child> myServerChildProcess
                         = std::make_shared<child>(myBinDir.data(),
                                                   std_out > stdout, std_err > stderr);
@@ -411,7 +413,7 @@ namespace striboh {
                 pLog.info("Server {} started.", pTestEchoServerBinary);
                 return myServerChildProcess;
             }
-            pLog.info("Server {} not started, env is {}.", pTestEchoServerBinary, myNoServerVariable);
+            pLog.info("Server {} not started.", pTestEchoServerBinary);
             return std::shared_ptr<child>();
         }
 

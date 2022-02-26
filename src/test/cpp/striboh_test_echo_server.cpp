@@ -437,7 +437,7 @@ int main( const int argc, const char* argv[]) {
     int myStep=1;
     do {
         aBroker.serveOnce();
-        std::this_thread::sleep_for(5s);
+        std::this_thread::sleep_for(1s);
         if (mySecondsCounter % 30 == 0) {
             myLog.debug("Waiting for broker state:{} time {}/{} step {}.",
                         toString(aBroker.getState()),
@@ -447,9 +447,9 @@ int main( const int argc, const char* argv[]) {
         }
         mySecondsCounter += myStep;
     } while ((mySecondsCounter < myTotalWorkTimeInSeconds) &&
-             (aBroker.getState() != EBrokerState::K_NOMINAL));
+             (aBroker.getState() != EBrokerState::K_STOPPED));
     cout << endl;
-    if(aBroker.getState() != EBrokerState::K_NOMINAL) {
+    if(aBroker.getState() != EBrokerState::K_STOPPED) {
         aBroker.shutdown();
         myLog.error("Test echo servant timed out.");
         return 2;

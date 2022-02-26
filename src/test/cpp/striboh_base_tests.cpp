@@ -431,6 +431,8 @@ namespace striboh::base {
     }
 }
 
+static EchoServantObject theEchoServant;
+
 TEST(stribohBaseTests, testParseUrlParameters) {
     {
         string_view myUrl("");
@@ -464,13 +466,6 @@ TEST(stribohBaseTests, testParseUrlParameters) {
         EXPECT_EQ("val1", myUrlParameters["p0"][1]);
         EXPECT_EQ("/m0/m1/Hello", myUrlParameters[K_BASE_URL][0]);
     }
-}
-
-TEST(stribohBaseTests, testStribohBrokerShutdown) {
-    Broker aBroker("http://0.0.0.0:10000",theLog);
-    aBroker.serveOnce();
-    aBroker.shutdown();
-    ASSERT_EQ(EBrokerState::K_NOMINAL, aBroker.getState());
 }
 
 TEST(stribohBaseTests, testMethodParametersConstructor) {
@@ -673,6 +668,7 @@ TEST(stribohBaseTests, testSimpleRemoteMessageTransfer) {
         EXPECT_EQ(0UL, myReply1.getParameters().size());
         EXPECT_EQ(EMessageType::K_RETURN, myReply1.getType());
     }
+
     if (myServerChildProcess) {
         EXPECT_FALSE(wait4shutdown(myServerChildProcess));
         EXPECT_EQ(0, myServerChildProcess->exit_code());

@@ -392,6 +392,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include <boost/log/trivial.hpp>
 #include <boost/lexical_cast.hpp>
 #include <nlohmann/json.hpp>
+#include <chrono>
 
 #include "stribohBaseLogIface.hpp"
 #include "stribohBaseBeastServer.hpp"
@@ -462,7 +463,7 @@ namespace striboh::base {
             class Send>
     bool
     handleOrUpgradeHttpRequest
-            (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, BrokerIface &pBroker,
+            (http::request<Body, http::basic_fields<Allocator>> &&pRequest, Send &&pSend, ServerIface &p_server,
              std::shared_ptr<websocket::stream<beast::tcp_stream>> &pWebSocketPtr,
              std::shared_ptr<beast::tcp_stream> &pTcpSocketPtr) {
         // Returns a bad request response (local lambdas, newest performance c++ woodoo)
@@ -512,7 +513,7 @@ namespace striboh::base {
             pRequest.target()[0] != '/' ||
             pRequest.target().find("..") != beast::string_view::npos) {
             const string myTarget(pRequest.target().data(), pRequest.target().size());
-            pBroker.getLog().debug("Received wrong target: \"{}\".",
+            p_server.getLog().debug("Received wrong target: \"{}\".",
                                    myTarget);
             return pSend(bad_request("Illegal/empty request-target: \"" + myTarget + "\""));
         }
@@ -540,23 +541,23 @@ namespace striboh::base {
             pWebSocketPtr->accept(pRequest);
             return true;
         } else if (myParams.find(K_TAG_SVC) != myParams.end()) {
-            pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
-            theResponse = pBroker.resolvedServiceIdToJsonStr(myParams[K_BASE_URL][0], aSvc);
+            pair<bool, InstanceId> aSvc = p_server.resolveService(myParams[K_BASE_URL][0]);
+            theResponse = p_server.resolvedServiceIdToJsonStr(myParams[K_BASE_URL][0], aSvc);
         } else if (myParams.find(K_TAG_API) != myParams.end()) {
-            pair<bool, InstanceId> aSvc = pBroker.resolveService(myParams[K_BASE_URL][0]);
+            pair<bool, InstanceId> aSvc = p_server.resolveService(myParams[K_BASE_URL][0]);
             if (aSvc.first) {
-                theResponse = serviceToJsonStr(pBroker.getAddress(), pBroker.getInterface(aSvc.second),
-                                               pBroker.getLog());
+                theResponse = serviceToJsonStr(p_server.getAddress(), p_server.getInterface(aSvc.second),
+                                               p_server.getLog());
             } else {
                 return pSend(server_error(("Failed to find service '" + myParams[K_BASE_URL][0]) + "'."));
             }
         } else {
-            auto myResolved = pBroker.resolve(std::string(pRequest.target()));
+            auto myResolved = p_server.resolve(std::string(pRequest.target()));
             if (myResolved.m_Result == EResolveResult::NOT_FOUND) {
                 return pSend(not_found(pRequest.target()));
             }
             // found
-            theResponse = createResolvedModuleReply(myResolved, pBroker.getLog());
+            theResponse = createResolvedModuleReply(myResolved, p_server.getLog());
         }
         if (theResponse.empty()) {
             // on root send hello
@@ -696,18 +697,24 @@ namespace striboh::base {
         std::shared_ptr<websocket::stream<beast::tcp_stream>> mWebSocketStream;
         http::request<http::string_body> mRequest;
         HttpSendLambda mLambda;
-        BrokerIface &mBroker;
+        ServerIface &mServer;
         std::shared_ptr<void> m_res;
         LogIface &mLog;
+
+    private:
         std::chrono::seconds m_read_timeout = std::chrono::seconds(10);
     public:
         // Take ownership of the socket
         explicit
-        WebSession(tcp::socket &&pSocket, BrokerIface &pBroker, LogIface &pLog)
+        WebSession(tcp::socket &&pSocket, ServerIface &p_server, LogIface &pLog)
                 : mTcpStream(std::make_shared<beast::tcp_stream>(std::move(pSocket))),
                   mLambda(*this),
-                  mBroker(pBroker),
+                  mServer(p_server),
                   mLog(pLog) {}
+
+        LogIface &getLog() const {
+            return mLog;
+        }
 
         // Get on the correct executor
         void
@@ -742,7 +749,7 @@ namespace striboh::base {
 
         void
         onHttpRead(beast::error_code pErrorCode, std::size_t pBytesTransferred) {
-            mBroker.getLog().debug("SRV --> onHttpRead");
+            getLog().debug("SRV --> onHttpRead");
             boost::ignore_unused(pBytesTransferred);
             try {
                 // This means they closed the connection
@@ -750,19 +757,31 @@ namespace striboh::base {
                     return doCloseHttpStream();
                 if (pErrorCode)
                     return fail(pErrorCode, "SRV onHttpRead", mLog);
-                // Send the response
-                if (handleOrUpgradeHttpRequest(std::move(mRequest), mLambda, mBroker,
-                                               mWebSocketStream, mTcpStream)) {
-                    mBroker.getLog().debug("SRV Upgraded!");
-                    doWsRead();
+                if (getServerState() == EServerState::K_STARTED) {
+
+                    // Send the response
+                    if (handleOrUpgradeHttpRequest(std::move(mRequest), mLambda, mServer,
+                                                   mWebSocketStream, mTcpStream)) {
+                        getLog().debug("SRV Upgraded!");
+                        doWsRead();
+                    } else {
+                        getLog().debug("SRV going to HTTP read...");
+                        doHttpRead();
+                    }
+                } else {
+                    getLog().debug("Not handling HTTP requests, state={}.", toString(getServerState()));
                 }
             } catch (std::exception &pExc) {
-                mBroker.getLog().error("SRV std::exception caught: {}.", pExc.what());
+                getLog().error("SRV std::exception caught: {}.", pExc.what());
             } catch (...) {
-                mBroker.getLog().error("SRV Unknown exception happened.");
+                getLog().error("SRV Unknown exception happened.");
             }
-            mBroker.getLog().debug("SRV <-- onHttpRead");
+            getLog().debug("SRV <-- onHttpRead");
         }
+
+        constexpr LogIface &getLog() { return mServer.getLog(); }
+
+        const std::atomic<EServerState> &getServerState() const { return mServer.getState(); }
 
         void
         onAccept(beast::error_code ec) {
@@ -807,7 +826,7 @@ namespace striboh::base {
                 auto myConstBuf(mReadBuffer.cdata());
                 myMsg.unpackFromBuffer(ReadBuffer(myConstBuf.data(), myConstBuf.size()));
                 getLog().debug("SRV Unpacked, {} values.", myMsg.getParameters().size());
-                const Message myReply = mBroker.invokeMethod(std::forward<Message>(myMsg));
+                const Message myReply = mServer.invokeMethod(std::forward<Message>(myMsg));
                 mWriteBuffer.clear();
                 myReply.packToBuffer(mWriteBuffer);
                 doWriteBufferToWebSocket();
@@ -815,8 +834,8 @@ namespace striboh::base {
         }
 
         void doWriteBufferToWebSocket() {
-            mBroker.getLog().debug("WS Send {} bytes.",
-                                   mWriteBuffer.size());
+            getLog().debug("WS Send {} bytes.",
+                           mWriteBuffer.size());
             mWebSocketStream->async_write(mWriteBuffer.data(),
                                           beast::bind_front_handler(&WebSession::onWsWrite, shared_from_this()));
         }
@@ -861,7 +880,7 @@ namespace striboh::base {
 
             if (ec)
                 return fail(ec, "onWsWrite", mLog);
-            mBroker.getLog().debug("Web socket write ok.");
+            getLog().debug("Web socket write ok.");
             // Do another read
             doWsRead();
         }
@@ -873,50 +892,51 @@ namespace striboh::base {
      * Accepts incoming connections and launches the sessions
      */
     class Listener : public std::enable_shared_from_this<Listener> {
-        net::io_context &mIoc;
-        tcp::acceptor mAcceptor;
-        BrokerIface &mBroker;
-        LogIface &mLog;
+        net::io_context &m_ioc;
+        tcp::acceptor m_acceptor;
+        ServerIface &m_server;
+        LogIface &m_log;
     public:
+
         Listener
                 (
                         net::io_context &ioc,
                         tcp::endpoint pEndpoint,
-                        BrokerIface &pBroker,
+                        ServerIface &p_server,
                         LogIface &pLog
                 )
-                : mIoc(ioc), mAcceptor(net::make_strand(ioc)), mBroker(pBroker), mLog(pLog) {
+                : m_ioc(ioc), m_acceptor(net::make_strand(ioc)), m_server(p_server), m_log(pLog) {
             beast::error_code ec;
 
             // Open the acceptor
-            mAcceptor.open(pEndpoint.protocol(), ec);
+            m_acceptor.open(pEndpoint.protocol(), ec);
             if (ec) {
-                fail(ec, "open", mLog);
+                fail(ec, "open", m_log);
                 return;
             }
 
             // Allow address reuse
-            mAcceptor.set_option(net::socket_base::reuse_address(true), ec);
+            m_acceptor.set_option(net::socket_base::reuse_address(true), ec);
             if (ec) {
-                fail(ec, "set_option", mLog);
+                fail(ec, "set_option", m_log);
                 return;
             }
 
             // Bind to the server address
-            mAcceptor.bind(pEndpoint, ec);
+            m_acceptor.bind(pEndpoint, ec);
             if (ec) {
-                fail(ec, "bind", mLog);
+                fail(ec, "bind", m_log);
                 return;
             }
 
             // Start listening for connections
-            mAcceptor.listen(
+            m_acceptor.listen(
                     net::socket_base::max_listen_connections, ec);
             if (ec) {
-                fail(ec, "listen", mLog);
+                fail(ec, "listen", m_log);
                 return;
             }
-            getLog().info("listening on http:/{}:{}/", pEndpoint.address().to_string(), pEndpoint.port());
+            m_log.info("listening on http://{}:{}/", pEndpoint.address().to_string(), pEndpoint.port());
         }
 
         // Start accepting incoming connections
@@ -928,10 +948,10 @@ namespace striboh::base {
     private:
         void
         doAccept() {
-            getLog().debug("SRV Accepting.");
+            m_log.debug("SRV Accepting.");
             // The new connection gets its own strand
-            mAcceptor.async_accept(
-                    net::make_strand(mIoc),
+            m_acceptor.async_accept(
+                    net::make_strand(m_ioc),
                     beast::bind_front_handler(
                             &Listener::onAccept,
                             shared_from_this()));
@@ -945,13 +965,16 @@ namespace striboh::base {
         void
         onAccept(beast::error_code pErrorCode, tcp::socket pSocket) {
             if (pErrorCode) {
-                fail(pErrorCode, "onAccept (is Port taken?)", mLog);
+                fail(pErrorCode, "onAccept (is Port taken?)", m_log);
             } else {
-                // Create the session and run it
-                std::make_shared<WebSession>(std::move(pSocket), mBroker, mLog)->run();
                 // Accept another connection
-                if (mBroker.getState() == EBrokerState::K_STARTED)
+                if (m_server.getState() == EServerState::K_STARTED) {
+                    // Create the session and run it
+                    std::make_shared<WebSession>(std::move(pSocket), m_server, m_log)->run();
                     doAccept();
+                } else {
+                    m_log.debug("Server state is {}, skipping accept.", toString(m_server.getState()));
+                }
             }
         }
     };
@@ -961,40 +984,40 @@ namespace striboh::base {
     void
     BeastServer::shutdown() {
         if (getState() == EServerState::K_STOPPED || getState() == EServerState::K_STOPPING) {
-            getLog().warn("BeastServer: already shutting down.");
+            m_log.warn("BeastServer: already shutting down.");
             return;
         }
-        getLog().info("BeastServer: Commencing shutdown...");
-        getState()=EServerState::K_STOPPING;
+        m_log.info("BeastServer: Commencing shutdown...");
+        getState() = EServerState::K_STOPPING;
         waitUntilAcceptingTasksReturn();
-        getState()=EServerState::K_STOPPED;
-        getLog().info("BeastServer: shutdown.");
+        getState() = EServerState::K_STOPPED;
+        m_log.info("BeastServer: shutdown.");
     }
 
     void BeastServer::waitUntilAcceptingTasksReturn() {
         int myCnt = 0;
+        m_ioc.stop();
         for (auto &aTask: mAcceptTasks) {
-            getLog().debug("SRV BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
+            m_log.debug("SRV BeastServer: Waiting for task {}/{}.", ++myCnt, mAcceptTasks.size());
             int myShutdownTime = 0;
             for (; myShutdownTime < theShutdownTime; myShutdownTime++) {
-                if (aTask.wait_for(std::chrono::duration(5s)) == std::future_status::timeout) {
-                    mIoc.run_for(5s);
-                    getLog().debug("SRV BeastServer: Task {}/{} still running.", myCnt, mAcceptTasks.size());
+                if (aTask.valid() && aTask.wait_for(std::chrono::duration(1s)) == std::future_status::timeout) {
+                    m_log.debug("SRV BeastServer: Task {}/{} still running.", myCnt, mAcceptTasks.size());
                 } else {
                     break;
                 }
             }
             if (myShutdownTime == theShutdownTime) {
-                getLog().error("SRV BeastServer: Task {}/{} failed to shutdown.", myCnt, mAcceptTasks.size());
+                m_log.error("SRV BeastServer: Task {}/{} failed to shutdown.", myCnt, mAcceptTasks.size());
             } else {
-                getLog().debug("SRV BeastServer: Task {}/{} down.", myCnt, mAcceptTasks.size());
+                m_log.debug("SRV BeastServer: Task {}/{} down.", myCnt, mAcceptTasks.size());
             }
         }
-        getLog().info("BeastServer: ... shutdown completed.");
+        m_log.info("BeastServer: ... shutdown completed.");
     }
 
     BeastServer::BeastServer(int pNum, BrokerIface &pBroker, LogIface &pLog)
-            : ServerIface(pBroker,pLog), mThreadNum(std::max<int>(1, pNum)), mIoc(mThreadNum) {
+            : ServerIface(pBroker, pBroker.getAddress(), pLog), mThreadNum(std::max<int>(1, pNum)), m_ioc(mThreadNum) {
     }
 
     inline std::string toString(const std::thread::id &pThreadId) {
@@ -1004,48 +1027,59 @@ namespace striboh::base {
     }
 
 
+    static const std::chrono::seconds K_DISPATCH_TIME = 1s;
+
     void BeastServer::run() {
-        getLog().debug("SRV BeastServer::run() -->");
+        m_log.debug("SRV BeastServer::run() -->");
         auto const aAddress = net::ip::make_address(getBroker().getAddress().getHost());
         auto const aPort = getBroker().getAddress().getPort();
         auto myIocRun = [this]() -> void {
-            this->getLog().debug("SRV BeastServer::run() Thread {} started.",
-                             toString(std::this_thread::get_id()));
+            this->m_log.debug("SRV BeastServer::run() Thread {} started.",
+                                 toString(std::this_thread::get_id()));
             EServerState myCurrentState = this->getState().load();
             do {
                 switch (myCurrentState) {
                     case EServerState::K_STOPPED:
-                        this->getLog().debug("SRV BeastServer::run() Thread {} state {}.",
-                                         toString(std::this_thread::get_id()), toString(myCurrentState));
+                        logState();
                         return;
                     case EServerState::K_STARTING:
-                        getState()=EServerState::K_STARTED;
-                        mIoc.run_for(15s);
+                        getState() = EServerState::K_STARTED;
+                        m_ioc.run_for(K_DISPATCH_TIME);
                         break;
                     case EServerState::K_STARTED:
-                        mIoc.run_for(15s);
+                        m_ioc.run_for(K_DISPATCH_TIME);
                         break;
                     case EServerState::K_STOPPING:
                         return;
                 }
                 myCurrentState = this->getState().load();
-                this->getLog().debug("SRV BeastServer::run() Thread {} state {}.",
-                                 toString(std::this_thread::get_id()), toString(myCurrentState));
+                logState();
             } while (myCurrentState != EServerState::K_STOPPING);
-            this->getLog().debug("SRV BeastServer::run() Thread {} finished.",
-                             toString(std::this_thread::get_id()));
+            logState();
             return;
         };
         // Create and launch a listening on Port aPort
-        std::make_shared<Listener>(mIoc, tcp::endpoint{aAddress, aPort}, getBroker(), getLog())->run();
+        std::make_shared<Listener>(m_ioc, tcp::endpoint{aAddress, aPort}, *this, m_log)->run();
         // Run the I/O service on the requested number of threads
         mAcceptTasks.reserve(mThreadNum - 1);
-        getState()=EServerState::K_STARTING;
+        getState() = EServerState::K_STARTING;
         for (auto i = mThreadNum - 1; i > 0; --i)
             mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
         mAcceptTasks.emplace_back(std::async(std::launch::async, myIocRun));
-        getLog().debug("SRV BeastServer::run() <--");
+        m_log.debug("SRV BeastServer::run() <--");
         return;
+    }
+
+    void BeastServer::logState() {
+        static std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now(), end;
+        end = std::chrono::system_clock::now();
+        const std::chrono::duration<float> elapsed_seconds = end - start;
+        if (15s <= elapsed_seconds) {
+
+            m_log.debug("SRV BeastServer::run() Thread {} state {}.",
+                           toString(std::this_thread::get_id()), toString(getState()));
+            start = end;
+        }
     }
 
 }

@@ -383,7 +383,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 #include "stribohBaseServerIface.hpp"
 #include "stribohBaseBrokerIface.hpp"
-#include "stribohBaseEServerState.hpp"
+#include "stribohBaseEBrokerState.hpp"
 
 namespace striboh {
     namespace base {
@@ -410,9 +410,11 @@ namespace striboh {
             std::vector<std::future<void>> mAcceptTasks;
 
             //! \brief The io_context is required for all boost::asio I/O.
-            boost::asio::io_context mIoc;
+            boost::asio::io_context m_ioc;
 
             void waitUntilAcceptingTasksReturn();
+
+            void logState();
         };
     } // base
 } // striboh
