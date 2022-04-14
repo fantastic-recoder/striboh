@@ -459,7 +459,7 @@ namespace striboh::base {
         };
     } // end namespace url
 
-    int Address::checkGrammar() {
+    size_t Address::checkGrammar() {
         return pegtl::analyze<url::Grammar>();
     }
 

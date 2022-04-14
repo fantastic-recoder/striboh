@@ -385,17 +385,17 @@ namespace striboh {
     namespace base {
         class LogBoostImpl: public LogIface {
         protected:
-            void doTrace(const std::string pMsg) override;
+            void doTrace(std::string_view pMsg) override;
 
-            void doDebug(const std::string pMsg) override;
+            void doDebug(std::string_view pMsg) override;
 
-            void doError(const std::string pMsg) override;
+            void doError(std::string_view pMsg) override;
 
-            void doFatal(const std::string pMsg) override;
+            void doFatal(std::string_view pMsg) override;
 
-            void doWarn(const std::string pMsg) override;
+            void doWarn(std::string_view pMsg) override;
 
-            void doInfo(const std::string pMsg) override;
+            void doInfo(std::string_view pMsg) override;
 
         };
     }

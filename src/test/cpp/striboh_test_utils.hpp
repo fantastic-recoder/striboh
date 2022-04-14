@@ -402,8 +402,8 @@ namespace striboh {
             std::cout << std::endl << "Wait 4 shutdown ";
             for (int mII = 0; mII < myMaxWaitTimeInSecs; mII++) {
                 if (p_processChild->running()) {
-                    p_processChild->wait_for(1s);
-                    std::cout << ".";
+                    p_processChild->wait_for(2s);
+                    std::cout << "." << std::endl;
                 } else {
                     std::cout << " not running - ok." << std::endl;
                     return false;

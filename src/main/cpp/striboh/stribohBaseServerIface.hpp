@@ -402,7 +402,7 @@ namespace striboh {
         };
 
         constexpr
-        static std::string_view const toString(EServerState p_state) {
+        inline std::string_view const toString(EServerState p_state) {
             switch (p_state) {
                 case EServerState::K_STOPPED:
                     return "EServerState::K_STOPPED";
@@ -419,7 +419,7 @@ namespace striboh {
             throw std::runtime_error("Unknown EServerState value.");
         }
 
-        class BrokerIface;
+        struct BrokerIface;
 
         class LogIface;
 

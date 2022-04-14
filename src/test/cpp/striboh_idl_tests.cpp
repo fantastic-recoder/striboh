@@ -402,17 +402,17 @@ module m0 {
 )K_TST_IDL";
 
     void printErrors(const ast::RootNode &myIdlAst) {
-        const unsigned long myErrorCount = myIdlAst.getErrors().size();
-        string myConcateatedErrors;
+        const size_t myErrorCount = myIdlAst.getErrors().size();
+        string myErrors;
         for (size_t myCnt = 0; myCnt < myErrorCount; myCnt++) {
             string myErrorTxt(myIdlAst.getErrors()[myCnt]);
-            myConcateatedErrors += myErrorTxt;
+            myErrors += myErrorTxt;
             if(myCnt>0) {
-                myConcateatedErrors += "; ";
+                myErrors += "; ";
             }
             BOOST_LOG_TRIVIAL(error) << myErrorTxt;
         }
-        EXPECT_EQ(0UL,myErrorCount) << "There are IDL parsing errors:[ " << myConcateatedErrors << " ].";
+        EXPECT_EQ(0UL,myErrorCount) << "There are IDL parsing errors:[ " << myErrors << " ].";
     }
 
     static striboh::base::LogBoostImpl theLog;

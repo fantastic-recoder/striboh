@@ -385,16 +385,16 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 namespace striboh {
     namespace base {
         enum class ELogLevel : int32_t {
-            NO_LOG= -1000,
-            TRACE=5,
-            DEBUG=4,
-            WARN=3,
-            INFO=2,
-            ERRORS=1,
-            FATAL=0
+            NO_LOG = -1000,
+            TRACE = 5,
+            DEBUG = 4,
+            WARN = 3,
+            INFO = 2,
+            ERRORS = 1,
+            FATAL = 0
         };
 
-        constexpr const char* toString(ELogLevel p_level) {
+        inline constexpr const char* toString(ELogLevel p_level) {
             switch(p_level) {
                 case ELogLevel::NO_LOG: return "ELogLevel::NO_LOG";
                 case ELogLevel::TRACE: return "ELogLevel::TRACE";
@@ -408,7 +408,7 @@ namespace striboh {
         }
 
         class LogIface {
-            ELogLevel mThreshold=ELogLevel::DEBUG;
+            ELogLevel mThreshold = ELogLevel::DEBUG;
 
         public:
             constexpr ELogLevel getThreshold() const {
@@ -420,8 +420,8 @@ namespace striboh {
                 mThreshold = pLevel;
             }
 
-            bool setThreshold(int pLevel) {
-                switch(pLevel) {
+            constexpr bool setThreshold(int pLevel) {
+                switch (pLevel) {
                     case 0:
                         setThreshold(ELogLevel::TRACE);
                         break;
@@ -447,58 +447,63 @@ namespace striboh {
                 return true;
             }
 
-            template<class ...TArgs>
-            constexpr void trace(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::TRACE) {
-                    doTrace(fmt::format(pFmt,pTArgs...));
+            template<typename ...TArgs>
+            constexpr void trace(fmt::format_string<TArgs...> pFmt, TArgs &&...pTArgs) {
+                if (mThreshold >= ELogLevel::TRACE) {
+                    doTrace(fmt::format(pFmt, pTArgs...));
                 }
             }
 
-            template<class ...TArgs>
-            constexpr void debug(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::DEBUG) {
-                    doDebug(fmt::format(pFmt,pTArgs...));
+            template<typename ...TArgs>
+            constexpr void debug(fmt::format_string<TArgs...> pFmt, TArgs &&...pTArgs) {
+                if (mThreshold >= ELogLevel::DEBUG) {
+                    doDebug(fmt::format(pFmt, pTArgs...));
                 }
             }
 
-            template<class ...TArgs>
-            constexpr void warn(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::WARN) {
-                    doWarn(fmt::format(pFmt,pTArgs...));
+            template<typename ...TArgs>
+            constexpr void warn(fmt::format_string<TArgs...> pFmt, TArgs &&...pTArgs) {
+                if (mThreshold >= ELogLevel::WARN) {
+                    doWarn(fmt::format(pFmt, pTArgs...));
                 }
             }
 
-            template<class ...TArgs>
-            constexpr void info(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::INFO) {
-                    doInfo(fmt::format(pFmt,pTArgs...));
+            template<typename  ...TArgs>
+            constexpr void info(fmt::format_string<TArgs...> pFmt, TArgs &&...pTArgs) {
+                if (mThreshold >= ELogLevel::INFO) {
+                    doInfo(fmt::format(pFmt, pTArgs...));
                 }
             }
 
-            template<class ...TArgs>
-            constexpr void error(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::ERRORS) {
-                    doError(fmt::format(pFmt,pTArgs...));
+            template<typename ...TArgs>
+            constexpr void error(fmt::format_string<TArgs...> pFmt, TArgs &&...pTArgs) {
+                if (mThreshold >= ELogLevel::ERRORS) {
+                    doError(fmt::format(pFmt, pTArgs...));
                 }
             }
 
-            template<class ...TArgs>
-            constexpr void fatal(std::string_view pFmt, TArgs ...pTArgs) {
-                if(mThreshold >= ELogLevel::FATAL) {
-                    doFatal(fmt::format(pFmt,pTArgs...));
+            template<class TFmtString, class ...TArgs>
+            constexpr void fatal(TFmtString pFmt, TArgs ...pTArgs) {
+                if (mThreshold >= ELogLevel::FATAL) {
+                    doFatal(fmt::format(pFmt, pTArgs...));
                 }
             }
 
         protected:
-            virtual void doTrace( const std::string pMsg ) = 0;
-            virtual void doDebug( const std::string pMsg ) = 0;
-            virtual void doError( const std::string pMsg ) = 0;
-            virtual void doFatal( const std::string pMsg ) = 0;
-            virtual void doWarn( const std::string pMsg ) = 0;
-            virtual void doInfo( const std::string pMsg ) = 0;
+            virtual void doTrace(std::string_view pMsg) = 0;
+
+            virtual void doDebug(std::string_view pMsg) = 0;
+
+            virtual void doError(std::string_view pMsg) = 0;
+
+            virtual void doFatal(std::string_view pMsg) = 0;
+
+            virtual void doWarn(std::string_view pMsg) = 0;
+
+            virtual void doInfo(std::string_view pMsg) = 0;
         };
 
-        LogIface& getGlobalLog();
+        LogIface &getGlobalLog();
 
     }
 }

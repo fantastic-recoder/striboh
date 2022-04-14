@@ -773,7 +773,8 @@ namespace striboh::base {
                     getLog().debug("Not handling HTTP requests, state={}.", toString(getServerState()));
                 }
             } catch (std::exception &pExc) {
-                getLog().error("SRV std::exception caught: {}.", pExc.what());
+                const string myMsg(pExc.what());
+                getLog().error("SRV std::exception caught: {}.", myMsg);
             } catch (...) {
                 getLog().error("SRV Unknown exception happened.");
             }

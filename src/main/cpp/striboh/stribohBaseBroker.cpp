@@ -489,8 +489,9 @@ namespace striboh::base {
     Message
     Broker::invokeMethod(Message &&pValues) {
         const InstanceId aInstanceId(pValues.getInstanceId());
+        const string aInstanceIdStr(toString(aInstanceId));
         getLog().debug("Calling instance \"{}\" method \"{}\".",
-                       toString(aInstanceId), pValues.getMethodName());
+                       aInstanceIdStr, pValues.getMethodName());
         auto myInterfaceIt = m_Instances.find(aInstanceId);
         if (myInterfaceIt != m_Instances.end()) {
             auto myMethodIt = myInterfaceIt->second.findMethod(pValues.getMethodName());
@@ -498,6 +499,7 @@ namespace striboh::base {
                 try {
                     return myMethodIt->invoke(pValues, Context(*this));
                 } catch (std::exception &pException) {
+                    const char *myReason = pException.what();
                     getLog().error("Failed to invoke method \"{}\", message is  \"{}\".", myMethodIt->getName(),
                                    pException.what());
                 } catch (...) {
@@ -506,12 +508,12 @@ namespace striboh::base {
                 }
             }
         } else {
-            getLog().error("Did not find instance \"{}\"", toString(aInstanceId));
+            getLog().error("Did not find instance \"{}\"", aInstanceIdStr);
         }
         Message myRetVal(pValues, Value{}, getLog());
         // send the buffer over and retrieve the result
         getLog().error("Did not find method {} on instance \"{}\".",
-                       pValues.getMethodName(), toString(aInstanceId));
+                       pValues.getMethodName(), aInstanceIdStr);
         return myRetVal;
     }
 

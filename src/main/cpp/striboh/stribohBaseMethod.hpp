@@ -388,7 +388,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 namespace striboh::base {
 
-    class BrokerIface;
+    struct BrokerIface;
 
     class Context {
     public:

@@ -398,7 +398,7 @@ namespace striboh::base {
 
         /// Parse the passed address
         explicit Address(std::string_view pUrl, LogIface& pLogger);
-        static int checkGrammar();
+        static size_t checkGrammar();
 
     public:
         const std::string &getHost() const {

@@ -426,9 +426,7 @@ namespace striboh {
                         (*this, m_ioContext, pValues, m_log);
                 myRetVal->startInvocation();
             } else {
-                const string myMsg(
-                        fmt::format("CLT Failed to connect to {}:{}.", m_client.getHost(), m_client.getPort()));
-                m_log.error(myMsg);
+                m_log.error("CLT Failed to connect to {}:{}.", m_client.getHost(), m_client.getPort());
             }
             m_log.debug("CLT <-- invokeMethod");
             return myRetVal;

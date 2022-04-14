@@ -12,7 +12,7 @@ if (MSVC)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS 1)
     set(CONAN_DISABLE_CHECK_COMPILER 1) # allow new shiny VS versions
     # _WIN32_WINNT=0x0A00 == Windows 10 Boost HAS to be compiled according define=BOOST_USE_WINAPI_VERSION=0x0A00
-    add_compile_options(/D_WIN32_WINNT=0x0A00 /bigobj /utf-8)
+    add_compile_options(/D_WIN32_WINNT=0x0A00 /bigobj /utf-8 )
     set(BCrypt_LIBRARIES bcrypt)
 else()
     # lots of warnings and all warnings as errors
