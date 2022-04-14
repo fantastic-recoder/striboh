@@ -634,7 +634,7 @@ namespace striboh {
                     getConnectionStatus() = EConnectionStatus::K_ERROR;
                 } else {
                     m_log.debug("CLT     restarting and running context...");
-                    if(m_ioContext.run_one()==0)
+                    if (m_ioContext.run_one() == 0)
                         m_ioContext.restart();
                 }
                 myCurrentState = getConnectionStatus();
@@ -709,6 +709,32 @@ namespace striboh {
         void
         ObjectProxy::fail(beast::error_code ec, char const *what) {
             m_log.warn("CLT ObjectProxy error {} : {}.", what, ec.message());
+        }
+
+        /**
+         * Used while shutdown, it connects to itself, sends shutdown and disconnects.
+         */
+        void ObjectProxy::sendShutdown() {
+            m_log.debug("CLT ObjectProxy sending shutdown.");
+            // Look up the domain name
+            auto myResolvedAddresses = m_resolver.resolve(
+                    m_client.getHost().c_str(),
+                    m_client.getPortStr().c_str()
+            );
+            for (auto myAddress: myResolvedAddresses) {
+                beast::get_lowest_layer(m_webSocket).expires_after(std::chrono::seconds(1));
+                // Make the connection on the IP address we get from a lookup
+                beast::error_code myErrorCode;
+                beast::get_lowest_layer(m_webSocket).connect(myAddress, myErrorCode);
+                if (myErrorCode.failed()) {
+                    m_log.debug("Failed connect '{}:{}' because '{}'.", myAddress.host_name(),
+                                myAddress.service_name(), myErrorCode.message());
+                }
+                string myShutdownMessage("shutdown");
+                beast::get_lowest_layer(m_webSocket).write_some(
+                        boost::asio::buffer(myShutdownMessage.c_str(), myShutdownMessage.size()), myErrorCode);
+                beast::get_lowest_layer(m_webSocket).close();
+            }
         }
 
         void

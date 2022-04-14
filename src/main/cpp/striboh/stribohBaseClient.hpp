@@ -510,6 +510,7 @@ namespace striboh {
 
             void dispatch();
 
+            void sendShutdown();
         private:
 
             void
@@ -559,7 +560,7 @@ namespace striboh {
             std::string m_baseUrl;
             InstanceId m_uuid;
             std::string m_webSocketUrl;
-            beast::flat_buffer m_flatBuffer; // (Must persist between reads)
+            beast::flat_buffer m_flatBuffer; //< Must persist between reads.
             uint8_t m_retryCnt = 13;
             LogIface &m_log;
 

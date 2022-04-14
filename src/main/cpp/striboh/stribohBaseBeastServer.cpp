@@ -401,6 +401,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 #include "stribohBaseEMessageType.hpp"
 #include "stribohBaseMethod.hpp"
 #include "../../../test/cpp/striboh_test_echo_server_common.hpp"
+#include "stribohBaseClient.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -1003,6 +1004,9 @@ namespace striboh::base {
             for (; myShutdownTime < theShutdownTime; myShutdownTime++) {
                 if (aTask.valid() && aTask.wait_for(std::chrono::duration(1s)) == std::future_status::timeout) {
                     m_log.debug("SRV BeastServer: Task {}/{} still running.", myCnt, mAcceptTasks.size());
+                    HostConnection aClient(Address(getAddress()),m_log);
+                    auto myProxy=aClient.createProxyFor("/");
+                    myProxy->sendShutdown();
                 } else {
                     break;
                 }
