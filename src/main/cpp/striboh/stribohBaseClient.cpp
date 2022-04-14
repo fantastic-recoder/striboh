@@ -671,6 +671,7 @@ namespace striboh {
 
         void
         ObjectProxy::shutdown(beast::error_code &ec) {// Gracefully close the socket
+            m_log.debug("CLT ObjectProxy::shutdown()");
             // Gracefully close the socket
             beast::get_lowest_layer(m_webSocket).socket().shutdown(tcp::socket::shutdown_both, ec);
 

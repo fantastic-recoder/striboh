@@ -451,17 +451,19 @@ namespace striboh::base {
 
     std::future<void>
     Broker::shutdown() {
-        if (getState() == EBrokerState::K_STARTED) {
+        getLog().debug("Broker::shutdown()");
+        if (getState() != EBrokerState::K_SHUTTING_DOWN) {
             return std::async(std::launch::async,
                               [this]() -> void { this->doShutdown(); });
         } else {
-            getLog().warn("ORB is not started.");
+            getLog().warn("ORB is not started. State={}.", toString(getState()));
         }
         return std::future<void>();
     }
 
     void Broker::doShutdown() {
-        if (getState() != EBrokerState::K_STARTED) {
+        if (getState() == EBrokerState::K_SHUTTING_DOWN) {
+            getLog().debug("Already shutting down... return.");
             return;
         }
         m_state = EBrokerState::K_SHUTTING_DOWN;

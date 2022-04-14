@@ -399,10 +399,10 @@ namespace striboh {
          */
         inline bool wait4shutdown(std::shared_ptr<boost::process::child> p_processChild) {
             constexpr const auto myMaxWaitTimeInSecs = 20;
-            std::cout << std::endl << "Wait 4 shutdown ";
+            std::cout << "Wait 4 shutdown "<< std::endl;
             for (int mII = 0; mII < myMaxWaitTimeInSecs; mII++) {
                 if (p_processChild->running()) {
-                    p_processChild->wait_for(2s);
+                    p_processChild->wait_for(1s);
                     std::cout << "." << std::endl;
                 } else {
                     std::cout << " not running - ok." << std::endl;
