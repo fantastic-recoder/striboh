@@ -394,7 +394,7 @@ namespace striboh {
             FATAL = 0
         };
 
-        inline constexpr const char* toString(ELogLevel p_level) {
+        inline constexpr std::string_view toString(ELogLevel p_level) {
             switch(p_level) {
                 case ELogLevel::NO_LOG: return "ELogLevel::NO_LOG";
                 case ELogLevel::TRACE: return "ELogLevel::TRACE";
@@ -415,7 +415,7 @@ namespace striboh {
                 return mThreshold;
             }
 
-            constexpr void setThreshold(ELogLevel pLevel) {
+            void setThreshold(ELogLevel pLevel) {
                 info("Setting log level {}",toString(pLevel));
                 mThreshold = pLevel;
             }
