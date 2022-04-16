@@ -41,7 +41,8 @@ You don't have to ever use `eject`. The curated feature set is suitable for smal
 
 **Install npm and node.js on Ubuntu**
 
-https://linuxize.com/post/how-to-install-node-js-on-ubuntu-20-04/
+How-to tutorial can be found [here](https://linuxize.com/post/how-to-install-node-js-on-ubuntu-20-04/).
+
 
 ## Learn More
 
