@@ -2,7 +2,9 @@
 <project version="4">
   <component name="CMakeSharedSettings">
     <configurations>
-      <configuration PROFILE_NAME="RelWithDebInfo-Visual Studio 2019" ENABLED="true" GENERATION_DIR="cmake-build-relwithdebinfo-visual-studio-2019" CONFIG_NAME="RelWithDebInfo" TOOLCHAIN_NAME="Visual Studio 2019" GENERATION_OPTIONS="-G &quot;Ninja Multi-Config&quot; -DCONAN_DISABLE_CHECK_COMPILER=1" />
+      <configuration PROFILE_NAME="RelWithDebInfo" ENABLED="true" CONFIG_NAME="RelWithDebInfo" GENERATION_OPTIONS="-G &quot;Ninja Multi-Config&quot;" />
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" GENERATION_OPTIONS="-G &quot;Ninja Multi-Config&quot;" />
+      <configuration PROFILE_NAME="RelWithDebInfo-Visual Studio 2019" ENABLED="false" GENERATION_DIR="cmake-build-relwithdebinfo-visual-studio-2019" CONFIG_NAME="RelWithDebInfo" TOOLCHAIN_NAME="Visual Studio 2019" GENERATION_OPTIONS="-G &quot;Ninja Multi-Config&quot; -DCONAN_DISABLE_CHECK_COMPILER=1" />
     </configurations>
   </component>
 </project>
