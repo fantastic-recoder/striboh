@@ -84,3 +84,5 @@ How to update and keep Your tool-chain uptodate?
 
 ```npm install react-scripts@latest```
 
+For full example see [here (TS react tutorial)](https://blog.logrocket.com/using-typescript-with-react-tutorial-examples/).
+
