@@ -1,6 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
+import Glediator from './glediator/Glediator';
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
           Striboh React demonstrator.
         </p>
       </header>
+      <Glediator/>
     </div>
   );
 }
