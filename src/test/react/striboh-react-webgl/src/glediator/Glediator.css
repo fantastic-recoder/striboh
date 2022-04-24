@@ -1,4 +1,4 @@
-.Glediator {
+#id_Glediator {
     text-align: bottom;
     background-color: #282c34;
     color: white;
@@ -6,6 +6,3 @@
     width: 100%;
 }
 
-#id_label {
-    margin: 1em;
-}
