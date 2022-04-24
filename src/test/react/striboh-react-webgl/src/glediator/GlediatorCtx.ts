@@ -1,6 +1,6 @@
 /*==================== MATRIX ====================== */
 
-import { time } from "console";
+//import { time } from "console";
 
 export function initGlediator(): void {
     let canvas: HTMLCanvasElement;
@@ -18,6 +18,7 @@ export function initGlediator(): void {
         throw new Error('Unable to initialize WebGL.');
     }
     gl = aGl;
+    console.log("WebGL initialized.");
 
     /* Step2: Define the geometry and store it in buffer objects */
 
@@ -40,7 +41,9 @@ export function initGlediator(): void {
     // Vertex shader source code
     let vertCode =
         'attribute vec2 coordinates;' +
-        'void main(void) {' + ' gl_Position = vec4(coordinates,0.0, 1.0);' + '}';
+        'void main(void) {' + //
+        ' gl_Position = vec4(coordinates,0.0, 1.0);' + //
+        '}';
 
     //Create a vertex shader object
     let vertShader = gl.createShader(gl.VERTEX_SHADER);
@@ -55,7 +58,10 @@ export function initGlediator(): void {
     gl.compileShader(vertShader);
 
     //Fragment shader source code
-    let fragCode = 'void main(void) {' + 'gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);' + '}';
+    let fragCode = //
+        'void main(void) {' //
+        + 'gl_FragColor = vec4(0.8, 0.0, 0.0, 0.1);' //
+        + '}';
 
     // Create fragment shader object
     let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
