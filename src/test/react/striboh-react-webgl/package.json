@@ -9,10 +9,12 @@
     "@types/jest": "^27.4.1",
     "@types/node": "^16.11.27",
     "@types/react-dom": "^18.0.1",
+    "@types/three": "^0.139.0",
     "async": "^2.6.4",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-scripts": "5.0.1",
+    "three": "^0.139.2",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

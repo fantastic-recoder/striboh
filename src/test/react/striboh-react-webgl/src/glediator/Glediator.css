@@ -5,3 +5,7 @@
     height: 50vh;
     width: 100%;
 }
+
+#id_label {
+    margin: 1em;
+}
