@@ -1,5 +1,5 @@
-import { cleanup } from "@testing-library/react";
 import React, { useEffect, useState } from "react";
+
 import * as THREE from "three";
 
 import "./Glediator.css";
@@ -18,7 +18,7 @@ class RenderingCtx {
   prevClientWidth: number = 0;
   prevClientHeigth: number = 0;
 
-  init() {
+  init(): void {
     this.canvas = document.getElementById("id_Glediator");
 
     if (!this.canvas) throw new Error("Could not get Glediator");
@@ -40,13 +40,32 @@ class RenderingCtx {
     console.log("Init ok!");
   }
 
+  public rotateCube(): void {
+    if (this.cube) {
+      this.cube.rotation.x += 0.01;
+      this.cube.rotation.y += 0.01;
+    }
+  }
+
   public adjustAspect() {
     if (this.canvas && this.renderer) {
-      if((this.canvas.clientWidth !== this.prevClientWidth)||(this.canvas.clientHeight !== this.prevClientHeigth)) {
+      if (
+        this.canvas.clientWidth !== this.prevClientWidth ||
+        this.canvas.clientHeight !== this.prevClientHeigth
+      ) {
         this.prevClientWidth = this.canvas.clientWidth;
         this.prevClientHeigth = this.canvas.clientHeight;
-        console.log('Updaring camera '+this.prevClientWidth+' '+this.prevClientHeigth+'.');
-        this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+        console.log(
+          "Updaring camera " +
+            this.prevClientWidth +
+            " " +
+            this.prevClientHeigth +
+            "."
+        );
+        this.renderer.setSize(
+          this.canvas.clientWidth,
+          this.canvas.clientHeight
+        );
         this.camera.aspect = this.prevClientWidth / this.canvas.clientHeight;
         this.camera.updateProjectionMatrix();
       }
@@ -59,19 +78,17 @@ function Glediator() {
 
   useEffect(() => {
     ctx.init();
+
     function animate() {
       requestAnimationFrame(animate);
-      if (ctx.cube) {
-        ctx.cube.rotation.x += 0.01;
-        ctx.cube.rotation.y += 0.01;
-      }
+      ctx.rotateCube();
       ctx.adjustAspect();
       if (ctx.renderer) ctx.renderer.render(ctx.scene, ctx.camera);
       setCtx(ctx);
     }
 
     animate();
-  }, []);
+  }, [ctx]);
 
   console.log("Rendering");
   return <div id="id_Glediator"></div>;
