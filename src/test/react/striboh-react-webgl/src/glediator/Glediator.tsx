@@ -1,61 +1,80 @@
 import { cleanup } from "@testing-library/react";
 import React, { useEffect, useState } from "react";
-import * as THREE from 'three';
+import * as THREE from "three";
 
-import "./Glediator.css"
+import "./Glediator.css";
 
-var renderer: THREE.WebGLRenderer | null = null;
-var cube: THREE.Mesh | null = null;
-var camera: THREE.PerspectiveCamera;
-var scene: THREE.Scene;
+class RenderingCtx {
+  renderer: THREE.WebGLRenderer | null = null;
+  cube: THREE.Mesh | null = null;
+  camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(
+    75,
+    1,
+    0.1,
+    1000
+  );
+  scene: THREE.Scene = new THREE.Scene();
+  canvas: HTMLElement | null = null;
+  prevClientWidth: number = 0;
+  prevClientHeigth: number = 0;
 
-function animate() {
-    requestAnimationFrame(animate);
-    if (cube) {
-        cube.rotation.x += 0.01;
-        cube.rotation.y += 0.01;
-    }
-    if (renderer)
-        renderer.render(scene, camera);
-};
+  init() {
+    this.canvas = document.getElementById("id_Glediator");
 
-function initGlediator(): void {
-    if (renderer)
-        return;
-    const aCanvas = document.getElementById('id_Glediator');
-    if (!aCanvas)
-        throw new Error("Could not get Glediator");
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, aCanvas.clientWidth / aCanvas.clientHeight, 0.1, 1000);
+    if (!this.canvas) throw new Error("Could not get Glediator");
 
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(aCanvas.clientWidth, aCanvas.clientHeight);
+    this.adjustAspect();
 
-    aCanvas.appendChild(renderer.domElement);
+    if (this.renderer) return;
+
+    this.renderer = new THREE.WebGLRenderer();
+    this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+
+    this.canvas.appendChild(this.renderer.domElement);
 
     const geometry = new THREE.BoxGeometry();
     const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
-    camera.position.z = 5;
+    this.cube = new THREE.Mesh(geometry, material);
+    this.scene.add(this.cube);
+    this.camera.position.z = 5;
     console.log("Init ok!");
+  }
+
+  public adjustAspect() {
+    if (this.canvas && this.renderer) {
+      if((this.canvas.clientWidth !== this.prevClientWidth)||(this.canvas.clientHeight !== this.prevClientHeigth)) {
+        this.prevClientWidth = this.canvas.clientWidth;
+        this.prevClientHeigth = this.canvas.clientHeight;
+        console.log('Updaring camera '+this.prevClientWidth+' '+this.prevClientHeigth+'.');
+        this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+        this.camera.aspect = this.prevClientWidth / this.canvas.clientHeight;
+        this.camera.updateProjectionMatrix();
+      }
+    }
+  }
 }
 
-
-
 function Glediator() {
-    const [value, setValue] = useState(true);
-    useEffect(() => {
-        initGlediator();
-        setValue(false);
-        animate();
-    }, []);
+  const [ctx, setCtx] = useState(new RenderingCtx());
 
-    console.log("Rendering");
-    return (
-        <div id="id_Glediator">
-        </div>
-    );
+  useEffect(() => {
+    ctx.init();
+    function animate() {
+      requestAnimationFrame(animate);
+      if (ctx.cube) {
+        ctx.cube.rotation.x += 0.01;
+        ctx.cube.rotation.y += 0.01;
+      }
+      ctx.adjustAspect();
+      if (ctx.renderer) ctx.renderer.render(ctx.scene, ctx.camera);
+      setCtx(ctx);
+    }
+
+    animate();
+  }, []);
+
+  console.log("Rendering");
+  return <div id="id_Glediator"></div>;
 }
 
 export default Glediator;
