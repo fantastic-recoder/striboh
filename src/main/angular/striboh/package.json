@@ -22,7 +22,7 @@
     "tslib": "^2.0.0",
     "zone.js": "~0.10.2",
     "engine.io": ">=6.4.2",
-    "follow-redirects": ">=1.14.8",
+    "follow-redirects": ">=1.15.4",
     "xmlhttprequest-ssl": ">=1.6.2",
     "ua-parser-js": ">=1.0.33",
     "is-svg": ">=5.0.0"
