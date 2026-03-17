@@ -25,7 +25,7 @@
     "follow-redirects": ">=1.15.4",
     "xmlhttprequest-ssl": ">=1.6.2",
     "ua-parser-js": ">=1.0.33",
-    "is-svg": ">=5.0.0"
+    "is-svg": ">=6.1.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "~21.2.2",
